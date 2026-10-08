@@ -77,7 +77,7 @@ function AuditSchedulesPage() {
         void queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
       })
       .catch(() => {
-        /* Manual "Run due schedules now" remains available. */
+        /* Manual "Assign due audits now" remains available. */
       });
     return () => {
       cancelled = true;
@@ -148,7 +148,7 @@ function AuditSchedulesPage() {
   return (
     <AppShell
       title="Recurring audits"
-      description="Recurring audits generate assignments server-side (pg_cron or schedule-runner Edge Function). Use Run now for a manual idempotent trigger."
+      description="Repeat an audit daily, weekly or monthly. Aislix assigns each round to your team automatically."
     >
       <div className="mx-auto max-w-3xl space-y-6">
         <section className="rounded-xl border border-border bg-card p-5">
@@ -222,7 +222,7 @@ function AuditSchedulesPage() {
             ) : (
               <CalendarClock className="size-4" />
             )}
-            Run due schedules now
+            Assign due audits now
           </Button>
         </div>
 
