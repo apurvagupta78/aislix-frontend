@@ -39,26 +39,18 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
   return (
     <section
       aria-label="AI analysis"
-      className={cn("space-y-4 rounded-2xl border bg-white p-5 shadow-sm", className)}
+      className={cn("space-y-4 rounded-2xl border bg-white p-5", className)}
       style={{ borderColor: AISLIX_PALETTE.border, borderLeft: `4px solid ${AISLIX_PALETTE.purple}` }}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-2">
-          <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: AISLIX_PALETTE.purple }} />
-          <div>
-            <h3 className="text-sm font-semibold text-[#04203F]">AI analysis</h3>
-            <p className="mt-0.5 text-xs text-[#667085]">
-              Your request, answered from the AI shelf counts and Aislix&apos;s document match. Nothing is
-              recounted here.
-            </p>
-          </div>
+      <div className="flex items-start gap-2">
+        <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: AISLIX_PALETTE.purple }} />
+        <div>
+          <h3 className="text-sm font-semibold text-[#04203F]">AI analysis</h3>
+          <p className="mt-0.5 text-xs text-[#667085]">
+            Your request, answered from the AI shelf counts and Aislix&apos;s document match. Nothing is
+            recounted here.
+          </p>
         </div>
-        <span
-          className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#04203F]"
-          style={{ background: ACCENT_TINT.purple, borderColor: AISLIX_PALETTE.purple }}
-        >
-          AI analysis
-        </span>
       </div>
 
       {askedChecks.length || analysis.question ? (
@@ -102,7 +94,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
                     style={{ borderColor: AISLIX_PALETTE.border }}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-[#667085]">
+                      <span className="text-xs font-medium text-[#667085]">
                         {checkLabel(finding.check)}
                       </span>
                       <span
@@ -126,7 +118,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
           ) : null}
 
           {analysis.needs_review.length ? (
-            <div className="rounded-xl border px-4 py-3" style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.border }}>
+            <div className="rounded-xl border border-[#D9E2E8] bg-white px-4 py-3">
               <p className="text-xs font-semibold text-[#04203F]">Verification required</p>
               <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-[#667085]">
                 {analysis.needs_review.map((item) => (

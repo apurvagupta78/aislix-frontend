@@ -72,7 +72,7 @@ export function AiAuditMetricTable<T>({
         <p className="border-b border-border/60 px-3 py-2 text-[11px] text-muted-foreground">{caption}</p>
       ) : null}
       <table className="min-w-full text-left text-xs">
-        <thead className="bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <thead className="text-xs text-muted-foreground">
           <tr>
             {columns.map((col) => (
               <th key={col.key} className={cn("px-2 py-2 whitespace-nowrap", col.className)}>

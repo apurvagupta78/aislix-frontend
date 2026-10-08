@@ -35,8 +35,8 @@ export function KpiCalculationPanel({
       </summary>
       <div className="mt-2 space-y-3 rounded-md border border-border/60 bg-muted/20 px-3 py-2.5">
         {content.demo_label ? (
-          <p className="text-[10px] font-medium uppercase tracking-wide text-brand">
-            Aislix Demo Data
+          <p className="text-xs font-medium text-brand">
+            Aislix demo data
           </p>
         ) : null}
         {content.sections.map((section) => (
@@ -44,7 +44,7 @@ export function KpiCalculationPanel({
             key={section.title}
             className="border-b border-border/40 pb-2.5 last:border-b-0 last:pb-0"
           >
-            <p className="text-[9px] font-semibold uppercase tracking-wide text-foreground/70">
+            <p className="text-xs font-medium text-foreground/70">
               {section.title}
             </p>
             <ul className="mt-1 space-y-0.5">

@@ -122,7 +122,7 @@ function MetaItem({
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
         {loading ? (
           <Skeleton className="mt-1.5 h-4 w-24" />
         ) : (

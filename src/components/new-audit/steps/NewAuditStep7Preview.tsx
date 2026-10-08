@@ -1,5 +1,4 @@
 import { NewAuditStepSection } from "@/components/new-audit/NewAuditStepSection";
-import { Badge } from "@/components/ui/badge";
 import { ASSIGNMENT_MODE_LABELS } from "@/lib/assignment-engine";
 import { CAPTURE_METHOD_OPTIONS } from "@/lib/new-audit/summary";
 import type { CaptureMethod, StartChoice } from "@/lib/new-audit/summary";
@@ -30,8 +29,8 @@ type Props = {
 
 function PreviewGroup({ title, rows }: { title: string; rows: PreviewRow[] }) {
   return (
-    <div className="rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-surface)]/40 p-4">
-      <p className="mb-3 text-xs font-bold uppercase tracking-[0.1em] text-[var(--aislix-secondary)]">
+    <div className="rounded-xl border border-[var(--aislix-border)] bg-white p-4">
+      <p className="mb-3 text-sm font-semibold text-[var(--aislix-primary)]">
         {title}
       </p>
       <dl className="space-y-2">
@@ -52,9 +51,9 @@ function PreviewGroup({ title, rows }: { title: string; rows: PreviewRow[] }) {
 }
 
 function startMethodLabel(choice: StartChoice, templateName?: string) {
-  if (choice === "template") return templateName ? `Template · ${templateName}` : "Select Template";
+  if (choice === "template") return templateName ? `Template · ${templateName}` : "Template";
   if (choice === "csv") return "Upload your document";
-  if (choice === "custom") return "Start from Scratch";
+  if (choice === "custom") return "Start from scratch";
   return "—";
 }
 
@@ -95,26 +94,20 @@ export function NewAuditStep7Preview({
       }
       complete={complete}
     >
-      <div className="mb-4 flex flex-wrap gap-2">
-        <Badge variant="outline">{modeLabel}</Badge>
-        {method !== "ai" ? (
-          <Badge variant="outline">{startMethodLabel(startChoice, templateName)}</Badge>
-        ) : null}
-      </div>
       <div className="grid gap-3 md:grid-cols-2">
         <PreviewGroup
-          title="Step 1 · Details"
+          title="Details"
           rows={[
-            { label: "Audit Name", value: auditName },
+            { label: "Audit name", value: auditName },
             { label: "Description", value: auditDescription || "—" },
           ]}
         />
         <PreviewGroup
-          title="Step 2 · Perform"
+          title="How"
           rows={[{ label: "Mode", value: modeLabel }]}
         />
         <PreviewGroup
-          title="Step 3 · Start"
+          title="Start"
           rows={
             method === "ai"
               ? [
@@ -131,7 +124,7 @@ export function NewAuditStep7Preview({
           }
         />
         <PreviewGroup
-          title="Step 4 · Where"
+          title="Where"
           rows={[
             {
               label: storeNames.length === 1 ? "Store" : "Stores",
@@ -142,10 +135,10 @@ export function NewAuditStep7Preview({
               : []),
           ]}
         />
-        <PreviewGroup title="Step 5 · Who" rows={[{ label: "Assigned to", value: assigneeDisplay }]} />
-        <PreviewGroup title="Step 6 · When" rows={[{ label: "Schedule", value: scheduleSummary }]} />
+        <PreviewGroup title="Who" rows={[{ label: "Assigned to", value: assigneeDisplay }]} />
+        <PreviewGroup title="When" rows={[{ label: "Schedule", value: scheduleSummary }]} />
         {showEvidence && evidenceSummary ? (
-          <PreviewGroup title="Step 3 · Evidence" rows={[{ label: "Required", value: evidenceSummary }]} />
+          <PreviewGroup title="Evidence" rows={[{ label: "Required", value: evidenceSummary }]} />
         ) : null}
       </div>
     </NewAuditStepSection>
@@ -156,9 +149,9 @@ export function formatScheduleSummary(
   mode: keyof typeof ASSIGNMENT_MODE_LABELS,
   publishAt?: string,
 ): string {
-  if (mode === "assign_now") return "Assign Now";
+  if (mode === "assign_now") return "Assign now";
   if (mode === "schedule_once") {
-    return publishAt ? `Schedule Once · ${publishAt}` : "Schedule Once";
+    return publishAt ? `Schedule once · ${publishAt}` : "Schedule once";
   }
   return ASSIGNMENT_MODE_LABELS[mode] ?? mode;
 }

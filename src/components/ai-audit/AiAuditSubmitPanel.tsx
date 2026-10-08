@@ -64,7 +64,7 @@ export function AiAuditSubmitPanel({
   }
 
   return (
-    <div className="mt-6 rounded-xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
+    <div className="mt-6 rounded-xl border border-[#D9E2E8] bg-white p-4">
       <h3 className="text-sm font-semibold text-[#04203F]">Submit audit</h3>
       <p className="mt-1 text-sm text-[#667085]">
         Analysis is complete. Add optional notes, then submit so the assignor is notified.

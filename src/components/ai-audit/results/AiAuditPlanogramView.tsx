@@ -257,11 +257,11 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
         const aiLabel = actualByAiLabel(r);
         return (
           <div className="max-w-[300px]">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-[#667085]">Expected</p>
+            <p className="text-xs font-medium text-[#667085]">Expected</p>
             <p className="font-medium leading-snug text-[#04203F]">{productLabel(r)}</p>
             {aiLabel ? (
               <>
-                <p className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[#667085]">
+                <p className="mt-1.5 text-xs font-medium text-[#667085]">
                   Actual by AI
                 </p>
                 <p className="leading-snug text-[#04203F]">{aiLabel}</p>

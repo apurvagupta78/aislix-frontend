@@ -19,37 +19,25 @@ const OPTIONS: {
   value: Exclude<StartChoice, null>;
   title: string;
   description: string;
-  action: string;
   icon: typeof LayoutTemplate;
-  card: string;
-  selected: string;
 }[] = [
   {
     value: "csv",
     title: "Upload your document",
     description: "Invoice, stock list or price list — PDF, photo, CSV or Excel.",
-    action: "Upload document",
     icon: FileSpreadsheet,
-    card: "border-status-good/30 bg-status-good-soft hover:border-status-good/50",
-    selected: "border-status-good bg-status-good-soft ring-2 ring-status-good/25",
   },
   {
     value: "template",
-    title: "Select Template",
+    title: "Use a template",
     description: "Start with an existing Aislix audit template.",
-    action: "Choose Template",
     icon: LayoutTemplate,
-    card: "border-sky-200 bg-sky-50/70 hover:border-sky-300",
-    selected: "border-sky-500 bg-sky-50 ring-2 ring-sky-200",
   },
   {
     value: "custom",
-    title: "Start from Scratch",
-    description: "Create a completely new audit.",
-    action: "Create Custom",
+    title: "Start from scratch",
+    description: "Build a new audit yourself.",
     icon: Plus,
-    card: "border-status-evidence/30 bg-status-evidence-soft hover:border-status-evidence/50",
-    selected: "border-status-evidence bg-status-evidence-soft ring-2 ring-status-evidence/25",
   },
 ];
 
@@ -81,30 +69,30 @@ export function StartChoiceCards({
               key={option.value}
               type="button"
               onClick={() => onChange(option.value)}
+              aria-pressed={selected}
               className={cn(
-                "relative flex flex-col rounded-2xl border p-4 text-left transition-all",
-                selected ? option.selected : option.card,
+                "relative flex min-h-[44px] flex-col rounded-xl border bg-white p-4 text-left transition-colors",
+                selected
+                  ? "border-[#04203F] ring-1 ring-[#04203F]"
+                  : "border-[#D9E2E8] hover:border-[#9FB3C8]",
               )}
             >
               {selected ? (
-                <span className="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-brand text-brand-foreground">
-                  <Check className="size-3.5" />
+                <span className="absolute right-3 top-3 flex size-5 items-center justify-center rounded-full bg-[#04203F] text-white">
+                  <Check className="size-3" />
                 </span>
               ) : null}
-              <Icon className="mb-3 size-6" />
-              <p className="font-semibold">{option.title}</p>
+              <Icon className="mb-3 size-5 text-[#04203F]" />
+              <p className="font-semibold text-[#04203F]">{option.title}</p>
               <p className="mt-1 flex-1 text-xs leading-relaxed text-muted-foreground">
                 {option.description}
               </p>
-              <span className="mt-3 inline-flex text-xs font-semibold text-brand">
-                {option.action} →
-              </span>
             </button>
           );
         })}
       </div>
       {selectedTemplateName && value === "template" ? (
-        <p className="rounded-xl border border-brand/20 bg-brand-soft/20 px-4 py-3 text-sm">
+        <p className="rounded-xl border border-[#D9E2E8] px-4 py-3 text-sm">
           Selected: <strong>{selectedTemplateName}</strong>
         </p>
       ) : null}

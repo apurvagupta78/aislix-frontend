@@ -122,11 +122,11 @@ function SimpleTemplateCard({
   return (
     <div
       className={cn(
-        "play-card flex h-full min-w-0 flex-col rounded-2xl border border-[var(--aislix-border)] bg-white p-4 transition-shadow",
-        selected && "ring-2 ring-[var(--aislix-primary)]/15",
+        "flex h-full min-w-0 flex-col rounded-xl border bg-white p-4 transition-colors",
+        selected ? "border-[var(--aislix-primary)]" : "border-[var(--aislix-border)] hover:border-[#9FB3C8]",
       )}
     >
-      <h3 className="font-display text-[15px] font-semibold leading-snug text-[var(--aislix-primary)]">
+      <h3 className="text-[15px] font-semibold leading-snug text-[var(--aislix-primary)]">
         {name}
       </h3>
       {description ? (
@@ -137,10 +137,7 @@ function SimpleTemplateCard({
           <Badge
             key={b}
             variant="outline"
-            className={cn(
-              "rounded-full border text-[10px] font-semibold text-[var(--aislix-primary)]",
-              badgeTone(b),
-            )}
+            className="rounded-full border-[var(--aislix-border)] bg-white text-xs font-normal text-[var(--aislix-secondary)]"
           >
             {b}
           </Badge>
@@ -155,13 +152,8 @@ function SimpleTemplateCard({
         >
           <Eye className="size-3 shrink-0" /> Preview
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onUse}
-          className={cn("min-w-0 flex-1 font-semibold shadow-soft", useTemplateButtonClass(colorIndex))}
-        >
-          <Play className="size-3 shrink-0" /> Use Template
+        <Button size="sm" variant="brand" onClick={onUse} className="min-w-0 flex-1">
+          <Play className="size-3 shrink-0" /> Use template
         </Button>
       </div>
     </div>
@@ -248,7 +240,7 @@ export function SimpleTemplatePicker({
     if (t.ai_config?.enabled) out.push("AI");
     if (t.evidence_required) out.push("Evidence");
     if (t.is_system_template) out.push("Aislix");
-    else if (t.visibility === "private") out.push("My Template");
+    else if (t.visibility === "private") out.push("My template");
     else out.push("Organization");
     return out;
   }
@@ -268,9 +260,9 @@ export function SimpleTemplatePicker({
 
   const chips: { id: SourceFilter; label: string }[] = [
     { id: "all", label: "All" },
-    { id: "mine", label: "My Templates" },
+    { id: "mine", label: "My templates" },
     { id: "organization", label: "Organization" },
-    { id: "aislix", label: "Aislix Templates" },
+    { id: "aislix", label: "Aislix templates" },
   ];
 
   return (

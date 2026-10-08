@@ -111,7 +111,7 @@ export function SummaryCard({
 }) {
   return (
     <div className="card-surface card-hover p-4 sm:p-5">
-      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       {loading ? (
         <Skeleton className="mt-3 h-7 w-20" />
       ) : (
@@ -802,11 +802,11 @@ export function InventoryTable({
     <section className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+          <p className="text-xs font-medium text-foreground/70">
             What Aislix found
           </p>
           <h2 className="mt-1 text-base font-semibold tracking-tight sm:text-lg">
-            Products Visible on This Shelf
+            Products visible on this shelf
           </h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
             See the products, brands and visible facings Aislix detected in this photo. This is a
@@ -818,8 +818,8 @@ export function InventoryTable({
           variant="outline"
           size="icon"
           className="size-8 shrink-0 rounded-lg"
-          title="Download Observed Products CSV"
-          aria-label="Download Observed Products CSV"
+          title="Download observed products (CSV)"
+          aria-label="Download observed products (CSV)"
           onClick={exportCsv}
           disabled={rows.length === 0}
         >
@@ -837,7 +837,7 @@ export function InventoryTable({
             key={label}
             className="rounded-xl border border-border/70 bg-background px-4 py-3"
           >
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               {label}
             </p>
             <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-brand">
@@ -917,7 +917,7 @@ export function InventoryTable({
       {view === "brand" ? (
         <div className="mt-4 space-y-4">
           <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+            <p className="text-xs font-medium text-foreground/70">
               Brand presence on this shelf
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">

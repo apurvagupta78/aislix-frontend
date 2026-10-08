@@ -640,7 +640,7 @@ function ScanPage() {
           <div className="space-y-4 lg:col-span-2">
             {verifyScanId ? (
               <section className="rounded-2xl border border-brand/30 bg-brand-soft/40 p-4 sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                <p className="text-xs font-medium text-brand">
                   Fix → re-audit → verify
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -651,7 +651,7 @@ function ScanPage() {
             ) : null}
             {assignment && (
               <section className="rounded-2xl border border-brand/30 bg-brand-soft/50 p-4 sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                <p className="text-xs font-medium text-brand">
                   Assigned audit
                 </p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
@@ -866,7 +866,7 @@ function ScanPage() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button
-                    variant="brand"
+                    variant="outline"
                     size="sm"
                     className="rounded-xl"
                     onClick={mergePlanogramSelections}
@@ -1153,13 +1153,16 @@ function ScanPage() {
 
                 <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                   <p className="text-sm text-muted-foreground">
-                    {items.length} of {MAX_SCAN_IMAGES} images ready to audit
+                    {items.length} of {MAX_SCAN_IMAGES} images ready ·{" "}
+                    {withPlanogram
+                      ? `compliance audit, ${planogramRows.length} expected product${planogramRows.length === 1 ? "" : "s"}`
+                      : "free audit"}
                   </p>
                   <div className="flex gap-2">
                     <Button
                       variant="subtle"
                       size="sm"
-                      className="rounded-xl"
+                      className="h-11 flex-1 rounded-xl sm:h-9 sm:flex-none"
                       disabled={busy || items.length >= MAX_SCAN_IMAGES}
                       onClick={openFiles}
                     >
@@ -1168,7 +1171,7 @@ function ScanPage() {
                     <Button
                       variant="brand"
                       size="sm"
-                      className="rounded-xl"
+                      className="h-11 flex-1 rounded-xl sm:h-9 sm:flex-none"
                       onClick={startScan}
                       disabled={busy || !setupComplete}
                     >
@@ -1178,16 +1181,6 @@ function ScanPage() {
                         <ScanLine className="size-4" />
                       )}
                       {busy ? "Uploading…" : "Start audit"}
-                      {!busy && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-1 rounded-lg text-[11px] font-medium"
-                        >
-                          {withPlanogram
-                            ? `Compliance audit · ${planogramRows.length} expected product${planogramRows.length === 1 ? "" : "s"}`
-                            : "Free audit"}
-                        </Badge>
-                      )}
                     </Button>
 
                   </div>
@@ -1217,8 +1210,8 @@ function ScanPage() {
           </div>
 
           <aside className="space-y-4">
-            <div className="card-surface border border-border/60 p-4 shadow-sm sm:p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
+            <div className="card-surface border border-border/60 p-4 sm:p-5">
+              <p className="text-xs font-medium text-brand">
                 Your audit in 3 steps
               </p>
               <ol className="mt-3.5 space-y-3">
@@ -1258,8 +1251,8 @@ function ScanPage() {
               </ol>
             </div>
 
-            <div className="card-surface border border-border/60 p-4 shadow-sm sm:p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
+            <div className="card-surface border border-border/60 p-4 sm:p-5">
+              <p className="text-xs font-medium text-brand">
                 Get a better audit
               </p>
               <ul className="mt-3.5 space-y-2.5">

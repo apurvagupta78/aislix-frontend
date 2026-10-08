@@ -91,7 +91,7 @@ function ShelfHeatmap({
         const shelfCells = cells.filter((c) => c.shelf === shelf);
         return (
           <div key={shelf}>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
               Shelf {shelf}
             </p>
             <div className="flex flex-wrap gap-1">

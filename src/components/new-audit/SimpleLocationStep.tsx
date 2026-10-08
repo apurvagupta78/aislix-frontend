@@ -180,7 +180,7 @@ export function SimpleLocationStep({ operatingModel, value, onChange, error }: P
             Add stores to your organization before creating an audit.
           </p>
           <Button asChild variant="brand" size="sm" className="mt-4 rounded-xl">
-            <Link to="/store-master">Manage Locations</Link>
+            <Link to="/store-master">Manage locations</Link>
           </Button>
         </div>
       ) : (

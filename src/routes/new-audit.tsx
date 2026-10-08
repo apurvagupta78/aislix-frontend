@@ -144,7 +144,7 @@ const NEW_AUDIT_SCAN_CONTEXT: ScanContextState = {
 };
 
 export const Route = createFileRoute("/new-audit")({
-  head: () => ({ meta: [{ title: "New Audit — Aislix" }] }),
+  head: () => ({ meta: [{ title: "New audit — Aislix" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     templateId: typeof search.templateId === "string" ? search.templateId : undefined,
     systemKey: typeof search.systemKey === "string" ? search.systemKey : undefined,
@@ -1402,14 +1402,14 @@ function NewAuditPage() {
       : aiAuditLaunched
         ? "Audit started"
         : canRunAiAudit
-          ? "Run AI Audit"
+          ? "Run AI audit"
           : "Submit";
 
   return (
     <AppShell title="" hidePageHeader>
       <div className="play-canvas mx-auto max-w-4xl space-y-6 pb-36">
         <PageHeader
-          title="New Audit"
+          title="New audit"
           description="Set up your audit, choose how it will be performed, assign your team and schedule it."
         />
 
@@ -1678,7 +1678,7 @@ function NewAuditPage() {
                   }
                 }}
               >
-                Save Draft
+                Save draft
               </Button>
               <Button
                 variant="brand"

@@ -227,10 +227,10 @@ function ReportViewer() {
         <EmptyState title="Report not found" description="This audit no longer exists." />
       ) : (
         <div className="bg-surface rounded-2xl p-4 sm:p-8">
-          <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-8 shadow-card sm:p-12">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-8 sm:p-12">
             <div className="flex items-start justify-between gap-4 border-b border-border pb-6">
               <div>
-                <p className="text-xs font-medium uppercase tracking-widest text-brand">
+                <p className="text-xs font-medium text-brand">
                   Aislix shelf audit
                 </p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight">

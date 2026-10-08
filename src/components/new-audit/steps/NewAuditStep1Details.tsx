@@ -32,7 +32,7 @@ export function NewAuditStep1Details({
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="audit-name">
-            Audit Name <span className="text-destructive">*</span>
+            Audit name <span className="text-destructive">*</span>
           </Label>
           <Input
             id="audit-name"

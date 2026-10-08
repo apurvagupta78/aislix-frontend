@@ -1,5 +1,3 @@
-import { CalendarClock } from "lucide-react";
-
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -53,12 +51,7 @@ export function AssignmentSchedulePanel({
     onRecurrenceChange({ ...recurrence, ...patch });
 
   return (
-    <div className="space-y-4 rounded-xl border p-4">
-      <div className="flex items-center gap-2">
-        <CalendarClock className="size-4 text-brand" />
-        <p className="font-semibold">When?</p>
-      </div>
-
+    <div className="space-y-4">
       <RadioGroup
         value={mode}
         onValueChange={(v) => onModeChange(v as AssignmentMode)}

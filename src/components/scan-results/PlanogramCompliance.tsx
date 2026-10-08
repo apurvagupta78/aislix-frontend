@@ -12,7 +12,7 @@ import {
 
 /**
  * "Planogram compliance" — rendered for any scan that carried expected products,
- * whether from an assignment or the ad-hoc Option 2 flow on the New Audit page.
+ * whether from an assignment or the ad-hoc Option 2 flow on the New audit page.
  */
 export function PlanogramComparisonSection({ comparison }: { comparison: PlanogramComparison }) {
   const percent = comparison.compliance_percent;
@@ -56,7 +56,7 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
       {comparison.lines.length > 0 && (
         <div className="mt-5 overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-left text-sm">
-            <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="text-xs text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 font-medium">Expected brand</th>
                 <th className="px-3 py-2 font-medium">Expected product</th>
@@ -127,7 +127,7 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
 export function PlanogramMissingAlert({ demoMode = false }: { demoMode?: boolean }) {
   const detail = demoMode
     ? "Add at least one expected product with brand, product name, and expected facings in Products & prices above, then re-audit."
-    : "Link this audit to expected products before auditing — add rows in Products & prices on the New Audit page (Option 2), or assign from a planogram library entry.";
+    : "Link this audit to expected products before auditing — add rows in Products & prices on the New audit page (Option 2), or assign from a planogram library entry.";
   return (
     <section
       role="alert"

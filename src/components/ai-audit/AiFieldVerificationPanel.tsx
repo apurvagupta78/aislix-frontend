@@ -82,7 +82,7 @@ export function AiFieldVerificationPanel({ scanId, products, canEdit = true }: P
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
-            <tr className="border-b border-[#D9E2E8] text-xs uppercase text-[#667085]">
+            <tr className="border-b border-[#D9E2E8] text-xs text-[#667085]">
               <th className="py-2 pr-3 font-medium">Product</th>
               <th className="py-2 pr-3 font-medium">AI facings</th>
               <th className="py-2 pr-3 font-medium">Verified facings</th>

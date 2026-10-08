@@ -152,7 +152,7 @@ export function DemoBrandProductAnalysis({
               onClick={() => downloadBrandAnalysisCsv(data, snapshot)}
             >
               <Download className="mr-1.5 size-3.5" />
-              Download Brand Analysis ↓
+              Download brand analysis
             </Button>
           ) : null}
         </div>
@@ -160,17 +160,17 @@ export function DemoBrandProductAnalysis({
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {/* Share of Shelf */}
-        <article className="rounded-lg border border-border/80 border-l-[3px] border-l-brand bg-card px-4 py-4 shadow-sm">
+        <article className="rounded-lg border border-border bg-card px-4 py-4">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">Share of Shelf</h3>
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">Share of shelf</h3>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
                 Your brand&apos;s shelf space compared with competing brands.
               </p>
             </div>
             {data ? (
               <PanelDownloadButton
-                label="Download Share of Shelf data"
+                label="Download share of shelf data"
                 onClick={() => downloadShareOfShelfCsv(data, snapshot)}
               />
             ) : null}
@@ -194,11 +194,11 @@ export function DemoBrandProductAnalysis({
         </article>
 
         {/* Product Mix */}
-        <article className="rounded-lg border border-border/80 border-l-[3px] border-l-brand/60 bg-card px-4 py-4 shadow-sm">
+        <article className="rounded-lg border border-border bg-card px-4 py-4">
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                Product Mix on the Shelf
+                Product mix on the shelf
               </h3>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
                 See which products and brands occupy the shelf, and how much visible presence each
@@ -207,7 +207,7 @@ export function DemoBrandProductAnalysis({
             </div>
             {data ? (
               <PanelDownloadButton
-                label="Download Product Mix data"
+                label="Download product mix data"
                 onClick={() => downloadProductMixCsv(data, snapshot)}
               />
             ) : null}
@@ -259,7 +259,7 @@ export function DemoBrandProductAnalysis({
 
       {snapshot?.upper_hand?.length ? (
         <div className="mt-4 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Insights
           </p>
           {snapshot.upper_hand.map((edge) => (

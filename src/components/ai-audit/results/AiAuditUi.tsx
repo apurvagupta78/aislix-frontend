@@ -35,7 +35,7 @@ export function AiAuditCard({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-border bg-card shadow-sm",
+        "overflow-hidden rounded-2xl border border-border bg-card",
         className,
       )}
     >
@@ -84,24 +84,19 @@ export function AiMetricStat({
   status?: string | null;
   bg?: string;
 }) {
+  void bg;
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-black/5 px-3 py-3 shadow-sm",
-        !bg && "bg-muted/20",
-      )}
-      style={bg ? { background: bg } : undefined}
-    >
+    <div className="rounded-xl border border-border bg-white px-3 py-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-navy/60">{label}</p>
+        <p className="text-sm text-muted-foreground">{label}</p>
         {status ? (
-          <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-navy/70">
+          <span className="rounded-full border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
             {status}
           </span>
         ) : null}
       </div>
-      <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-navy">{value}</p>
-      {sub ? <p className="mt-0.5 text-[11px] text-navy/55">{sub}</p> : null}
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-navy">{value}</p>
+      {sub ? <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p> : null}
     </div>
   );
 }
@@ -230,7 +225,6 @@ export function AiExecutiveSummary({
     <AiAuditCard
       title="Executive summary"
       description="Key findings from this shelf audit"
-      headerClassName="bg-[#F3EFFB]"
       csvDownload={{
         onDownload: () => {
           const rows: Array<[string, string]> = [];
@@ -251,7 +245,7 @@ export function AiExecutiveSummary({
             return (
               <h4
                 key={i}
-                className="rounded-md bg-[#EEF6FA] px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-[#04203F]"
+                className="pt-1 text-sm font-semibold text-[#04203F]"
               >
                 {block.text}
               </h4>

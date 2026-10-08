@@ -40,7 +40,7 @@ export function AuditScopePanel({ data, loading }: { data?: ScanResult; loading?
 
   return (
     <div className="card-surface p-5 sm:p-6">
-      <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <MapPin className="size-3.5" /> Bay audit scope
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -96,7 +96,7 @@ export function PricingCompliancePanel({ data, loading }: { data?: ScanResult; l
   if (state === "not_configured") {
     return (
       <div className="card-surface p-5 sm:p-6">
-        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <Tag className="size-3.5" /> Price tag compliance
         </p>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -112,7 +112,7 @@ export function PricingCompliancePanel({ data, loading }: { data?: ScanResult; l
   return (
     <div className="card-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <Tag className="size-3.5" /> Price tag compliance
         </p>
         {state === "available" && compliance ? (
@@ -129,7 +129,7 @@ export function PricingCompliancePanel({ data, loading }: { data?: ScanResult; l
       {lines.length ? (
         <div className="mt-4 overflow-x-auto rounded-xl border border-border">
           <table className="w-full min-w-[36rem] text-left text-sm">
-            <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="text-xs text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">Product</th>
                 <th className="px-3 py-2 text-right">Expected</th>

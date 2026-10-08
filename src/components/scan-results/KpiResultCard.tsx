@@ -88,9 +88,7 @@ export function KpiResultCard({
   const body = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/80">
-          {kpi.display_label}
-        </p>
+        <p className="text-sm text-muted-foreground">{kpi.display_label}</p>
         {statusLabel ? (
           <Badge
             variant="secondary"
@@ -154,9 +152,8 @@ export function KpiResultCard({
   );
 
   const className = cn(
-    "rounded-lg border border-border/80 border-l-[3px] bg-card px-3.5 py-3 shadow-sm transition-shadow",
-    kpi.accent_border,
-    onClick && "cursor-pointer hover:border-brand/30",
+    "rounded-lg border border-border bg-card px-3.5 py-3",
+    onClick && "cursor-pointer transition-colors hover:border-[#9FB3C8]",
   );
 
   if (onClick) {

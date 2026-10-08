@@ -32,7 +32,7 @@ export function TemplateChecklistPreview({ definition, templateName }: { definit
         if (!fields.length) return null;
         return (
           <div key={section.key} className="space-y-2">
-            <h5 className="text-xs font-semibold uppercase tracking-wide text-[#667085]">{section.title}</h5>
+            <h5 className="text-xs font-medium text-[#667085]">{section.title}</h5>
             <ul className="grid gap-2 sm:grid-cols-2">
               {fields.map((f) => {
                 const style = ROLE_LABEL[resolveFieldRole(f)] ?? ROLE_LABEL.auditor_input!;

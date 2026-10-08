@@ -268,7 +268,7 @@ export function BboxAnnotationEditor({
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Detections</p>
+          <p className="text-xs font-medium text-muted-foreground">Detections</p>
           <ul className="max-h-72 space-y-1 overflow-y-auto rounded-xl border border-border p-2 text-sm">
             {boxes.filter((b) => !b.draft).length === 0 ? (
               <li className="px-2 py-4 text-center text-xs text-muted-foreground">No boxes yet</li>

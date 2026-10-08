@@ -102,7 +102,7 @@ export function FixRescanVerifyPanel({
     <div className="card-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <ClipboardList className="size-3.5" /> Assigned audit loop
           </p>
           <h3 className="mt-1 text-base font-semibold tracking-tight">

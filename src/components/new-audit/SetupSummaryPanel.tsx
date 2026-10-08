@@ -67,7 +67,7 @@ export function SetupSummaryPanel({
 
   return (
     <aside
-      className={`rounded-2xl border border-border bg-card p-5 shadow-sm ${className ?? ""}`}
+      className={`rounded-2xl border border-border bg-card p-5 ${className ?? ""}`}
     >
       <div className="mb-4 flex items-center justify-between gap-2">
         <h3 className="font-semibold">Your audit setup</h3>
@@ -92,7 +92,7 @@ export function SetupSummaryPanel({
         <SummaryRow icon={Users} label="Template / data" value={startLabel} />
       </div>
       <div className="mt-5 border-t border-border pt-4">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-2 text-xs font-medium text-muted-foreground">
           What your auditor will fill
         </p>
         <AuditorFillPills items={auditorItems} compact />

@@ -82,7 +82,7 @@ export function KpiVisualChartsPanel({
 
         <div>
 
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+          <p className="text-xs font-medium text-foreground/70">
 
             KPI details
 
@@ -90,7 +90,7 @@ export function KpiVisualChartsPanel({
 
           <h2 className="mt-1 text-base font-semibold tracking-tight sm:text-lg">
 
-            See How Your Shelf Performed.
+            How your shelf performed
 
           </h2>
 
@@ -122,7 +122,7 @@ export function KpiVisualChartsPanel({
 
             <Download className="mr-1.5 size-3.5" />
 
-            Download All KPI Data ↓
+            Download all KPI data
 
           </Button>
 
@@ -172,7 +172,7 @@ export function KpiVisualChartsPanel({
 
               <div key={group.label}>
 
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
 
                   {group.label}
 

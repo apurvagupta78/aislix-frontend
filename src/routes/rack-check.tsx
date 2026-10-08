@@ -167,7 +167,7 @@ function RackCheckPage() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <section
           aria-labelledby="new-check"
-          className="h-fit rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm sm:p-5"
+          className="h-fit rounded-2xl border border-[#D9E2E8] bg-white p-4 sm:p-5"
         >
           <h2 id="new-check" className="text-base font-semibold text-[#04203F]">
             New rack check
@@ -201,7 +201,7 @@ function RackCheckPage() {
             <label
               className={cn(
                 "flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-3 py-3 text-sm transition-colors duration-150",
-                file ? "border-[#7DB7D6] bg-[#EEF6FA] text-[#04203F]" : "border-[#D9E2E8] text-[#667085] hover:bg-[#F4F7F9]",
+                file ? "border-[#04203F] bg-white text-[#04203F]" : "border-[#D9E2E8] text-[#667085] hover:bg-[#F4F7F9]",
               )}
             >
               <Camera className="size-4 shrink-0" aria-hidden />
@@ -217,7 +217,7 @@ function RackCheckPage() {
             </label>
             <Button
               variant="brand"
-              className="w-full rounded-xl"
+              className="h-11 w-full rounded-xl"
               disabled={!file || !storeId || run.isPending}
               onClick={() => run.mutate()}
             >
@@ -251,7 +251,7 @@ function RackCheckPage() {
           )}
 
           {rows.length > 1 ? (
-            <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4">
               <h3 className="text-sm font-semibold text-[#04203F]">Recent checks</h3>
               <ul className="mt-2 divide-y divide-[#EEF1F4]">
                 {rows.map((r) => (
@@ -319,7 +319,7 @@ function CheckResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
   const rack = rackLabel(row);
   const verdict = row.status !== "unclear" && row.status !== "none_found";
   return (
-    <div id="check-result" className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm sm:p-5">
+    <div id="check-result" className="rounded-2xl border border-[#D9E2E8] bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-[#04203F]">

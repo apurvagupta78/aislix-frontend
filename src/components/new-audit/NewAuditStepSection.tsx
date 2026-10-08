@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CheckCircle2, CircleDashed } from "lucide-react";
+import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -28,33 +28,28 @@ export function NewAuditStepSection({
     <section
       id={id}
       className={cn(
-        "scroll-mt-28 rounded-2xl border border-[var(--aislix-border)] bg-white p-5 shadow-soft md:p-6",
+        "scroll-mt-28 rounded-2xl border border-[var(--aislix-border)] bg-white p-5 md:p-6",
         className,
       )}
     >
       <header className="mb-5 flex items-start gap-3">
         <span
+          aria-label={complete ? `Step ${stepNumber} done` : `Step ${stepNumber}`}
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold",
+            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
             complete
-              ? "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)]"
-              : "border-[var(--aislix-border)] bg-[var(--aislix-surface)] text-[var(--aislix-secondary)]",
+              ? "border-[#04203F] bg-[#04203F] text-white"
+              : "border-[var(--aislix-border)] bg-white text-[var(--aislix-secondary)]",
           )}
         >
-          {complete ? <CheckCircle2 className="size-4" /> : stepNumber}
+          {complete ? <Check className="size-3.5" /> : stepNumber}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--aislix-secondary)]">
-            Step {stepNumber}
-          </p>
-          <h2 className="font-display text-lg font-semibold text-[var(--aislix-primary)]">{title}</h2>
+          <h2 className="text-lg font-semibold text-[var(--aislix-primary)]">{title}</h2>
           {description ? (
             <p className="mt-1 text-sm text-[var(--aislix-secondary)]">{description}</p>
           ) : null}
         </div>
-        {!complete && !error ? (
-          <CircleDashed className="size-4 shrink-0 text-[var(--aislix-secondary)]" aria-hidden />
-        ) : null}
       </header>
       {error ? <p className="mb-4 text-sm font-medium text-[#04203F]">{error}</p> : null}
       {children}

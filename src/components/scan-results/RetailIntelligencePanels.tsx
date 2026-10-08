@@ -114,7 +114,7 @@ export function ImageQualityPanel({
 
     <div className="card-surface p-5 sm:p-6">
 
-      <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
 
         <Camera className="size-3.5" /> Audit image quality
 
@@ -188,7 +188,7 @@ export function AssortmentPanel({ data, loading }: { data?: ScanResult; loading?
 
           <div key={label} className="rounded-xl border border-border bg-surface px-4 py-3">
 
-            <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
+            <p className="text-xs font-medium text-muted-foreground">{label}</p>
 
             <p className="mt-1 text-lg font-semibold tabular-nums">{metricDisplay(m, suffix ?? "%")}</p>
 
@@ -268,7 +268,7 @@ export function OpportunityLedgerPanel({ data, loading }: { data?: ScanResult; l
 
       <div className="card-surface p-5 sm:p-6">
 
-        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
 
           <ListOrdered className="size-3.5" /> Aislix opportunity ledger
 
@@ -290,7 +290,7 @@ export function OpportunityLedgerPanel({ data, loading }: { data?: ScanResult; l
 
       <div className="flex flex-wrap items-center justify-between gap-2">
 
-        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
 
           <ListOrdered className="size-3.5" /> Aislix opportunity ledger
 
@@ -308,7 +308,7 @@ export function OpportunityLedgerPanel({ data, loading }: { data?: ScanResult; l
 
         <table className="w-full min-w-[48rem] text-left">
 
-          <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="text-xs text-muted-foreground">
 
             <tr>
 
@@ -406,7 +406,7 @@ export function VerifiedExecutionPanel({
 
     <div className="card-surface border-brand/20 bg-brand-soft/20 p-5 sm:p-6">
 
-      <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-brand">
+      <p className="flex items-center gap-2 text-xs font-medium text-brand">
 
         <ShieldCheck className="size-3.5" /> Fix → re-audit → verify
 
@@ -522,7 +522,7 @@ export function HistoricalIntelligencePanel({ data, loading }: { data?: ScanResu
 
     <div className="card-surface p-5 sm:p-6">
 
-      <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
 
         <History className="size-3.5" /> Historical intelligence
 
@@ -654,7 +654,7 @@ export function FixRescanCtaPanel({
 
         <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
 
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Priority action</p>
+          <p className="text-xs font-medium text-muted-foreground">Priority action</p>
 
           <p className="mt-1 font-medium">{top.recommended_action}</p>
 

@@ -141,7 +141,7 @@ export function UnifiedExceptionsPanel({
       ) : (
         <div className="mt-4 overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-left text-sm">
-            <thead className="bg-brand text-xs uppercase tracking-wide text-brand-foreground">
+            <thead className="border-b border-border text-xs text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 font-medium">Severity</th>
                 <th className="px-3 py-2 font-medium">Category</th>

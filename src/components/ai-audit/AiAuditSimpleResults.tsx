@@ -43,7 +43,7 @@ export function AiAuditSimpleResults({ data, imageUrl }: Props) {
 
       {data.executive_summary ? (
         <div className="rounded-xl border border-border bg-card px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Executive summary
           </p>
           <p className="mt-2 text-sm leading-relaxed text-foreground">{data.executive_summary}</p>
@@ -79,7 +79,7 @@ export function AiAuditSimpleResults({ data, imageUrl }: Props) {
               : "—"],
           ].map(([label, value]) => (
             <div key={String(label)} className="rounded-lg border border-border bg-card px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+              <p className="text-xs text-muted-foreground">{label}</p>
               <p className="mt-1 text-lg font-semibold tabular-nums">{value ?? "—"}</p>
             </div>
           ))}

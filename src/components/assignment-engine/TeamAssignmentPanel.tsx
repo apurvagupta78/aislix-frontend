@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Users } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import type { AssignableMember } from "@/lib/assignments";
@@ -43,19 +42,11 @@ export function TeamAssignmentPanel({
   };
 
   return (
-    <div className="space-y-4 rounded-xl border p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold">Who?</p>
-          <p className="text-sm text-muted-foreground">
-            Choose team members to assign this audit to.
-          </p>
-        </div>
-        <Badge variant="secondary">
-          <Users className="mr-1 size-3" />
-          {teamScope.assigneeIds.length} selected
-        </Badge>
-      </div>
+    <div className="space-y-4">
+      <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Users className="size-3.5" aria-hidden />
+        {teamScope.assigneeIds.length} selected
+      </p>
 
       {!singleAssignee ? (
         <div className="flex gap-2">

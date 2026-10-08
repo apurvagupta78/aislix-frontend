@@ -158,9 +158,9 @@ export const TIMEZONE_OPTIONS = [
 ] as const;
 
 export const ASSIGNMENT_MODE_LABELS: Record<AssignmentMode, string> = {
-  assign_now: "Assign Now",
-  schedule_once: "Schedule Once",
-  recurring: "Recurring Audit",
+  assign_now: "Assign now",
+  schedule_once: "Schedule once",
+  recurring: "Recurring audit",
 };
 
 export const DISTRIBUTION_LABELS: Record<DistributionStrategy, string> = {

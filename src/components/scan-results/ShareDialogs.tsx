@@ -172,7 +172,7 @@ export function EmailAuditDialog({
             ) : sent ? (
               "Report sent ✓"
             ) : (
-              <>Send Report →</>
+              <>Send report</>
             )}
           </Button>
         </DialogFooter>

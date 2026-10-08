@@ -36,7 +36,7 @@ export function AiAstraPricesSection({ extras }: { extras: AstraOutputExtras }) 
     <AiAuditCard title="Visible prices" description="Prices read from shelf labels">
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-xs">
-          <thead className="text-[11px] uppercase tracking-wide text-muted-foreground">
+          <thead className="text-xs text-muted-foreground">
             <tr>
               <th className="pb-2 pr-3">Product</th>
               <th className="pb-2 pr-3">Price</th>
@@ -185,7 +185,7 @@ export function AiRoleSummariesSection({
       <div className="grid gap-3 sm:grid-cols-2">
         {entries.map(([role, text]) => (
           <div key={role} className="rounded-lg border border-border/70 px-3 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               {role}
             </p>
             <p className="mt-1 text-sm leading-relaxed">{text}</p>
@@ -285,10 +285,10 @@ export function AiFinancialImpactSection({
         {cards.map((card) => (
           <div
             key={card.label}
-            className="rounded-xl border border-black/5 px-3 py-3 shadow-sm"
+            className="rounded-xl border border-black/5 px-3 py-3"
             style={{ background: card.bg }}
           >
-            <p className="text-[10px] font-bold uppercase tracking-wide text-navy/60">{card.label}</p>
+            <p className="text-xs font-medium text-navy/60">{card.label}</p>
             <p className="mt-1 text-lg font-semibold tabular-nums text-navy">{card.value}</p>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
               <div className="h-full w-2/3 rounded-full" style={{ background: card.accent }} />
@@ -338,7 +338,7 @@ export function AiSubcategoryMismatchesSection({
     <AiAuditCard title="Sub-category mismatches" description="Products outside the audited sub-category">
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-xs">
-          <thead className="text-[11px] uppercase tracking-wide text-muted-foreground">
+          <thead className="text-xs text-muted-foreground">
             <tr>
               <th className="pb-2 pr-3">Brand</th>
               <th className="pb-2 pr-3">Product</th>

@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 function SummaryChip({ value, label }: { value: string | number; label: string }) {
   return (
-    <div className="rounded-lg border border-border/80 bg-card px-3 py-2 shadow-sm">
+    <div className="rounded-lg border border-border/80 bg-card px-3 py-2">
       <p className="text-lg font-semibold tabular-nums tracking-tight text-foreground">{value}</p>
       <p className="text-[10px] leading-snug text-muted-foreground">{label}</p>
     </div>
@@ -91,7 +91,7 @@ function ObservedProductCard({
   return (
     <div
       className={cn(
-        "w-full rounded-lg border border-l-[3px] bg-card px-3 py-2.5 text-left text-xs shadow-sm",
+        "w-full rounded-lg border border-l-[3px] bg-card px-3 py-2.5 text-left text-xs",
         STATUS_ACCENT[statusKey],
       )}
     >
@@ -202,7 +202,7 @@ function ExpectedPositionCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full rounded-lg border border-l-[3px] bg-card px-3 py-2.5 text-left text-xs shadow-sm transition-shadow",
+        "w-full rounded-lg border border-l-[3px] bg-card px-3 py-2.5 text-left text-xs",
         STATUS_ACCENT[position.status],
         selected && "ring-2 ring-brand/25",
       )}
@@ -263,7 +263,7 @@ function ExpectedShelfGrid({
     <div className="space-y-3">
       {shelves.map(([shelfKey, cells]) => (
         <div key={shelfKey} className="rounded-lg border border-border/60 bg-muted/20 p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground/70">
+          <p className="mb-2 text-xs font-medium text-foreground/70">
             {cells[0]?.shelf_label ?? shelfKey}
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -311,7 +311,7 @@ export function PlanogramSideBySidePanel({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold tracking-tight sm:text-lg">
-            Actual Shelf vs Expected Shelf
+            Actual shelf vs expected shelf
           </h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
             See what Aislix found on the shelf compared with the products and positions expected for
@@ -332,7 +332,7 @@ export function PlanogramSideBySidePanel({
               onClick={() => downloadComparisonCsv(data, comparison)}
             >
               <Download className="mr-1.5 size-3.5" />
-              Download Comparison CSV
+              Download comparison (CSV)
             </Button>
             <Button
               type="button"
@@ -342,14 +342,14 @@ export function PlanogramSideBySidePanel({
               onClick={() => downloadExceptionsCsv(data, comparison)}
             >
               <Download className="mr-1.5 size-3.5" />
-              Download Exceptions CSV
+              Download exceptions (CSV)
             </Button>
           </div>
         ) : null}
       </div>
 
-      <div className="mt-4 rounded-lg border border-border/60 bg-card px-4 py-3 shadow-sm">
-        <p className="text-xs font-semibold tracking-tight text-foreground">Shelf Execution</p>
+      <div className="mt-4 rounded-lg border border-border/60 bg-card px-4 py-3">
+        <p className="text-xs font-semibold tracking-tight text-foreground">Shelf execution</p>
         <p className="mt-0.5 text-[10px] text-muted-foreground">
           Aislix compared your shelf photo with the expected shelf setup.
         </p>
@@ -365,8 +365,8 @@ export function PlanogramSideBySidePanel({
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-border/80 bg-card p-3 shadow-sm">
-          <h3 className="text-sm font-semibold tracking-tight text-foreground">What Aislix Saw</h3>
+        <div className="rounded-lg border border-border/80 bg-card p-3">
+          <h3 className="text-sm font-semibold tracking-tight text-foreground">What Aislix saw</h3>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             Your shelf photo with detected products and issues highlighted.
           </p>
@@ -377,7 +377,7 @@ export function PlanogramSideBySidePanel({
               scanId={data?.scan_id}
               loading={loading}
               embedded
-              downloadTooltip="Download Annotated Image"
+              downloadTooltip="Download annotated image"
               highlightLabel={
                 selected
                   ? `Highlighting ${selected.position_id} · ${selected.status_short}`
@@ -387,16 +387,16 @@ export function PlanogramSideBySidePanel({
           </div>
         </div>
 
-        <div className="rounded-lg border border-border/80 bg-card p-3 shadow-sm">
+        <div className="rounded-lg border border-border/80 bg-card p-3">
           <h3 className="text-sm font-semibold tracking-tight text-foreground">
-            What Should Be There
+            What should be there
           </h3>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             The expected products, positions and facings from your shelf setup.
           </p>
           <div className="mt-3 max-h-[32rem] overflow-y-auto pr-1">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground/70">
-              What Should Be
+            <p className="mb-2 text-xs font-medium text-foreground/70">
+              What should be
             </p>
             <ExpectedShelfGrid
               positions={positions}
@@ -405,8 +405,8 @@ export function PlanogramSideBySidePanel({
             />
             {observedCards.length ? (
               <div className="mt-4 border-t border-border/60 pt-3">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground/70">
-                  What Aislix Saw
+                <p className="mb-2 text-xs font-medium text-foreground/70">
+                  What Aislix saw
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {observedCards.map((card) => (

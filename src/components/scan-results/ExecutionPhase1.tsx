@@ -98,7 +98,7 @@ export function ExecutionAuditHeader({
   const auditId = buildAuditHeaderId(data);
   return (
     <div className="card-surface p-5 sm:p-6">
-      <p className="text-xs font-medium uppercase tracking-widest text-brand">AI shelf audit</p>
+      <p className="text-xs font-medium text-brand">AI shelf audit</p>
       <h2 className="mt-2 text-lg font-semibold tracking-tight sm:text-xl">{primary}</h2>
       {meta ? <p className="mt-1 text-sm text-muted-foreground">{meta}</p> : null}
       {auditId ? <p className="mt-1 text-[11px] text-muted-foreground/80">{auditId}</p> : null}
@@ -128,7 +128,7 @@ export function ExecutionScoreHero({
 
   return (
     <div className="card-surface p-5 sm:p-6">
-      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         Retail execution score
       </p>
       {loading ? (
@@ -296,7 +296,7 @@ export function ExecutionKpiStripPanel({
       <div className="space-y-3">
         {showIntro ? (
           <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+            <p className="text-xs font-medium text-foreground/70">
               {KPI_STRIP_INTRO.eyebrow}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -387,7 +387,7 @@ function IssueGroupCard({
             className="h-8 shrink-0 rounded-lg text-xs text-brand hover:text-brand"
             onClick={() => scrollToActionEvidence(group.evidence_target)}
           >
-            View Evidence <ArrowRight className="ml-1 size-3.5" />
+            View evidence <ArrowRight className="ml-1 size-3.5" />
           </Button>
         </div>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{group.explanation}</p>
@@ -453,7 +453,7 @@ export function ActionCenterPanel({
     <section className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+          <h3 className="text-xs font-medium text-foreground/70">
             Issues to fix
           </h3>
           <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground">
@@ -467,8 +467,8 @@ export function ActionCenterPanel({
             variant="outline"
             size="icon"
             className="size-8 shrink-0 rounded-lg"
-            title="Download Action List"
-            aria-label="Download Action List"
+            title="Download action list"
+            aria-label="Download action list"
             onClick={() => downloadIssuesToFixCsv(data, comparison ?? null, demoMode)}
           >
             <Download className="size-3.5" />
@@ -526,7 +526,7 @@ export function ActionCenterPanel({
 
           {viewModel.type_counts.length >= 2 ? (
             <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+              <p className="text-xs font-medium text-foreground/70">
                 Issues by type
               </p>
               <ul className="mt-2 space-y-1.5">
@@ -604,7 +604,7 @@ export function AiSummaryBlock({
         <div className="mt-4 space-y-4">
           {rollup.map((section) => (
             <div key={section.key}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 {section.label}
               </p>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{section.text}</p>
@@ -692,7 +692,7 @@ export function CompetitorIntelPanel({
         <div className="mt-4 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-brand/20 bg-brand-soft/30 px-4 py-3">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Share of facings</p>
+              <p className="text-xs text-muted-foreground">Share of facings</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {snapshot.primary_brand}{" "}
                 <span className="text-lg text-muted-foreground">
@@ -703,7 +703,7 @@ export function CompetitorIntelPanel({
             </div>
             {snapshot.product_share_percent !== undefined && snapshot.product_label ? (
               <div className="rounded-xl border border-border bg-surface px-4 py-3">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Product share</p>
+                <p className="text-xs text-muted-foreground">Product share</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">
                   {snapshot.product_label}{" "}
                   <span className="text-lg text-muted-foreground">
@@ -716,7 +716,7 @@ export function CompetitorIntelPanel({
           </div>
           {snapshot.upper_hand?.length ? (
             <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-widest text-brand">
+              <p className="text-xs font-medium text-brand">
                 Where competitors lead
               </p>
               {snapshot.upper_hand.map((edge) => (
@@ -844,7 +844,7 @@ export function FacingsSummaryStrip({ data, loading }: { data?: ScanResult; load
         { label: "Brands", value: s?.unique_brands },
       ].map(({ label, value }) => (
         <div key={label} className="card-surface px-4 py-3">
-          <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             {label}
           </p>
           {loading ? (
@@ -904,7 +904,7 @@ export function SkuAvailabilityPanel({
       ) : (
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl border border-border bg-surface px-4 py-3">
-            <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Target SKU availability
             </p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">
@@ -915,7 +915,7 @@ export function SkuAvailabilityPanel({
             )}
           </div>
           <div className="rounded-xl border border-border bg-surface px-4 py-3">
-            <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Category OSA
             </p>
             {categoryOsaConfigured && categoryPct !== undefined ? (
@@ -959,7 +959,7 @@ function PriorityOverviewBar({ summary }: { summary: ReturnType<typeof buildPrio
   ];
   return (
     <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+      <p className="text-xs font-medium text-foreground/70">
         Priority overview
       </p>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
@@ -990,7 +990,7 @@ function IssueTypeBar({ counts }: { counts: ReturnType<typeof buildIssueTypeCoun
   const max = Math.max(...counts.map((c) => c.count), 1);
   return (
     <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+      <p className="text-xs font-medium text-foreground/70">
         Issues by type
       </p>
       <ul className="mt-2 space-y-1.5">
@@ -1022,7 +1022,7 @@ export function RecommendedActionsPanel({ data, loading }: { data?: ScanResult; 
     <section className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+          <h3 className="text-xs font-medium text-foreground/70">
             What to fix next
           </h3>
           <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground">
@@ -1036,8 +1036,8 @@ export function RecommendedActionsPanel({ data, loading }: { data?: ScanResult; 
             variant="outline"
             size="icon"
             className="size-8 shrink-0 rounded-lg"
-            title="Download Action List"
-            aria-label="Download Action List"
+            title="Download action list"
+            aria-label="Download action list"
             onClick={() => downloadRecommendedActionsCsv(data)}
             disabled={cards.length === 0}
           >
@@ -1205,14 +1205,14 @@ export function FinancialImpactPanel({
   );
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
+    <div className="relative overflow-hidden rounded-xl border border-border bg-card p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+          <p className="flex items-center gap-2 text-xs font-medium text-foreground/70">
             <IndianRupee className="size-3.5" /> Commercial impact
           </p>
           <h3 className="mt-1 text-base font-semibold tracking-tight sm:text-lg">
-            See the Potential Impact of Shelf Issues.
+            Potential impact of shelf issues
           </h3>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
             Estimate the potential commercial exposure from visible availability, stock and facing
@@ -1220,8 +1220,8 @@ export function FinancialImpactPanel({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-wide">
-            PRO FEATURE
+          <Badge variant="outline" className="rounded-full text-xs">
+            Pro feature
           </Badge>
           {data && impact ? (
             <Button
@@ -1229,8 +1229,8 @@ export function FinancialImpactPanel({
               variant="outline"
               size="icon"
               className="size-8 rounded-lg"
-              title="Download Commercial Impact Data"
-              aria-label="Download Commercial Impact Data"
+              title="Download commercial impact data"
+              aria-label="Download commercial impact data"
               onClick={() => downloadCommercialImpactCsv(data)}
             >
               <Download className="size-3.5" />
@@ -1292,7 +1292,7 @@ function SkuExposureChart({ rows }: { rows: CommercialImpactView["sku_rows"] }) 
   const maxDaily = Math.max(...rows.map((r) => r.daily_loss_inr), 1);
   return (
     <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+      <p className="text-xs font-medium text-foreground/70">
         Estimated exposure by SKU
       </p>
       <ul className="mt-3 space-y-2.5">
@@ -1375,10 +1375,10 @@ function FinancialImpactBody({
                 className="rounded-xl border border-border/70 bg-background px-4 py-3"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {label}
                   </p>
-                  <span className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                  <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
                     {status}
                   </span>
                 </div>
@@ -1395,10 +1395,10 @@ function FinancialImpactBody({
       ) : (
         <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Commercial risk
             </p>
-            <span className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
               {estimateStatus}
             </span>
           </div>
@@ -1448,7 +1448,7 @@ export function DemoFinancialImpactStrip({
   const hasRisk = level >= 2 && impact.estimated_daily_lost_sales_inr > 0;
   return (
     <div className={cn("rounded-xl border border-border bg-surface p-4", className)}>
-      <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         {level === 1 ? "Commercial risk" : "Revenue at risk (daily)"}
       </p>
       <p

@@ -289,7 +289,7 @@ export function ReferenceSourcePanel({
           </p>
           <div className="max-h-[420px] overflow-auto rounded-xl border border-[#D9E2E8]">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 z-10 bg-[#F4F7F9] text-left text-[10px] uppercase tracking-wide text-[#667085]">
+              <thead className="sticky top-0 z-10 bg-white text-left text-xs text-[#667085]">
                 <tr>
                   <th className="px-2 py-2 font-semibold">#</th>
                   {COLUMNS.map((c) => (

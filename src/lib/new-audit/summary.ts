@@ -15,13 +15,13 @@ export const CAPTURE_METHOD_OPTIONS: {
 }[] = [
   {
     value: "digital",
-    title: "Digital Audit",
+    title: "Digital audit",
     description:
       "Your team records results in Aislix. Upload your document, start from a template, or build from scratch.",
   },
   {
     value: "ai",
-    title: "AI Audit",
+    title: "AI audit",
     description: "Use AI to analyze photos and identify relevant audit results.",
   },
 ];

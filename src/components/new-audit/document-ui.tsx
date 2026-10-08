@@ -233,8 +233,7 @@ export async function uploadAndReadDocument(
 export function DocumentBusyBanner({ stage, detail }: { stage: "upload" | "read" | "csv"; detail?: string | null }) {
   return (
     <div
-      className="flex items-center gap-3 rounded-xl border px-4 py-3 text-sm text-[#04203F]"
-      style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.blue }}
+      className="flex items-center gap-3 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-4 py-3 text-sm text-[#04203F]"
       role="status"
     >
       <Loader2 className="size-4 animate-spin" />

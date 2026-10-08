@@ -159,7 +159,7 @@ export function TemplateChoiceGrid({ operatingModel, templateChoice, savedTempla
 
       {saved.length ? (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--aislix-secondary)]">
+          <h3 className="text-xs font-medium text-[var(--aislix-secondary)]">
             Your templates
           </h3>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -186,7 +186,7 @@ export function TemplateChoiceGrid({ operatingModel, templateChoice, savedTempla
       {specs.length ? (
         <div className="space-y-2">
           {saved.length ? (
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--aislix-secondary)]">
+            <h3 className="text-xs font-medium text-[var(--aislix-secondary)]">
               Aislix templates
             </h3>
           ) : null}

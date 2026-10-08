@@ -86,7 +86,7 @@ export function AstraComparisonResults({ result, className }: Props) {
       </div>
       <div className="overflow-x-auto rounded-lg border border-border/70">
         <table className="min-w-full text-left text-xs">
-          <thead className="bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <thead className="text-xs text-muted-foreground">
             <tr>
               <th className="px-2 py-2">Product</th>
               <th className="px-2 py-2">Exp facings</th>

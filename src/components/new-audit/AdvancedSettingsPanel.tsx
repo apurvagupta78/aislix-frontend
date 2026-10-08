@@ -265,7 +265,7 @@ export function AdvancedSettingsPanel({
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-1.5">
-          <Label>Minimum Evidences</Label>
+          <Label>Minimum evidence</Label>
           <Select
             value={String(evidencePolicy.minimumPhotos)}
             onValueChange={(v) => onEvidencePolicyChange({ minimumPhotos: Number(v) })}
