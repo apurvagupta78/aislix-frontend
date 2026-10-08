@@ -150,18 +150,14 @@ function appendUtm(form: FormData) {
   }
 }
 
-async function postScan(form: FormData, _fallback: string): Promise<LandingScanResult> {
-  // Same-origin proxy: keeps the demo working from any origin, records the
-  // anonymous attempt, and allows the slow vision scan up to two minutes.
+const SCAN_POLL_MS = 4_000;
+const SCAN_MAX_WAIT_MS = 8 * 60_000;
+
+async function postJson(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 180_000);
-  let res: Response;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    res = await fetch("/api/public/landing/scan", {
-      method: "POST",
-      body: form,
-      signal: controller.signal,
-    });
+    return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new LandingScanError(GENERIC_TIMEOUT, 408);
@@ -170,6 +166,9 @@ async function postScan(form: FormData, _fallback: string): Promise<LandingScanR
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function readScanResponse(res: Response): Promise<LandingScanResult> {
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as unknown;
     throw new LandingScanError(parseApiDetail(body), res.status);
@@ -181,6 +180,51 @@ async function postScan(form: FormData, _fallback: string): Promise<LandingScanR
     inventory: payload.inventory ?? [],
     metrics: payload.metrics ?? {},
   };
+}
+
+/** Polls a background demo scan until it completes, fails or runs out of time. */
+async function waitForScan(sessionId: string, aiAnalysis: string | null): Promise<LandingScanResult> {
+  const deadline = Date.now() + SCAN_MAX_WAIT_MS;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, SCAN_POLL_MS));
+    let res: Response;
+    try {
+      res = await postJson(
+        "/api/public/landing/scan-status",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ landing_session_id: sessionId, ai_analysis: aiAnalysis }),
+        },
+        90_000,
+      );
+    } catch {
+      continue;
+    }
+    if (res.status === 200) {
+      const body = (await res.clone().json().catch(() => null)) as { status?: string } | null;
+      if (body?.status === "processing") continue;
+      return readScanResponse(res);
+    }
+    if (res.status >= 500 || res.status === 408) continue;
+    return readScanResponse(res);
+  }
+  throw new LandingScanError(GENERIC_TIMEOUT, 408);
+}
+
+async function postScan(form: FormData, _fallback: string): Promise<LandingScanResult> {
+  // Same-origin proxy: keeps the demo working from any origin and records the
+  // anonymous attempt. The AI run happens in a background job that we poll.
+  form.append("async", "1");
+  const aiAnalysis = form.get("ai_analysis");
+  const res = await postJson("/api/public/landing/scan", { method: "POST", body: form }, 180_000);
+  if (res.status === 202) {
+    const started = (await res.json().catch(() => null)) as { landing_session_id?: string } | null;
+    if (started?.landing_session_id) {
+      return waitForScan(started.landing_session_id, typeof aiAnalysis === "string" ? aiAnalysis : null);
+    }
+  }
+  return readScanResponse(res);
 }
 
 /** Optional shelf context forwarded with a landing scan. */

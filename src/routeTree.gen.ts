@@ -131,6 +131,7 @@ import { Route as AuditTemplatesTemplateIdTestRouteImport } from './routes/audit
 import { Route as AuditTemplatesTemplateIdVersionsRouteImport } from './routes/audit-templates.$templateId.versions'
 import { Route as ExpiryControlInspectAttemptIdRouteImport } from './routes/expiry-control.inspect.$attemptId'
 import { Route as ApiPublicLandingScanRouteImport } from './routes/api/public/landing/scan'
+import { Route as ApiPublicLandingScanStatusRouteImport } from './routes/api/public/landing/scan-status'
 import { Route as ApiPublicShareTokenRouteImport } from './routes/api/public/share/$token'
 import { Route as ApiPublicSharePersistRouteImport } from './routes/api/public/share/persist'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -760,6 +761,12 @@ const ApiPublicLandingScanRoute = ApiPublicLandingScanRouteImport.update({
   path: '/api/public/landing/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicLandingScanStatusRoute =
+  ApiPublicLandingScanStatusRouteImport.update({
+    id: '/api/public/landing/scan-status',
+    path: '/api/public/landing/scan-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicShareTokenRoute = ApiPublicShareTokenRouteImport.update({
   id: '/api/public/share/$token',
   path: '/api/public/share/$token',
@@ -910,6 +917,7 @@ export interface FileRoutesByFullPath {
   '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/expiry-control/inspect/$attemptId': typeof ExpiryControlInspectAttemptIdRoute
   '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
+  '/api/public/landing/scan-status': typeof ApiPublicLandingScanStatusRoute
   '/api/public/share/$token': typeof ApiPublicShareTokenRoute
   '/api/public/share/persist': typeof ApiPublicSharePersistRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -1039,6 +1047,7 @@ export interface FileRoutesByTo {
   '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/expiry-control/inspect/$attemptId': typeof ExpiryControlInspectAttemptIdRoute
   '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
+  '/api/public/landing/scan-status': typeof ApiPublicLandingScanStatusRoute
   '/api/public/share/$token': typeof ApiPublicShareTokenRoute
   '/api/public/share/persist': typeof ApiPublicSharePersistRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -1169,6 +1178,7 @@ export interface FileRoutesById {
   '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/expiry-control/inspect/$attemptId': typeof ExpiryControlInspectAttemptIdRoute
   '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
+  '/api/public/landing/scan-status': typeof ApiPublicLandingScanStatusRoute
   '/api/public/share/$token': typeof ApiPublicShareTokenRoute
   '/api/public/share/persist': typeof ApiPublicSharePersistRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -1300,6 +1310,7 @@ export interface FileRouteTypes {
     | '/audit-templates/$templateId/versions'
     | '/expiry-control/inspect/$attemptId'
     | '/api/public/landing/scan'
+    | '/api/public/landing/scan-status'
     | '/api/public/share/$token'
     | '/api/public/share/persist'
     | '/lovable/email/auth/preview'
@@ -1429,6 +1440,7 @@ export interface FileRouteTypes {
     | '/audit-templates/$templateId/versions'
     | '/expiry-control/inspect/$attemptId'
     | '/api/public/landing/scan'
+    | '/api/public/landing/scan-status'
     | '/api/public/share/$token'
     | '/api/public/share/persist'
     | '/lovable/email/auth/preview'
@@ -1558,6 +1570,7 @@ export interface FileRouteTypes {
     | '/audit-templates/$templateId/versions'
     | '/expiry-control/inspect/$attemptId'
     | '/api/public/landing/scan'
+    | '/api/public/landing/scan-status'
     | '/api/public/share/$token'
     | '/api/public/share/persist'
     | '/lovable/email/auth/preview'
@@ -1657,6 +1670,7 @@ export interface RootRouteChildren {
   ApiPlanogramParseCsvRoute: typeof ApiPlanogramParseCsvRoute
   ApiPublicGeoRoute: typeof ApiPublicGeoRoute
   ApiPublicLandingScanRoute: typeof ApiPublicLandingScanRoute
+  ApiPublicLandingScanStatusRoute: typeof ApiPublicLandingScanStatusRoute
   ApiPublicShareTokenRoute: typeof ApiPublicShareTokenRoute
   ApiPublicSharePersistRoute: typeof ApiPublicSharePersistRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -2520,6 +2534,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicLandingScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/landing/scan-status': {
+      id: '/api/public/landing/scan-status'
+      path: '/api/public/landing/scan-status'
+      fullPath: '/api/public/landing/scan-status'
+      preLoaderRoute: typeof ApiPublicLandingScanStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/share/$token': {
       id: '/api/public/share/$token'
       path: '/api/public/share/$token'
@@ -2811,6 +2832,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPlanogramParseCsvRoute: ApiPlanogramParseCsvRoute,
   ApiPublicGeoRoute: ApiPublicGeoRoute,
   ApiPublicLandingScanRoute: ApiPublicLandingScanRoute,
+  ApiPublicLandingScanStatusRoute: ApiPublicLandingScanStatusRoute,
   ApiPublicShareTokenRoute: ApiPublicShareTokenRoute,
   ApiPublicSharePersistRoute: ApiPublicSharePersistRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,

@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { Json } from "@/integrations/supabase/types";
 import { GENERIC_SCAN, parseApiDetail } from "@/lib/api-errors";
-import { parseAiAnalysisRequest, type AiAnalysisRequest } from "@/lib/ai-audit/ai-analysis";
-import { runLunaAnalysis } from "@/lib/ai-audit/luna-analysis.server";
-import { buildLunaEvidence, shelfProductsFromRows, shelfPromotionsFromAstra } from "@/lib/ai-audit/luna-evidence";
-import { findReferenceMatch } from "@/lib/ai-audit/reference-match";
+import {
+  attachLunaAnalysis,
+  MAX_AI_ANALYSIS_CHARS,
+  parseAiAnalysisText,
+  recordLandingSession,
+  safeLandingResult,
+} from "@/lib/landing-scan-finalize.server";
 import {
   hashForBucket,
   requestClientIp,
@@ -34,44 +36,8 @@ const LONG_FIELD_CAPS: Record<string, number> = {
   planogram_items: MAX_PLANOGRAM_CHARS,
   reference_items: MAX_PLANOGRAM_CHARS,
   reference_document: 20_000,
-  ai_analysis: 4_000,
+  ai_analysis: MAX_AI_ANALYSIS_CHARS,
 };
-
-function aiAnalysisFromForm(form: FormData): AiAnalysisRequest | null {
-  const raw = longTextField(form, "ai_analysis");
-  if (!raw) return null;
-  try {
-    return parseAiAnalysisRequest(JSON.parse(raw));
-  } catch {
-    return null;
-  }
-}
-
-/** Luna answers the visitor's checks / question from the finished demo scan. Never throws. */
-async function attachLunaAnalysis(payload: Record<string, unknown>, request: AiAnalysisRequest) {
-  const metrics =
-    payload.metrics && typeof payload.metrics === "object" && !Array.isArray(payload.metrics)
-      ? (payload.metrics as Record<string, unknown>)
-      : {};
-  const products = shelfProductsFromRows(payload.inventory);
-  const brandShare = (Array.isArray(payload.brand_share) ? payload.brand_share : [])
-    .filter((b): b is Record<string, unknown> => Boolean(b) && typeof b === "object")
-    .map((b) => ({ brand: String(b.brand ?? "Unknown"), share: Number(b.share ?? b.percent ?? 0) || 0 }));
-  const multiPhoto = metrics.multi_photo as Record<string, unknown> | undefined;
-  const analysis = await runLunaAnalysis(
-    request,
-    buildLunaEvidence({
-      referenceMatch: findReferenceMatch(metrics, payload),
-      products,
-      brandShare,
-      totalFacings: products.reduce((sum, p) => sum + p.facings, 0),
-      countPending: metrics.scan_complete === false,
-      photoCount: typeof multiPhoto?.photo_count === "number" ? multiPhoto.photo_count : 1,
-      promotions: shelfPromotionsFromAstra(metrics.astra_cv_analysis ?? payload.astra_cv_analysis),
-    }),
-  );
-  payload.metrics = { ...metrics, luna_analysis: analysis };
-}
 
 function longTextField(form: FormData, field: string): string | null {
   const value = form.get(field);
@@ -92,13 +58,6 @@ function textField(form: FormData, field: string): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed ? trimmed.slice(0, MAX_TEXT_LENGTH) : null;
-}
-
-function safeResult(payload: unknown): Json | null {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
-  const { annotated_image_base64: _annotated, original_image_base64: _original, csv_base64: _csv, ...rest } =
-    payload as Record<string, unknown>;
-  return JSON.parse(JSON.stringify(rest)) as Json;
 }
 
 export const Route = createFileRoute("/api/public/landing/scan")({
@@ -150,11 +109,21 @@ export const Route = createFileRoute("/api/public/landing/scan")({
         const userAgent = request.headers.get("user-agent")?.slice(0, 1000) ?? null;
         const referrer = request.headers.get("referer")?.slice(0, 2048) ?? null;
         const utm = Object.fromEntries(UTM_FIELDS.map((field) => [field, textField(incoming, field)]));
+        const wantsJob = textField(incoming, "async") === "1";
+        const sessionFields = {
+          sample_id: sampleId,
+          category: file ? "uploaded_shelf" : "sample_shelf",
+          ip_hash: ipHash,
+          user_agent: userAgent,
+          referrer,
+          ...utm,
+        };
 
         const forward = new FormData();
         if (file) forward.append("file", file, file.name);
         if (sampleId) forward.append("sample_id", sampleId);
         forward.append("landing_session_id", attemptToken);
+        if (wantsJob) forward.append("async", "1");
         appendForwardedFields(forward, incoming, CONTEXT_FIELDS);
         appendForwardedFields(forward, incoming, ASTRA_FIELDS);
         for (const field of UTM_FIELDS) {
@@ -175,49 +144,36 @@ export const Route = createFileRoute("/api/public/landing/scan")({
           } catch {
             payload = null;
           }
+          const payloadRecord =
+            payload && typeof payload === "object" && !Array.isArray(payload)
+              ? (payload as Record<string, unknown>)
+              : null;
 
-          const aiRequest = aiAnalysisFromForm(incoming);
-          if (upstream.ok && aiRequest && payload && typeof payload === "object" && !Array.isArray(payload)) {
-            await attachLunaAnalysis(payload as Record<string, unknown>, aiRequest);
+          if (upstream.status === 202 && payloadRecord?.status === "processing") {
+            await recordLandingSession(attemptToken, { ...sessionFields, scan_status: "processing" });
+            return Response.json(
+              { landing_session_id: attemptToken, status: "processing" },
+              { status: 202, headers: { "Cache-Control": "no-store" } },
+            );
+          }
+
+          const aiRequest = parseAiAnalysisText(longTextField(incoming, "ai_analysis"));
+          if (upstream.ok && aiRequest && payloadRecord) {
+            await attachLunaAnalysis(payloadRecord, aiRequest);
           }
 
           if (upstream.ok || upstream.status === 422) {
-            try {
-              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-              const payloadRecord =
-                payload && typeof payload === "object" && !Array.isArray(payload)
-                  ? (payload as Record<string, unknown>)
-                  : null;
-              const detail =
-                payloadRecord && typeof payloadRecord.detail === "string" ? payloadRecord.detail : null;
-              const scanId =
-                payloadRecord && typeof payloadRecord.scan_id === "string" ? payloadRecord.scan_id : null;
-              const { error } = await supabaseAdmin.from("landing_demo_sessions").upsert(
-                {
-                  session_token: attemptToken,
-                  scan_status: upstream.ok ? "completed" : "failed",
-                  scan_error: upstream.ok ? null : detail ?? `AI service returned ${upstream.status}`,
-                  scan_id: scanId,
-                  scan_result: upstream.ok ? safeResult(payload) : null,
-                  sample_id: sampleId,
-                  category: file ? "uploaded_shelf" : "sample_shelf",
-                  ip_hash: ipHash,
-                  user_agent: userAgent,
-                  referrer,
-                  ...utm,
-                  updated_at: new Date().toISOString(),
-                },
-                { onConflict: "session_token" },
-              );
-              if (error) console.error("Landing scan record finalize failed:", error.message);
-            } catch (error) {
-              console.error("Landing scan record finalize failed:", error);
-            }
+            const detail = payloadRecord && typeof payloadRecord.detail === "string" ? payloadRecord.detail : null;
+            await recordLandingSession(attemptToken, {
+              ...sessionFields,
+              scan_status: upstream.ok ? "completed" : "failed",
+              scan_error: upstream.ok ? null : detail ?? `AI service returned ${upstream.status}`,
+              scan_id: payloadRecord && typeof payloadRecord.scan_id === "string" ? payloadRecord.scan_id : null,
+              scan_result: upstream.ok ? safeLandingResult(payload) : null,
+            });
           }
 
-          if (payload && typeof payload === "object" && !Array.isArray(payload)) {
-            (payload as Record<string, unknown>).landing_session_id = attemptToken;
-          }
+          if (payloadRecord) payloadRecord.landing_session_id = attemptToken;
           const responseBody = upstream.ok
             ? (payload ?? {})
             : { detail: parseApiDetail(payload ?? {}, GENERIC_SCAN) };
