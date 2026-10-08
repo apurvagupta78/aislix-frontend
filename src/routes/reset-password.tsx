@@ -113,7 +113,7 @@ function ResetPasswordPage() {
 
       {linkState === "expired" && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <div className="rounded-xl border border-[#ECBDCC] bg-white p-4 text-sm text-destructive">
             Your password reset link has expired or was already used. Request a new link and open it
             from the same browser.
           </div>

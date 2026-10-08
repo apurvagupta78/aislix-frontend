@@ -74,7 +74,7 @@ export function GuestPageChrome({ children, className }: GuestPageChromeProps) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className="rounded-md bg-[var(--aislix-supermarket-bg)] text-xs font-medium text-[#4F6B2E]">
+            <Badge className="rounded-md bg-[var(--aislix-supermarket-bg)] text-xs font-medium text-navy">
               Demo ON
             </Badge>
             <div className="flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1.5">

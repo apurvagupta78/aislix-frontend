@@ -1,5 +1,5 @@
 import { retailFormats } from "@/lib/home/homepage-data";
-import { toneCard, toneText } from "@/lib/home/homepage-tone";
+import { toneCard, toneDot, toneText } from "@/lib/home/homepage-tone";
 
 export function HomeRetailFormats() {
   return (
@@ -23,12 +23,15 @@ export function HomeRetailFormats() {
           {retailFormats.map(({ icon: Icon, title, body, tone }) => (
             <li
               key={title}
-              className={`flex flex-col items-center rounded-2xl border px-5 py-7 text-center ${toneCard[tone]}`}
+              className={`flex flex-col items-center rounded-xl border px-5 py-7 text-center ${toneCard[tone]}`}
             >
-              <span className="flex size-10 items-center justify-center rounded-xl bg-white">
+              <span className="flex size-10 items-center justify-center rounded-lg bg-muted">
                 <Icon className={`size-5 ${toneText[tone]}`} aria-hidden="true" />
               </span>
-              <h3 className="mt-4 text-base font-semibold text-foreground">{title}</h3>
+              <h3 className="mt-4 flex items-center gap-2 text-base font-semibold text-foreground">
+                <span className={`size-1.5 shrink-0 rounded-full ${toneDot[tone]}`} aria-hidden="true" />
+                {title}
+              </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
             </li>
           ))}

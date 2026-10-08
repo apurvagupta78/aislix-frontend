@@ -28,7 +28,7 @@ export const GUEST_KPI_CARDS = [
     label: "Critical",
     value: "3",
     detail: "Need attention today",
-    accent: "#B03A63",
+    accent: "#ECBDCC",
   },
   {
     label: "Overdue actions",

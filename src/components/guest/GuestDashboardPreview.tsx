@@ -67,7 +67,7 @@ export function GuestDashboardPreview() {
 
       <div
         id="assigned"
-        className="rounded-xl border border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)] px-4 py-3 text-sm text-foreground"
+        className="rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground"
       >
         Assigned audits appear here after you create a workspace. In guest mode, start with a
         shelf scan below.

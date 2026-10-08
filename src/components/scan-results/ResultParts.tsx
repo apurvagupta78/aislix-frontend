@@ -437,7 +437,7 @@ export function ComplianceAlertCard({
 
 const severityStyles: Record<Severity, string> = {
   high: "border-destructive/30 bg-destructive/10 text-destructive",
-  medium: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  medium: "border-[#ECBDCC] bg-[#FFEAF1] text-[#04203F] dark:text-amber-400",
   low: "border-brand/25 bg-brand-soft text-brand",
 };
 
@@ -578,7 +578,7 @@ const PAGE_SIZE = 10;
 const STATUS_PILL: Record<ObservedProductStatus, string> = {
   Observed: "border-brand/25 bg-brand-soft text-brand",
   Matched: "border-accent-green/30 bg-accent-green-soft text-accent-green",
-  "Needs Review": "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+  "Needs Review": "border-[#ECBDCC] bg-[#FFEAF1] text-[#04203F] dark:text-amber-200",
   Unknown: "border-border bg-muted/50 text-muted-foreground",
   "Not Assessed": "border-border bg-muted/30 text-muted-foreground",
 };
@@ -596,7 +596,7 @@ function ConfidenceDistributionStrip({ items }: { items: InventoryItem[] }) {
   const total = dist.high + dist.needs_review + dist.unknown || 1;
   const segments = [
     { label: "High confidence", count: dist.high, className: "bg-accent-green" },
-    { label: "Needs review", count: dist.needs_review, className: "bg-amber-500" },
+    { label: "Needs review", count: dist.needs_review, className: "bg-[#ECBDCC]" },
     { label: "Unknown", count: dist.unknown, className: "bg-muted-foreground/40" },
   ];
   return (

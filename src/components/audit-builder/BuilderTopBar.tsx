@@ -28,7 +28,7 @@ export function BuilderTopBar({
           {status}
         </Badge>
         {dirty ? (
-          <span className="text-xs text-amber-600 dark:text-amber-400">Unsaved changes</span>
+          <span className="text-xs text-[#04203F] dark:text-amber-400">Unsaved changes</span>
         ) : null}
       </div>
       <div className="flex flex-wrap gap-2">

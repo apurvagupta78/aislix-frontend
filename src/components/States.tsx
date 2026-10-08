@@ -68,7 +68,7 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className="flex flex-col items-center justify-center rounded-xl border border-status-danger bg-status-danger-soft px-6 py-14 text-center"
+      className="flex flex-col items-center justify-center rounded-xl border border-status-danger bg-white px-6 py-14 text-center"
     >
       <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-card text-status-danger-strong">
         <AlertTriangle className="size-6" aria-hidden />

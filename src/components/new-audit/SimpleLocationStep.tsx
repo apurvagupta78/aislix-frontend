@@ -169,7 +169,7 @@ export function SimpleLocationStep({ operatingModel, value, onChange, error }: P
           ))}
         </div>
       ) : storesQuery.isError ? (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center text-sm">
+        <div className="rounded-2xl border border-[#ECBDCC] bg-white p-6 text-center text-sm">
           Could not load your locations. Try refreshing the page.
         </div>
       ) : !stores.length ? (

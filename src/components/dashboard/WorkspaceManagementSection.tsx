@@ -27,7 +27,7 @@ function planogramStatusClass(status: string): string {
 
 function auditStatusClass(key: AssignedAuditStatusKey): string {
   if (key === "completed") return "bg-accent-green/10 text-accent-green ring-accent-green/15";
-  if (key === "needs_action") return "bg-amber-500/10 text-amber-700 ring-amber-500/15";
+  if (key === "needs_action") return "bg-[#FFEAF1] text-[#04203F] ring-[#ECBDCC]";
   if (key === "cancelled") return "bg-muted/40 text-muted-foreground ring-border/40";
   return "bg-brand-soft/60 text-brand ring-brand/10";
 }
@@ -244,7 +244,7 @@ function AssignedAuditsCard({ data }: { data: WorkspaceManagementData["assigned_
             </span>
             <span className="text-muted-foreground">
               Needs action{" "}
-              <span className="font-semibold tabular-nums text-amber-700">{data.needs_action}</span>
+              <span className="font-semibold tabular-nums text-[#04203F]">{data.needs_action}</span>
             </span>
           </div>
           <ul className="space-y-2">

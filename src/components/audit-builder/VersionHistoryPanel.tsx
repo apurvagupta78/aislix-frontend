@@ -115,13 +115,13 @@ function VersionCompare({
   return (
     <dl className="space-y-3 text-sm">
       <div>
-        <dt className="font-medium text-emerald-700 dark:text-emerald-400">Added</dt>
+        <dt className="font-medium text-[#04203F] dark:text-emerald-400">Added</dt>
         <dd className="mt-1 text-muted-foreground">
           {added.length ? added.map((f) => f.label).join(", ") : "None"}
         </dd>
       </div>
       <div>
-        <dt className="font-medium text-amber-700 dark:text-amber-400">Changed</dt>
+        <dt className="font-medium text-[#04203F] dark:text-amber-400">Changed</dt>
         <dd className="mt-1 text-muted-foreground">
           {changed.length
             ? changed.map((f) => `${f.label} → Required`).join(", ")

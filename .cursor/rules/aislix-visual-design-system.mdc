@@ -47,6 +47,18 @@ No arbitrary chart colors. No neon. No traffic-light red/orange overload.
 - Dashboards: Ask Aislix + top ≤8 KPIs; the rest behind "Show all metrics (n)".
 - Filters: list pages only, collapsed behind a "Filters" button.
 
+## Surface ladder (enterprise look — Corrective actions is the reference page)
+
+- Page and every card / panel / tile / section / alert: **white** + 1px `#D9E2E8` border.
+- `#F4F7F9` is the only inset / hover / selected fill (icon tiles, table hover, active toggle).
+- Navy `#04203F` is the only action colour (primary buttons, selected border, focus ring).
+- Palette colours appear **only** in charts, small pills/badges (soft tint OK), and status dots (`size-1.5`). Never as the background of anything wider than a pill.
+- Status on a card = a coloured dot next to the label; alerts = white + coloured border (pink `#ECBDCC` for risk), never a filled pastel box.
+- No gradients, glows, grid textures, or accent top/left bars.
+- No raw Tailwind hues (`amber-*`, `emerald-*`, `rose-*`, `red-*`, `sky-*`) — map to the locked palette.
+- **One exception: Ask Aislix** is the single highlighted surface — soft blue panel `#EEF6FA`, border `#B9DAEA`, navy sparkle tile, white composer and chips (`ASK_AISLIX_SECTION` in `src/lib/aislix-theme.ts`).
+- Homepage tiles follow the same rules: white card, navy icon on `#F4F7F9` tile, palette dot. Bounding boxes on shelf photos may use palette colours.
+
 ## Hard rule: no adjacent same accent
 
 Applies to chart / status accents. Never put the same accent on two adjacent analytical cards (2-col grid or KPI row).

@@ -150,7 +150,7 @@ function AssignmentStatusBadge({ status }: { status: string | null }) {
 function complianceTone(value: number | null): string {
   if (value === null) return "text-muted-foreground";
   if (value >= 100) return "text-accent-green";
-  if (value >= 70) return "text-amber-600";
+  if (value >= 70) return "text-[#04203F]";
   return "text-destructive";
 }
 

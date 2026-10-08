@@ -358,8 +358,7 @@ export function GuidedSweepCamera({ open, onOpenChange, role, maxPhotos, onCompl
 
         {phase === "aim" && !cameraError ? (
           <ol
-            className="space-y-1 rounded-xl border px-4 py-3 text-xs text-[#04203F]"
-            style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.border }}
+            className="space-y-1 rounded-xl border border-[#D9E2E8] bg-white px-4 py-3 text-xs text-[#04203F]"
           >
             {script.steps.map((step, i) => (
               <li key={step}>

@@ -61,13 +61,14 @@ export const SEMANTIC_PALETTE = {
   },
 } as const;
 
+/** Operating-model cards are white; the model colour is only a small dot inside the card. */
 export const OPERATING_MODEL_PALETTE = {
-  local_store: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
-  supermarket: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
-  dark_store: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
-  warehouse: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
-  fmcg_distributor: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
-  custom: "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
+  local_store: "border-border bg-white",
+  supermarket: "border-border bg-white",
+  dark_store: "border-border bg-white",
+  warehouse: "border-border bg-white",
+  fmcg_distributor: "border-border bg-white",
+  custom: "border-border bg-white",
 } as const;
 
 export type OperatingModelTone = keyof typeof OPERATING_MODEL_PALETTE;

@@ -287,7 +287,7 @@ export function RetailIntelligenceDemo() {
               )}
 
               {phase === "error" && error ? (
-                <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="mb-4 flex items-start gap-2 rounded-lg border border-[#ECBDCC] bg-white p-3 text-sm text-destructive">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <span>{error}</span>
                 </div>

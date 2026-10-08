@@ -387,7 +387,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
       {countPending ? (
         <div
-          className="rounded-2xl border border-[#D9E2E8] bg-[#FFEAF1] px-4 py-3 text-sm text-[#04203F]"
+          className="rounded-2xl border bg-white px-4 py-3 text-sm text-[#04203F] border-[#ECBDCC]"
           role="status"
         >
           <p className="font-semibold tracking-wide">COUNT VERIFICATION PENDING</p>

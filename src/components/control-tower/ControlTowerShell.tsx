@@ -409,7 +409,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
                 key={f.id}
                 type="button"
                 onClick={() => drillTo("finding", f.id)}
-                className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] p-3 text-left text-sm transition-colors hover:bg-white/70"
+                className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-[var(--aislix-darkstore-border)] bg-white p-3 text-left text-sm transition-colors hover:bg-white/70"
               >
                 <AlertTriangle className="size-4 text-[var(--aislix-primary)]" />
                 <Badge variant="destructive">{f.severity}</Badge>
@@ -438,19 +438,18 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
           <CardContent>
             <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {[
-                { label: "Open", value: data.correctiveActionHealth.open, surface: "bg-[var(--aislix-warehouse-bg)] border-[var(--aislix-warehouse-border)]" },
-                { label: "Due Today", value: data.correctiveActionHealth.dueToday, surface: "bg-[var(--aislix-local-bg)] border-[var(--aislix-local-border)]" },
-                { label: "Overdue", value: data.correctiveActionHealth.overdue, surface: "bg-[var(--aislix-darkstore-bg)] border-[var(--aislix-darkstore-border)]" },
-                {
-                  label: "Pending Verification",
-                  value: data.correctiveActionHealth.pendingVerification,
-                  surface: "bg-[var(--aislix-custom-bg)] border-[var(--aislix-custom-border)]",
-                },
-                { label: "Closed", value: data.correctiveActionHealth.closed, surface: "bg-[var(--aislix-supermarket-bg)] border-[var(--aislix-supermarket-border)]" },
+                { label: "Open", value: data.correctiveActionHealth.open, dot: "#9B86D9" },
+                { label: "Due today", value: data.correctiveActionHealth.dueToday, dot: "#7DB7D6" },
+                { label: "Overdue", value: data.correctiveActionHealth.overdue, dot: "#ECBDCC" },
+                { label: "Pending verification", value: data.correctiveActionHealth.pendingVerification, dot: "#D9E2E8" },
+                { label: "Closed", value: data.correctiveActionHealth.closed, dot: "#79E2A8" },
               ].map((item) => (
-                <div key={item.label} className={cn("rounded-lg border p-3 text-center", item.surface)}>
-                  <p className="text-xl font-semibold tabular-nums text-[var(--aislix-primary)]">{item.value}</p>
-                  <p className="text-[10px] text-muted-foreground">{item.label}</p>
+                <div key={item.label} className="rounded-lg border border-border bg-white p-3">
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="size-1.5 shrink-0 rounded-full" style={{ background: item.dot }} aria-hidden />
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--aislix-primary)]">{item.value}</p>
                 </div>
               ))}
             </div>
@@ -499,19 +498,20 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
             {data.sla.available && data.sla.compliancePct != null ? (
               <Progress value={data.sla.compliancePct} className="h-2" />
             ) : null}
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="rounded-lg border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] p-2">
-                <p className="font-semibold text-[var(--aislix-primary)]">{data.sla.overdue}</p>
-                <p className="text-muted-foreground">Overdue</p>
-              </div>
-              <div className="rounded-lg border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] p-2">
-                <p className="font-semibold text-[var(--aislix-primary)]">{data.sla.dueToday}</p>
-                <p className="text-muted-foreground">Due today</p>
-              </div>
-              <div className="rounded-lg border border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)] p-2">
-                <p className="font-semibold text-[var(--aislix-primary)]">{data.sla.breached}</p>
-                <p className="text-muted-foreground">Breached</p>
-              </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              {[
+                { label: "Overdue", value: data.sla.overdue, dot: "#ECBDCC" },
+                { label: "Due today", value: data.sla.dueToday, dot: "#7DB7D6" },
+                { label: "Breached", value: data.sla.breached, dot: "#D9E2E8" },
+              ].map((item) => (
+                <div key={item.label} className="rounded-lg border border-border bg-white p-2">
+                  <p className="font-semibold text-[var(--aislix-primary)]">{item.value}</p>
+                  <p className="flex items-center gap-1.5 text-muted-foreground">
+                    <span className="size-1.5 shrink-0 rounded-full" style={{ background: item.dot }} aria-hidden />
+                    {item.label}
+                  </p>
+                </div>
+              ))}
             </div>
             <Button variant="outline" size="sm" className="w-full" asChild>
               <Link to="/escalation-settings">SLA configuration</Link>
@@ -648,7 +648,7 @@ function DrilldownPanel({
   const level = search.drill ?? "kpi";
 
   return (
-    <Card className="rounded-2xl border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]">
+    <Card className="rounded-xl border-border bg-white">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <BarChart3 className="size-4" /> Drilldown — {level}

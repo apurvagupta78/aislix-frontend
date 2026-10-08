@@ -419,7 +419,7 @@ export function AuditExecutionForm({
   return (
     <div className="space-y-4 pb-28">
       {testMode ? (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-center text-sm font-medium text-amber-800 dark:text-amber-300">
+        <div className="rounded-xl border border-[#ECBDCC] bg-white px-4 py-2 text-center text-sm font-medium text-foreground dark:text-amber-300">
           TEST MODE — sample data only, not saved to production audits
         </div>
       ) : null}
@@ -455,7 +455,7 @@ export function AuditExecutionForm({
               Audit Completion {completion.percent}%
             </Badge>
             {!completion.complete ? (
-              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+              <p className="mt-1 text-xs text-[#04203F] dark:text-amber-400">
                 {completion.missing.length} required item(s) remaining
               </p>
             ) : null}
@@ -466,7 +466,7 @@ export function AuditExecutionForm({
             <span className="font-medium">Expiry Verification:</span>{" "}
             {verifiedUnits} / {physicalQty} units verified
             {verifiedUnits < physicalQty ? (
-              <span className="text-amber-700 dark:text-amber-400">
+              <span className="text-[#04203F] dark:text-amber-400">
                 {" "}
                 — each unit needs expiry evidence before completion
               </span>
@@ -474,7 +474,7 @@ export function AuditExecutionForm({
           </div>
         ) : null}
         {!completion.complete ? (
-          <ul className="mt-2 space-y-1 text-xs text-amber-700 dark:text-amber-400">
+          <ul className="mt-2 space-y-1 text-xs text-[#04203F] dark:text-amber-400">
             {completion.missing.slice(0, 5).map((m) => (
               <li key={`${m.sectionKey}-${m.recordIndex}-${m.fieldKey}`}>Missing: {m.label}</li>
             ))}

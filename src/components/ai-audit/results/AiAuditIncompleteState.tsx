@@ -15,8 +15,8 @@ export function AiAuditIncompleteState({ scanId, reason, modeLabel }: Props) {
     <div className="space-y-4">
       <AiAuditCard title="Analysis incomplete" description={modeLabel}>
         <div className="flex flex-col items-center gap-4 py-8 text-center">
-          <div className="rounded-full bg-amber-500/10 p-4">
-            <AlertTriangle className="size-10 text-amber-600" />
+          <div className="rounded-full bg-[#FFEAF1] p-4">
+            <AlertTriangle className="size-10 text-[#04203F]" />
           </div>
           <div className="max-w-lg space-y-2">
             <p className="text-sm font-medium text-foreground">{hideModelNames(reason)}</p>

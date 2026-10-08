@@ -143,7 +143,7 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
         </p>
         {coverage ? (
           <p
-            className={`text-sm font-medium ${coverage.complete ? "text-emerald-700" : "text-destructive"}`}
+            className={`text-sm font-medium ${coverage.complete ? "text-[#04203F]" : "text-destructive"}`}
           >
             {coverage.statusLabel} — coverage{" "}
             {coverage.coveragePct != null ? `${coverage.coveragePct.toFixed(0)}%` : "N/A"} (
@@ -152,7 +152,7 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
         ) : null}
         <p className="text-xs text-muted-foreground">{attempt.coverage_statement ?? "Partial coverage — not store-wide."}</p>
         {reconcile ? (
-          <p className={`text-sm ${reconcile.ok ? "text-emerald-700" : "text-destructive"}`}>{reconcile.equation}</p>
+          <p className={`text-sm ${reconcile.ok ? "text-[#04203F]" : "text-destructive"}`}>{reconcile.equation}</p>
         ) : null}
         <div className="space-y-2">
           {observations.map((o) => (
@@ -223,7 +223,7 @@ function ObservationRow({
       <div className="flex items-center gap-2">
         <ClassificationBadge value={observation.classification} />
         {observation.duplicate_hash_flag ? <SeverityBadge severity="medium" /> : null}
-        {observation.ai_simulated ? <span className="text-xs text-amber-700">Simulated OCR</span> : null}
+        {observation.ai_simulated ? <span className="text-xs text-[#04203F]">Simulated OCR</span> : null}
       </div>
     </button>
   );
@@ -272,7 +272,7 @@ function AttemptSummary({ attempt }: { attempt: ExpiryInspectionAttempt }) {
         <dd>{attempt.disposition_status}</dd>
       </div>
       {attempt.assurance_fallback ? (
-        <p className="text-xs text-amber-700">Lower-assurance fallback was used for this inspection.</p>
+        <p className="text-xs text-[#04203F]">Lower-assurance fallback was used for this inspection.</p>
       ) : null}
     </dl>
   );

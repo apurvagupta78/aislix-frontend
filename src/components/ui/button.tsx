@@ -13,12 +13,12 @@ const buttonVariants = cva(
         destructive: "border border-status-danger bg-status-danger-soft text-status-danger-strong shadow-soft hover:bg-status-danger/85",
         outline:
           "border border-input bg-card text-foreground shadow-soft hover:bg-surface",
-        secondary: "border border-border bg-secondary text-secondary-foreground shadow-soft hover:bg-muted",
+        secondary: "border border-border bg-card text-foreground shadow-soft hover:bg-muted",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         brand: "bg-brand text-brand-foreground shadow-soft hover:bg-brand/92",
         hero: "bg-brand text-brand-foreground shadow-card",
-        soft: "border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-local-bg)]",
+        soft: "border border-border bg-card text-foreground hover:bg-muted",
         subtle:
           "border border-border bg-card text-foreground shadow-soft hover:border-brand/40 hover:text-brand transition-all",
       },

@@ -110,7 +110,7 @@ export function ControlTowerDataTable<T extends Record<string, unknown>>({
     >
       <div className="space-y-4">
         {demoBanner ? (
-          <div className="rounded-xl border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] px-4 py-3 text-xs text-[var(--aislix-primary)]">
+          <div className="rounded-xl border border-[var(--aislix-darkstore-border)] bg-white px-4 py-3 text-xs text-[var(--aislix-primary)]">
             <strong>Illustrative demo data</strong> — Phase 1E. Filters:{" "}
             {modelFilterLabel(ctModel as "all" | undefined)} · Period {filters.datePreset ?? "all"}
             {filters.storeId ? " · Store filter active" : ""}

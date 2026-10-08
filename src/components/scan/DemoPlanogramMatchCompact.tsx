@@ -20,10 +20,10 @@ const STATUS_LABEL: Record<PlanogramMatchLine["issue_type"], string> = {
 };
 
 const STATUS_CLASS: Record<PlanogramMatchLine["issue_type"], string> = {
-  correct: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  correct: "bg-[#EFFAF4] text-[#04203F] border-[#79E2A8]",
   missing: "bg-destructive/10 text-destructive border-destructive/30",
   wrong_product: "bg-destructive/10 text-destructive border-destructive/30",
-  qty_mismatch: "bg-amber-50 text-amber-900 border-amber-200",
+  qty_mismatch: "bg-[#FFEAF1] text-[#04203F] border-[#ECBDCC]",
 };
 
 export function DemoPlanogramMatchCompact({ data }: { data: ScanResult }) {

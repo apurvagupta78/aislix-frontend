@@ -1,40 +1,48 @@
 import type { HomeTone } from "./homepage-data";
 
-/** Soft pastel cards aligned to Aislix operating-model tokens. */
+/** Homepage tiles are white; the tone shows only as a small dot (and as boxes on the shelf photo). */
 export const toneCard: Record<HomeTone, string> = {
-  sky: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
-  sage: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
-  rose: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
-  azure: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
-  mist: "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
+  sky: "border-border bg-white",
+  sage: "border-border bg-white",
+  rose: "border-border bg-white",
+  azure: "border-border bg-white",
+  mist: "border-border bg-white",
 };
 
 export const toneText: Record<HomeTone, string> = {
-  sky: "text-[#2A6FA8]",
-  sage: "text-[#4F6B2E]",
+  sky: "text-[#04203F]",
+  sage: "text-[#04203F]",
   rose: "text-[#04203F]",
-  azure: "text-[#1F6FB2]",
-  mist: "text-[#35658F]",
+  azure: "text-[#04203F]",
+  mist: "text-[#04203F]",
+};
+
+export const toneDot: Record<HomeTone, string> = {
+  sky: "bg-[#7DB7D6]",
+  sage: "bg-[#79E2A8]",
+  rose: "bg-[#ECBDCC]",
+  azure: "bg-[#8EC9E8]",
+  mist: "bg-[#9B86D9]",
 };
 
 export const toneBox: Record<HomeTone, string> = {
-  sky: "border-[#2A6FA8] bg-[#2A6FA8]/10",
-  sage: "border-[#4F6B2E] bg-[#4F6B2E]/10",
-  rose: "border-[#B03A63] bg-[#B03A63]/10",
-  azure: "border-[#1F6FB2] bg-[#1F6FB2]/10",
-  mist: "border-[#35658F] bg-[#35658F]/10",
+  sky: "border-[#7DB7D6] bg-[#7DB7D6]/15",
+  sage: "border-[#79E2A8] bg-[#79E2A8]/15",
+  rose: "border-[#ECBDCC] bg-[#ECBDCC]/20",
+  azure: "border-[#8EC9E8] bg-[#8EC9E8]/15",
+  mist: "border-[#9B86D9] bg-[#9B86D9]/15",
 };
 
 export const toneLabel: Record<HomeTone, string> = {
-  sky: "bg-[#2A6FA8] text-white",
-  sage: "bg-[#4F6B2E] text-white",
-  rose: "bg-[#B03A63] text-white",
-  azure: "bg-[#1F6FB2] text-white",
-  mist: "bg-[#35658F] text-white",
+  sky: "bg-[#7DB7D6] text-[#04203F]",
+  sage: "bg-[#79E2A8] text-[#04203F]",
+  rose: "bg-[#ECBDCC] text-[#04203F]",
+  azure: "bg-[#8EC9E8] text-[#04203F]",
+  mist: "bg-[#9B86D9] text-white",
 };
 
 export const statusDot: Record<"ok" | "warn" | "issue", string> = {
   ok: "bg-[#79E2A8]",
-  warn: "bg-[#B7791F]",
-  issue: "bg-[#C2410C]",
+  warn: "bg-[#8EC9E8]",
+  issue: "bg-[#ECBDCC]",
 };

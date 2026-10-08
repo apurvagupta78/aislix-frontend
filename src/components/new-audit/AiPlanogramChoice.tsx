@@ -21,7 +21,7 @@ export function AiPlanogramChoice({
   return (
     <div className={cn("space-y-4", className)}>
       {showCostNotice ? (
-        <Alert className="border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]">
+        <Alert className="border-[#ECBDCC] bg-white">
           <AlertTriangle className="size-4 text-[var(--aislix-primary)]" />
           <AlertDescription className="text-sm text-[var(--aislix-primary)]">
             AI audits use additional vision processing —{" "}

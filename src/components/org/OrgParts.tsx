@@ -271,7 +271,7 @@ export function OrganizationOverview({
 
 const toneClasses: Record<string, string> = {
   good: "bg-brand-soft text-brand",
-  warn: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  warn: "bg-[#FFEAF1] text-[#04203F] dark:text-amber-400",
   bad: "bg-destructive/10 text-destructive",
   unknown: "bg-muted text-muted-foreground",
 };

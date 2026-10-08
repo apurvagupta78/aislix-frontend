@@ -282,7 +282,7 @@ function ActionBucket({
 }) {
   return (
     <div
-      className={`rounded-xl border px-3 py-2 ${highlight && value > 0 ? "border-destructive/30 bg-destructive/5" : "border-border bg-surface"}`}
+      className={`rounded-xl border px-3 py-2 ${highlight && value > 0 ? "border-[#ECBDCC] bg-white" : "border-border bg-surface"}`}
     >
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-xl font-semibold tabular-nums">{value}</p>

@@ -43,7 +43,7 @@ type Props = {
   onReviewerChange?: (userId: string) => void;
 };
 
-const SELECTED_CARD = "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]/60";
+const SELECTED_CARD = "border-[var(--aislix-primary)] bg-white";
 const UNSELECTED_CARD = "border-[#D9E2E8] bg-white";
 const NONE = "__none__";
 const NEAR_EXPIRY_OPTIONS = [0, 3, 7, 14, 30];

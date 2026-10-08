@@ -27,8 +27,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGE: Record<string, string> = {
-  complete: "bg-emerald-500/12 text-emerald-800 dark:text-emerald-300",
-  partial: "bg-amber-500/12 text-amber-900 dark:text-amber-200",
+  complete: "bg-[#EFFAF4] text-[#04203F] dark:text-emerald-300",
+  partial: "bg-[#FFEAF1] text-[#04203F] dark:text-amber-200",
   not_assessable: "bg-muted text-muted-foreground",
   not_applicable: "bg-muted text-muted-foreground",
   not_configured: "bg-muted text-muted-foreground",

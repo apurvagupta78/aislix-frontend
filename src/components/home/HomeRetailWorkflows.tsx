@@ -3,35 +3,35 @@ import { SectionHeading } from "@/components/landing/retail-shelf-intelligence/s
 
 const WORKFLOWS = [
   {
-    modelClass: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
+    dot: "#7DB7D6",
     Icon: Store,
     title: "Local stores",
     headline: "Turn every store visit into measurable execution.",
     body: "Track availability, assortment, facings, pricing and promotions without complicated retail systems.",
   },
   {
-    modelClass: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
+    dot: "#79E2A8",
     Icon: ShoppingCart,
     title: "Supermarkets",
     headline: "Know what's on the shelf — and what's not.",
     body: "Track availability, planogram compliance, assortment, pricing and promotions.",
   },
   {
-    modelClass: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
+    dot: "#ECBDCC",
     Icon: Building2,
     title: "Dark stores",
     headline: "Know if products are where they should be.",
     body: "Monitor availability, location accuracy, planogram compliance, assortment and facings.",
   },
   {
-    modelClass: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
+    dot: "#8EC9E8",
     Icon: Warehouse,
     title: "Warehouses",
     headline: "Know whether inventory is accurate and in the right place.",
     body: "Audit receiving, bin accuracy, putaway, picking and dispatch without a separate warehouse tool.",
   },
   {
-    modelClass: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
+    dot: "#9B86D9",
     Icon: PackageSearch,
     title: "FMCG / Distributors",
     headline: "Know how the brand and outlet network are executing.",
@@ -49,10 +49,13 @@ export function HomeRetailWorkflows() {
           subtitle="Every retail team sees the shelf differently. Aislix adapts the audit to what matters most for your role."
         />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {WORKFLOWS.map(({ Icon, title, headline, body, modelClass }) => (
-            <div key={title} className={`card-hover rounded-lg border p-5 ${modelClass}`}>
+          {WORKFLOWS.map(({ Icon, title, headline, body, dot }) => (
+            <div key={title} className="card-hover rounded-lg border border-border bg-white p-5">
               <Icon className="size-5 text-[var(--aislix-primary)]" strokeWidth={1.75} aria-hidden="true" />
-              <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
+              <h3 className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <span className="size-1.5 shrink-0 rounded-full" style={{ background: dot }} aria-hidden="true" />
+                {title}
+              </h3>
               <p className="mt-2 text-xs font-medium leading-snug text-foreground/90">{headline}</p>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{body}</p>
             </div>

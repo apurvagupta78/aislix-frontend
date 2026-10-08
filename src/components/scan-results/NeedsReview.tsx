@@ -50,7 +50,7 @@ export function reviewCount(data?: ScanResult | undefined): number {
 export function NeedsReviewBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <Badge variant="outline" className="rounded-full border-amber-500/30 bg-amber-500/10 text-amber-600">
+    <Badge variant="outline" className="rounded-full border-[#ECBDCC] bg-[#FFEAF1] text-[#04203F]">
       <ScanEye className="size-3.5" /> {count} in AI review queue
     </Badge>
   );

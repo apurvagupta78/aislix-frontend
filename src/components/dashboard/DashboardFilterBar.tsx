@@ -790,7 +790,7 @@ export function DashboardFilterBar({
               key={`${chip.key}-${chip.label}`}
               type="button"
               onClick={() => onChange(clearDashboardFilterChip(filters, chip.key))}
-              className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-white px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:border-[var(--aislix-warehouse-border)] hover:bg-[var(--aislix-warehouse-bg)]"
+              className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-white px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:border-[var(--aislix-warehouse-border)] hover:bg-muted"
             >
               {chip.label}
               <X className="size-2.5 opacity-50" aria-hidden />

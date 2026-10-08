@@ -259,7 +259,7 @@ function AuditReviewPage() {
           </div>
 
           {(aiFlagsQuery.data?.length ?? 0) > 0 ? (
-            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            <div className="rounded-lg border border-[#ECBDCC] bg-white p-3 text-sm">
               <p className="font-medium">AI-Assisted verification</p>
               <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                 {aiFlagsQuery.data!.map((f) => (

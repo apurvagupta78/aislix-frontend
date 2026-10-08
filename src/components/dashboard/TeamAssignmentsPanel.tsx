@@ -41,7 +41,7 @@ const statusLabels: Record<string, string> = {
 const statusClasses: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
   in_progress: "bg-brand-soft text-brand",
-  needs_correction: "bg-amber-500/12 text-amber-600",
+  needs_correction: "bg-[#FFEAF1] text-[#04203F]",
   completed: "bg-accent-green/12 text-accent-green",
   cancelled: "bg-muted text-muted-foreground",
   overdue: "bg-destructive/10 text-destructive",
@@ -50,7 +50,7 @@ const statusClasses: Record<string, string> = {
 function complianceTone(value: number | null): string {
   if (value === null) return "text-muted-foreground";
   if (value >= 100) return "text-accent-green";
-  if (value >= 70) return "text-amber-600";
+  if (value >= 70) return "text-[#04203F]";
   return "text-destructive";
 }
 

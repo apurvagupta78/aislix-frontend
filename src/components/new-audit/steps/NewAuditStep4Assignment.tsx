@@ -168,7 +168,7 @@ export function NewAuditStep4Assignment({
           </div>
         ) : null}
 
-        <Label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)] p-4">
+        <Label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-white p-4">
           <Checkbox
             checked={assignToSelf}
             onCheckedChange={(v) => onAssignToSelfChange(v === true)}

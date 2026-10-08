@@ -588,7 +588,7 @@ export function DemoScanSetupPanel({
       ) : null}
 
       {showDemoPlanogram ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background">
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-white  ">
           <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
             <ClipboardList className="size-4 text-brand" />
             <div className="flex-1">
@@ -703,7 +703,7 @@ export function DemoScanSetupPanel({
       {planogramMode === "none" ? <div className="mt-5">{aiAnalysisCard(null)}</div> : null}
 
       {homepageIntro && planogramMode === "none" ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand-soft/40 to-background p-5 sm:p-6">
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-white p-5 sm:p-6">
           <p className="text-base font-semibold text-foreground">
             {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.title}
           </p>
@@ -895,7 +895,7 @@ export function DemoScanSetupPanel({
       ) : null}
 
       {showWizard ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background">
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-white  ">
           <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
             <ClipboardList className="size-4 shrink-0 text-brand" />
             <div className="flex-1">

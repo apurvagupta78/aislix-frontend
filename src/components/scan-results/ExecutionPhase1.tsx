@@ -508,7 +508,7 @@ export function ActionCenterPanel({
             <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-muted">
               {[
                 { count: viewModel.summary.high, className: "bg-destructive/80" },
-                { count: viewModel.summary.medium, className: "bg-amber-500" },
+                { count: viewModel.summary.medium, className: "bg-[#ECBDCC]" },
                 { count: viewModel.summary.low, className: "bg-brand" },
               ].map(({ count, className }, i) =>
                 count > 0 ? (
@@ -940,7 +940,7 @@ export function SkuAvailabilityPanel({
 
 const ACTION_PRIORITY_PILL: Record<ActionPriority, string> = {
   high: "border-destructive/30 bg-destructive/10 text-destructive",
-  medium: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+  medium: "border-[#ECBDCC] bg-[#FFEAF1] text-[#04203F] dark:text-amber-200",
   low: "border-brand/25 bg-brand-soft text-brand",
 };
 
@@ -954,7 +954,7 @@ function PriorityOverviewBar({ summary }: { summary: ReturnType<typeof buildPrio
   const total = summary.high + summary.medium + summary.low || 1;
   const segments = [
     { key: "high", count: summary.high, className: "bg-destructive", label: "High" },
-    { key: "medium", count: summary.medium, className: "bg-amber-500", label: "Medium" },
+    { key: "medium", count: summary.medium, className: "bg-[#ECBDCC]", label: "Medium" },
     { key: "low", count: summary.low, className: "bg-brand", label: "Low" },
   ];
   return (

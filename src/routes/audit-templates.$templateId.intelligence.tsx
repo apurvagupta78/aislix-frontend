@@ -124,7 +124,7 @@ function TemplateIntelligencePage() {
         </Button>
       </div>
 
-      <div className="mb-6 rounded-xl border border-warning/30 bg-warning/5 p-4 text-sm">
+      <div className="mb-6 rounded-xl border border-[#ECBDCC] bg-white p-4 text-sm">
         <strong>Pre–Phase 2 illustrative data.</strong> KPI definitions and formulas are live from the
         centralized catalog; values wire to assignments and responses in Phase 2 live KPI wiring.
       </div>

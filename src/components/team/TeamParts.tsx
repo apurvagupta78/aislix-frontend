@@ -112,7 +112,7 @@ export function StatusBadge({ status }: { status?: UserStatus | undefined }) {
   if (!status) return <span className="text-sm text-muted-foreground">—</span>;
   const tone: Record<UserStatus, string> = {
     active: "border-brand/30 bg-brand-soft text-brand",
-    pending: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    pending: "border-[#ECBDCC] bg-[#FFEAF1] text-[#04203F] dark:text-amber-400",
     disabled: "border-border bg-muted text-muted-foreground",
   };
   return (
@@ -431,7 +431,7 @@ export function UserFormDialog({
           </div>
 
           {error && (
-            <p className="rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            <p className="rounded-xl border border-[#ECBDCC] bg-white px-3 py-2 text-xs text-destructive">
               {error}
             </p>
           )}
@@ -1100,7 +1100,7 @@ export function BulkUserImportDialog({
               />
             </label>
             {parseError && (
-              <p className="rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              <p className="rounded-xl border border-[#ECBDCC] bg-white px-3 py-2 text-xs text-destructive">
                 {parseError}
               </p>
             )}

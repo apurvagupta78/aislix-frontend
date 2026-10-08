@@ -5,7 +5,7 @@ import {
   heroAnnotations,
   heroInsights,
 } from "@/lib/home/homepage-data";
-import { toneBox, toneCard, toneLabel, toneText } from "@/lib/home/homepage-tone";
+import { toneBox, toneCard, toneDot, toneLabel, toneText } from "@/lib/home/homepage-tone";
 
 const flow = [
   { icon: Camera, label: "Capture" },
@@ -81,11 +81,14 @@ export function HomeShelfPreview() {
               key={label}
               className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${toneCard[tone]}`}
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
                 <Icon className={`size-4 ${toneText[tone]}`} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+                <p className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                  <span className={`size-1.5 shrink-0 rounded-full ${toneDot[tone]}`} aria-hidden="true" />
+                  {label}
+                </p>
                 <p className="truncate text-sm font-semibold text-foreground">{value}</p>
               </div>
             </div>

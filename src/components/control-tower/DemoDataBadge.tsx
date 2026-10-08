@@ -10,15 +10,15 @@ export function DemoDataBadge({
 }) {
   return (
     <div
-      className="flex flex-col gap-1 rounded-lg border border-amber-300/80 bg-amber-50 px-3 py-2"
+      className="flex flex-col gap-1 rounded-lg border border-[#ECBDCC] bg-white px-3 py-2"
       role="status"
       aria-label={DEMO_DATA_LABEL}
     >
-      <MpBadge tone="neutral" className="w-fit border-amber-400 bg-amber-100 font-semibold text-amber-900">
+      <MpBadge tone="neutral" className="w-fit border-[#ECBDCC] bg-[#FFEAF1] font-semibold text-[#04203F]">
         {DEMO_DATA_LABEL}
       </MpBadge>
       {showCta ? (
-        <p className="text-xs text-amber-900/80">{previewMode ? DEMO_PREVIEW_CTA : DEMO_CTA}</p>
+        <p className="text-xs text-[#04203F]/80">{previewMode ? DEMO_PREVIEW_CTA : DEMO_CTA}</p>
       ) : null}
     </div>
   );

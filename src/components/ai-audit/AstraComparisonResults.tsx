@@ -17,14 +17,14 @@ function statusBadge(status: unknown) {
   const normalized = String(status ?? "").toUpperCase();
   if (normalized.includes("COMPLIANT") && !normalized.includes("NON") && !normalized.includes("PARTIAL")) {
     return (
-      <Badge variant="outline" className="border-emerald-500/40 text-emerald-700">
+      <Badge variant="outline" className="border-[#79E2A8] text-[#04203F]">
         {status}
       </Badge>
     );
   }
   if (normalized.includes("NOT_FOUND") || normalized.includes("NON_COMPLIANT")) {
     return (
-      <Badge variant="outline" className="border-rose-500/40 text-rose-700">
+      <Badge variant="outline" className="border-[#ECBDCC] text-[#04203F]">
         {status}
       </Badge>
     );
@@ -41,9 +41,9 @@ function ImageQualityBanner({ analysis }: { analysis: NormalizedAstraAnalysis })
     <div
       className={cn(
         "flex items-start gap-2 rounded-lg border px-3 py-2 text-sm",
-        status === "GOOD" && "border-emerald-500/30 bg-emerald-500/5",
-        status === "LIMITED" && "border-amber-500/30 bg-amber-500/5",
-        status === "POOR" && "border-rose-500/30 bg-rose-500/5",
+        status === "GOOD" && "border-[#79E2A8] bg-white",
+        status === "LIMITED" && "border-[#ECBDCC] bg-white",
+        status === "POOR" && "border-[#ECBDCC] bg-white",
       )}
     >
       <Icon className="mt-0.5 size-4 shrink-0" />

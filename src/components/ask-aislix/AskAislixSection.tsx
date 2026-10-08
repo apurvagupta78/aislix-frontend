@@ -211,14 +211,20 @@ export function AskAislixSection({
   const showSuggestions = !loading && !response && !error;
 
   return (
-    <section aria-labelledby="ask-aislix-heading" className="w-full">
-      <header className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+    <section
+      aria-labelledby="ask-aislix-heading"
+      className="w-full rounded-xl border p-4 sm:p-5"
+      style={{ backgroundColor: ASK_AISLIX_SECTION.background, borderColor: ASK_AISLIX_SECTION.bandBorder }}
+    >
+      <header className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1">
         <h2
           id="ask-aislix-heading"
-          className="flex items-center gap-1.5 text-base font-semibold"
+          className="flex items-center gap-2 text-base font-semibold"
           style={{ color: ASK_AISLIX_SECTION.heading }}
         >
-          <Sparkles className="h-4 w-4" aria-hidden />
+          <span className="grid size-7 place-items-center rounded-lg bg-[#04203F] text-white" aria-hidden>
+            <Sparkles className="h-4 w-4" />
+          </span>
           Ask Aislix
         </h2>
         <p className="text-sm" style={{ color: ASK_AISLIX_SECTION.subtitle }}>

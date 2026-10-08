@@ -5,8 +5,8 @@ import { AUDIT_STATUS_DISPLAY } from "@/lib/role-audit-ui";
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGE: Record<string, string> = {
-  complete: "bg-emerald-500/12 text-emerald-800 dark:text-emerald-300",
-  partial: "bg-amber-500/12 text-amber-900 dark:text-amber-200",
+  complete: "bg-[#EFFAF4] text-[#04203F] dark:text-emerald-300",
+  partial: "bg-[#FFEAF1] text-[#04203F] dark:text-amber-200",
   not_assessable: "bg-muted text-muted-foreground",
   not_applicable: "bg-muted text-muted-foreground",
   not_configured: "bg-muted text-muted-foreground",
@@ -14,7 +14,7 @@ const STATUS_BADGE: Record<string, string> = {
 
 const PROGRESS_BAR: Record<string, string> = {
   complete: "bg-brand",
-  partial: "bg-amber-500",
+  partial: "bg-[#ECBDCC]",
   not_assessable: "bg-muted-foreground/40",
   not_applicable: "bg-muted-foreground/30",
   not_configured: "bg-muted-foreground/30",

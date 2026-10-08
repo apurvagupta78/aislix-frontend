@@ -131,7 +131,7 @@ export function PlanogramMissingAlert({ demoMode = false }: { demoMode?: boolean
   return (
     <section
       role="alert"
-      className="card-surface flex items-start gap-3 border-warning/40 bg-warning/5 p-4 sm:p-6"
+      className="card-surface flex items-start gap-3 border-[#ECBDCC] bg-white p-4 sm:p-6"
     >
       <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-warning/15 text-warning">
         <AlertTriangle className="size-4" />

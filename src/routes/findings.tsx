@@ -241,7 +241,7 @@ function FindingsMain() {
             onClick={() => setOverdueOnly((v) => !v)}
             className={`inline-flex h-10 items-center gap-1.5 rounded-lg border px-3.5 text-sm font-medium transition-colors ${
               overdueOnly
-                ? "border-dark-line bg-dark-bg text-navy"
+                ? "border-navy/40 bg-muted text-navy"
                 : "border-line bg-canvas text-mp-muted hover:bg-white"
             }`}
           >

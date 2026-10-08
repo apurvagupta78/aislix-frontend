@@ -17,7 +17,7 @@ export function statusBadge(status: unknown, className?: string) {
     !normalized.includes("NON") &&
     !normalized.includes("PARTIAL")
   ) {
-    tone = "border-emerald-500/40 bg-emerald-500/5 text-emerald-700";
+    tone = "border-[#79E2A8] bg-[#EFFAF4] text-[#04203F]";
   } else if (
     normalized.includes("NOT_FOUND") ||
     normalized.includes("NON_COMPLIANT") ||
@@ -25,7 +25,7 @@ export function statusBadge(status: unknown, className?: string) {
     normalized.includes("BELOW_MINIMUM") ||
     normalized.includes("HIGH_PRIORITY")
   ) {
-    tone = "border-rose-500/40 bg-rose-500/5 text-rose-700";
+    tone = "border-[#ECBDCC] bg-[#FFEAF1] text-[#04203F]";
   } else if (
     normalized.includes("PARTIAL") ||
     normalized.includes("BELOW") ||
@@ -33,9 +33,9 @@ export function statusBadge(status: unknown, className?: string) {
     normalized.includes("WRONG") ||
     normalized.includes("REDUCED")
   ) {
-    tone = "border-amber-500/40 bg-amber-500/5 text-amber-700";
+    tone = "border-[#ECBDCC] bg-[#FFEAF1] text-[#04203F]";
   } else if (normalized.includes("MATCHED") || normalized.includes("IDENTIFIED") || normalized.includes("CORRECT")) {
-    tone = "border-emerald-500/40 bg-emerald-500/5 text-emerald-700";
+    tone = "border-[#79E2A8] bg-[#EFFAF4] text-[#04203F]";
   }
   return (
     <Badge variant="outline" className={cn("whitespace-nowrap text-[10px]", tone, className)}>

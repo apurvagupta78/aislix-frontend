@@ -739,7 +739,7 @@ function RequiredEvidencePanel({
               className={`flex items-start gap-2 rounded-lg border p-2.5 text-xs ${
                 req.ok
                   ? "border-[#D9E2E8] bg-white"
-                  : "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]"
+                  : "border-border bg-white"
               }`}
             >
               {req.ok ? (

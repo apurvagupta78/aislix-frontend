@@ -82,7 +82,7 @@ export function AskAislixSuggestions({
               onClick={() => onSelect(suggestion.text)}
               className={cn(
                 "max-w-full rounded-full border border-[#D9E2E8] bg-white px-3 py-1.5 text-left text-[13px] text-[#04203F]",
-                "transition-colors duration-150 hover:border-[#9FB3C8] hover:bg-[#F4F7F9]",
+                "transition-colors duration-150 hover:border-[#7DB7D6] hover:bg-[#F4F7F9]",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9E2E8]",
                 "disabled:pointer-events-none disabled:opacity-50",
               )}

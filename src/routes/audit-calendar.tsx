@@ -21,7 +21,7 @@ type CalendarView = "month" | "week" | "day";
 type EventTone = "scheduled" | "assigned" | "due_today" | "overdue" | "recurring" | "done";
 
 const LEGEND: { tone: EventTone; label: string; className: string }[] = [
-  { tone: "scheduled", label: "Scheduled", className: "bg-sky-50 text-sky-900" },
+  { tone: "scheduled", label: "Scheduled", className: "bg-[#EEF6FA] text-[#04203F]" },
   { tone: "assigned", label: "Assigned", className: "bg-brand-soft text-brand" },
   { tone: "due_today", label: "Due today", className: "bg-status-evidence-soft text-status-evidence-strong" },
   { tone: "overdue", label: "Overdue", className: "bg-status-danger-soft text-status-danger-strong" },

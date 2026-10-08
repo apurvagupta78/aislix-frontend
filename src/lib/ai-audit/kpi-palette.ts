@@ -42,7 +42,7 @@ export function accentHex(accent: AislixAccent): string {
   return AISLIX_PALETTE[accent];
 }
 
-/** Very light tint for card surfaces (white + subtle wash). Not full-color fills. */
+/** Very light tints for small status pills only — never card or panel surfaces. */
 export const ACCENT_TINT: Record<AislixAccent, string> = {
   purple: "#F3EFFB",
   blue: "#EEF6FA",
@@ -109,40 +109,28 @@ export function chartSeriesAt(index: number): string {
   return CHART_SERIES[index % CHART_SERIES.length]!;
 }
 
-/** @deprecated Prefer ACCENT_TINT + KPI_ACCENT — kept for existing card bg props */
+/** @deprecated KPI cards are white; the accent lives in the status dot (see KPI_ACCENT). */
 export const KPI_CARD = {
-  auditCompletion: ACCENT_TINT.purple,
-  evidenceCoverage: ACCENT_TINT.blue,
-  auditPass: ACCENT_TINT.green,
-  openFindings: ACCENT_TINT.cyan,
-  criticalFindings: ACCENT_TINT.pink,
-  overdueActions: ACCENT_TINT.grey,
-  slaCompliance: ACCENT_TINT.blue,
-  inventoryValueVariance: ACCENT_TINT.cyan,
-  pricesRead: ACCENT_TINT.blue,
-  detectedProducts: ACCENT_TINT.purple,
-  aiConfidence: ACCENT_TINT.blue,
-  priceStatus: ACCENT_TINT.grey,
-  financialDaily: ACCENT_TINT.cyan,
-  financialWeekly: ACCENT_TINT.purple,
-  financialOos: ACCENT_TINT.pink,
-  financialStatus: ACCENT_TINT.grey,
+  auditCompletion: AISLIX_PALETTE.card,
+  evidenceCoverage: AISLIX_PALETTE.card,
+  auditPass: AISLIX_PALETTE.card,
+  openFindings: AISLIX_PALETTE.card,
+  criticalFindings: AISLIX_PALETTE.card,
+  overdueActions: AISLIX_PALETTE.card,
+  slaCompliance: AISLIX_PALETTE.card,
+  inventoryValueVariance: AISLIX_PALETTE.card,
+  pricesRead: AISLIX_PALETTE.card,
+  detectedProducts: AISLIX_PALETTE.card,
+  aiConfidence: AISLIX_PALETTE.card,
+  priceStatus: AISLIX_PALETTE.card,
+  financialDaily: AISLIX_PALETTE.card,
+  financialWeekly: AISLIX_PALETTE.card,
+  financialOos: AISLIX_PALETTE.card,
+  financialStatus: AISLIX_PALETTE.card,
 } as const;
 
-/** Soft fills cycled so adjacent summary tiles never share the same tint. */
-export const SUMMARY_KPI_FILLS = [
-  ACCENT_TINT.purple,
-  ACCENT_TINT.blue,
-  ACCENT_TINT.pink,
-  ACCENT_TINT.green,
-  ACCENT_TINT.cyan,
-  ACCENT_TINT.purple,
-  ACCENT_TINT.blue,
-  ACCENT_TINT.green,
-  ACCENT_TINT.pink,
-  ACCENT_TINT.cyan,
-] as const;
-
+/** Summary tiles are white; colour is reserved for status dots and charts. */
+export const SUMMARY_KPI_FILLS = [AISLIX_PALETTE.card] as const;
 export function summaryFillAt(index: number): string {
   return SUMMARY_KPI_FILLS[index % SUMMARY_KPI_FILLS.length]!;
 }

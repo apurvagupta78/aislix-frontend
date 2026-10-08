@@ -4,11 +4,11 @@ import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
  * Aislix chart + operating-model colors — hex from the official palette only.
  */
 export const AISLIX = {
-  bg: "#F2F6F9",
+  bg: "#F4F7F9",
   primary: "#04203F",
-  secondary: "#557187",
-  border: "#E7EDF0",
-  surface: "#EFF4F7",
+  secondary: "#667085",
+  border: "#D9E2E8",
+  surface: "#F4F7F9",
   white: "#FFFFFF",
   localBg: "#EAF6FD",
   localBorder: "#C1E4F8",
@@ -28,12 +28,12 @@ export const AISLIX = {
 } as const;
 
 /**
- * Ask Aislix palette — neutral search box: white, thin grey border, navy Ask button.
+ * Ask Aislix palette — the one highlighted surface: soft blue panel, white composer, navy Ask button.
  * Do not reuse on KPI cards (those stay on AISLIX / AISLIX_PALETTE).
  */
 export const ASK_AISLIX_SECTION = {
-  background: "#FFFFFF",
-  bandBorder: "#D9E2E8",
+  background: "#EEF6FA",
+  bandBorder: "#B9DAEA",
   heading: "#04203F",
   subtitle: "#667085",
   muted: "#667085",
@@ -41,11 +41,11 @@ export const ASK_AISLIX_SECTION = {
   composerBorder: "#D9E2E8",
   /** Ask CTA — the one accent in the box */
   askButton: "#04203F",
-  askButtonHover: "#0B3360",
+  askButtonHover: "#04203F",
   askButtonText: "#FFFFFF",
   askButtonDisabled: "#EEF1F4",
   askButtonDisabledText: "rgba(4, 32, 63, 0.4)",
-  focusRing: "#9FB3C8",
+  focusRing: "#7DB7D6",
   accentSoft: "#F4F7F9",
   accentRing: "#D9E2E8",
   enhanceBg: "#FFFFFF",

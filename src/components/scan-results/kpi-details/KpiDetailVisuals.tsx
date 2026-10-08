@@ -47,13 +47,13 @@ function StatusLegend({ mode }: { mode: "location" | "planogram" }) {
   const items =
     mode === "location"
       ? [
-          { label: "Correct", className: "bg-emerald-500/20 border-emerald-500/40" },
-          { label: "Needs review", className: "bg-amber-500/20 border-amber-500/40" },
+          { label: "Correct", className: "bg-[#EFFAF4] border-[#79E2A8]" },
+          { label: "Needs review", className: "bg-[#FFEAF1] border-[#ECBDCC]" },
           { label: "Incorrect", className: "bg-destructive/15 border-destructive/40" },
         ]
       : [
-          { label: "Match", className: "bg-emerald-500/20 border-emerald-500/40" },
-          { label: "Needs review", className: "bg-amber-500/20 border-amber-500/40" },
+          { label: "Match", className: "bg-[#EFFAF4] border-[#79E2A8]" },
+          { label: "Needs review", className: "bg-[#FFEAF1] border-[#ECBDCC]" },
           { label: "Mismatch", className: "bg-destructive/15 border-destructive/40" },
         ];
   return (
@@ -69,9 +69,9 @@ function StatusLegend({ mode }: { mode: "location" | "planogram" }) {
 }
 
 function cellColor(status: PositionStatus): string {
-  if (status === "correct") return "bg-emerald-500/20 border-emerald-500/35 text-emerald-900 dark:text-emerald-200";
+  if (status === "correct") return "bg-[#EFFAF4] border-[#79E2A8] text-[#04203F] dark:text-emerald-200";
   if (status === "incorrect") return "bg-destructive/12 border-destructive/35 text-destructive";
-  return "bg-amber-500/15 border-amber-500/35 text-amber-900 dark:text-amber-200";
+  return "bg-[#FFEAF1] border-[#ECBDCC] text-[#04203F] dark:text-amber-200";
 }
 
 function ShelfHeatmap({
@@ -194,7 +194,7 @@ export function AssortmentDetailVisual({
     <div className="space-y-2.5">
       <div className="flex gap-4 text-[11px]">
         <span>
-          <span className="font-semibold text-emerald-700 dark:text-emerald-300">{present}</span> Present
+          <span className="font-semibold text-[#04203F] dark:text-emerald-300">{present}</span> Present
         </span>
         <span>
           <span className="font-semibold text-destructive">{missing.length}</span> Missing
@@ -356,7 +356,7 @@ export function PriceDetailVisual({ ctx, metric }: { ctx: KpiDetailsContext; met
                       r.status === "Mismatch"
                         ? "bg-destructive/10 text-destructive"
                         : r.status === "Compliant"
-                          ? "bg-emerald-500/10 text-emerald-700"
+                          ? "bg-[#EFFAF4] text-[#04203F]"
                           : "",
                     )}
                   >
@@ -386,7 +386,7 @@ export function PromoDetailVisual({ ctx, metric }: { ctx: KpiDetailsContext; met
   }
 
   const segments = [
-    { label: "Compliant", count: pass, className: "bg-emerald-500" },
+    { label: "Compliant", count: pass, className: "bg-[#79E2A8]" },
     { label: "Non-compliant", count: fail, className: "bg-destructive" },
     { label: "Not assessable", count: na, className: "bg-muted-foreground/40" },
   ].filter((s) => s.count > 0);
@@ -421,7 +421,7 @@ export function PromoDetailVisual({ ctx, metric }: { ctx: KpiDetailsContext; met
                 c.status === "Non-compliant"
                   ? "text-destructive"
                   : c.status === "Compliant"
-                    ? "text-emerald-700 dark:text-emerald-300"
+                    ? "text-[#04203F] dark:text-emerald-300"
                     : "text-muted-foreground",
               )}
             >

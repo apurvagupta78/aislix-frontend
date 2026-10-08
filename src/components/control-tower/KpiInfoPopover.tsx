@@ -48,7 +48,7 @@ export function KpiInfoPopover({ kpi, scopeLabel, periodLabel }: Props) {
         <div>
           <p className="font-semibold">{kpi.label}</p>
           {!kpi.available && def?.unavailableReason ? (
-            <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{def.unavailableReason}</p>
+            <p className="mt-1 text-xs text-[#04203F] dark:text-amber-400">{def.unavailableReason}</p>
           ) : null}
         </div>
 

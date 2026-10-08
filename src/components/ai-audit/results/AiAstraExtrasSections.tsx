@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 
 function severityClass(severity: string) {
   const s = severity.toUpperCase();
-  if (s === "HIGH" || s === "CRITICAL") return "border-rose-500/40 text-rose-700";
-  if (s === "MEDIUM") return "border-amber-500/40 text-amber-700";
+  if (s === "HIGH" || s === "CRITICAL") return "border-[#ECBDCC] text-[#04203F]";
+  if (s === "MEDIUM") return "border-[#ECBDCC] text-[#04203F]";
   return "border-border text-muted-foreground";
 }
 
@@ -19,9 +19,9 @@ export function AiImageQualityBanner({ extras }: { extras: AstraOutputExtras }) 
     <div
       className={cn(
         "rounded-xl border px-4 py-3 text-sm",
-        iq.status === "GOOD" && "border-emerald-500/30 bg-emerald-500/5",
-        iq.status === "LIMITED" && "border-amber-500/30 bg-amber-500/5",
-        iq.status === "POOR" && "border-rose-500/30 bg-rose-500/5",
+        iq.status === "GOOD" && "border-[#79E2A8] bg-white",
+        iq.status === "LIMITED" && "border-[#ECBDCC] bg-white",
+        iq.status === "POOR" && "border-[#ECBDCC] bg-white",
       )}
     >
       <p className="font-medium">Image quality: {iq.status}</p>
@@ -238,7 +238,7 @@ export function AiFinancialImpactSection({
                 ? "—"
                 : `₹${impact.potential_inventory_value_gap_inr}`,
             bg: "#FFEAF1",
-            accent: "#F9A8C9",
+            accent: "#ECBDCC",
           },
         ]
       : []),
@@ -258,13 +258,13 @@ export function AiFinancialImpactSection({
       label: "Potential OOS SKUs",
       value: estimated ? impact.oos_sku_count : "N/A",
       bg: "#FFEAF1",
-      accent: "#F9A8C9",
+      accent: "#ECBDCC",
     },
     {
       label: "Financial Impact Status",
       value: impact.estimate_status ?? impact.confidence ?? "—",
       bg: "#EEF1F4",
-      accent: "#94A3B8",
+      accent: "#D9E2E8",
     },
   ];
   return (
@@ -283,16 +283,12 @@ export function AiFinancialImpactSection({
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => (
-          <div
-            key={card.label}
-            className="rounded-xl border border-black/5 px-3 py-3"
-            style={{ background: card.bg }}
-          >
-            <p className="text-xs font-medium text-navy/60">{card.label}</p>
+          <div key={card.label} className="rounded-xl border border-border bg-white px-3 py-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span className="size-1.5 shrink-0 rounded-full" style={{ background: card.accent }} aria-hidden />
+              {card.label}
+            </p>
             <p className="mt-1 text-lg font-semibold tabular-nums text-navy">{card.value}</p>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
-              <div className="h-full w-2/3 rounded-full" style={{ background: card.accent }} />
-            </div>
           </div>
         ))}
       </div>

@@ -849,7 +849,7 @@ function ScanPage() {
             {!lockedByAssignment && missingPlanogramSelections.length > 0 && (
               <div
                 role="alert"
-                className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-4"
+                className="rounded-2xl border border-[#ECBDCC] bg-white px-4 py-4"
               >
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -996,7 +996,7 @@ function ScanPage() {
               </div>
 
               {!setupComplete && (
-                <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                <p className="mt-4 rounded-xl border border-[#ECBDCC] bg-white px-3 py-2 text-xs text-foreground dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
                   {withPlanogram
                     ? "Complete shelf setup, add expected products with prices, then upload photos."
                     : "Select store, location, shelf types, and add at least one product with shelf price (MRP)."}
@@ -1102,7 +1102,7 @@ function ScanPage() {
               {fileError && (
                 <div
                   role="alert"
-                  className="mt-3 flex items-start gap-2.5 rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3"
+                  className="mt-3 flex items-start gap-2.5 rounded-xl border border-[#ECBDCC] bg-white px-4 py-3"
                 >
                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
                   <p className="text-sm text-destructive">{fileError}</p>

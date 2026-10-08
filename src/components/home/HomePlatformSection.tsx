@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { platformFeatures } from "@/lib/home/homepage-data";
-import { statusDot, toneCard, toneText } from "@/lib/home/homepage-tone";
+import { statusDot, toneCard, toneDot, toneText } from "@/lib/home/homepage-tone";
 
 export function HomePlatformSection() {
   const [activeId, setActiveId] = useState(platformFeatures[0].id);
@@ -88,15 +88,18 @@ export function HomePlatformSection() {
           >
             <div key={active.id} className="animate-in fade-in duration-200">
               <div
-                className={`flex items-end justify-between gap-4 rounded-2xl border p-6 ${toneCard[active.tone]}`}
+                className={`flex items-end justify-between gap-4 rounded-xl border p-6 ${toneCard[active.tone]}`}
               >
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">{active.metric.label}</p>
+                  <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <span className={`size-1.5 shrink-0 rounded-full ${toneDot[active.tone]}`} aria-hidden="true" />
+                    {active.metric.label}
+                  </p>
                   <p className="mt-1 text-6xl font-bold tracking-[-0.03em] text-foreground">
                     {active.metric.value}
                   </p>
                 </div>
-                <span className="flex size-12 items-center justify-center rounded-xl bg-white">
+                <span className="flex size-12 items-center justify-center rounded-lg bg-muted">
                   <ActiveIcon className={`size-6 ${toneText[active.tone]}`} aria-hidden="true" />
                 </span>
               </div>

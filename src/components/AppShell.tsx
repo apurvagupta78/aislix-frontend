@@ -635,7 +635,7 @@ export function AppShell({
                       <Badge className="hidden rounded-md border border-border bg-surface text-xs font-medium text-muted-foreground sm:inline-flex">
                         Guest
                       </Badge>
-                      <Badge className="hidden rounded-md bg-[var(--aislix-supermarket-bg)] text-xs font-medium text-[#4F6B2E] sm:inline-flex">
+                      <Badge className="hidden rounded-md bg-[var(--aislix-supermarket-bg)] text-xs font-medium text-navy sm:inline-flex">
                         Demo ON
                       </Badge>
                       <Button asChild variant="brand" size="sm" className="rounded-lg">

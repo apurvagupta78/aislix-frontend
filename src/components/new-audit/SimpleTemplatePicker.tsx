@@ -20,64 +20,9 @@ import {
   getRecentTemplates,
   type RecentTemplateEntry,
 } from "@/lib/new-audit/recent-templates";
-import { SEMANTIC_PALETTE } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 
 type SourceFilter = "all" | "mine" | "organization" | "aislix";
-
-const MODEL_BADGE: Record<string, string> = {
-  "Local Store": "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
-  Supermarket: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
-  "Dark Store": "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
-  Warehouse: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
-  "FMCG / Distributor": "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
-  FMCG: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
-  Distributor: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
-  Custom: "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
-};
-
-const SPECIAL_BADGE: Record<string, string> = {
-  AI: `${SEMANTIC_PALETTE.ai.border} ${SEMANTIC_PALETTE.ai.bg}`,
-  Evidence: `${SEMANTIC_PALETTE.evidence.border} ${SEMANTIC_PALETTE.evidence.bg}`,
-  Aislix: `${SEMANTIC_PALETTE.brand.border} ${SEMANTIC_PALETTE.brand.bg}`,
-  Organization: `${SEMANTIC_PALETTE.success.border} ${SEMANTIC_PALETTE.success.bg}`,
-  "My Template": `${SEMANTIC_PALETTE.warning.border} ${SEMANTIC_PALETTE.warning.bg}`,
-};
-
-const PURPOSE_BADGE = `${SEMANTIC_PALETTE.info.border} ${SEMANTIC_PALETTE.info.bg}`;
-
-/** Five distinct operating-model tints from the design system — rotate so no two neighbors match. */
-const USE_TEMPLATE_BUTTON: Record<OperatingModel, string> = {
-  local_store:
-    "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-local-border)]/40",
-  supermarket:
-    "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-supermarket-border)]/40",
-  dark_store:
-    "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-darkstore-border)]/40",
-  warehouse:
-    "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-warehouse-border)]/40",
-  fmcg_distributor:
-    "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-fmcg-border)]/40",
-  custom:
-    "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-custom-border)]/40",
-};
-
-const USE_TEMPLATE_BUTTON_ROTATION: OperatingModel[] = [
-  "local_store",
-  "supermarket",
-  "dark_store",
-  "warehouse",
-  "custom",
-];
-
-function badgeTone(label: string) {
-  return MODEL_BADGE[label] ?? SPECIAL_BADGE[label] ?? PURPOSE_BADGE;
-}
-
-function useTemplateButtonClass(colorIndex: number) {
-  const tone = USE_TEMPLATE_BUTTON_ROTATION[colorIndex % USE_TEMPLATE_BUTTON_ROTATION.length];
-  return USE_TEMPLATE_BUTTON[tone];
-}
 
 function systemKeyFromTemplate(t: AuditTemplate): string | undefined {
   const raw = t.purpose_config?.systemTemplateKey;

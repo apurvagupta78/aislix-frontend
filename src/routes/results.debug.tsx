@@ -193,7 +193,7 @@ function ResultsDebugPage() {
               )}
             </p>
             {payload.errors.length ? (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
+              <div className="mt-3 rounded-lg border border-[#ECBDCC] bg-white px-3 py-2 text-xs text-foreground dark:text-amber-100">
                 Partial load warnings: {payload.errors.join(" · ")}
               </div>
             ) : null}

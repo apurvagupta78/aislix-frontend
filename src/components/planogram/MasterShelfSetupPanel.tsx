@@ -59,7 +59,7 @@ function IssueList({ issues }: { issues: MasterValidationIssue[] }) {
         </p>
       ))}
       {warnings.slice(0, 3).map((issue, idx) => (
-        <p key={`w-${idx}`} className="flex gap-2 text-amber-700 dark:text-amber-400">
+        <p key={`w-${idx}`} className="flex gap-2 text-[#04203F] dark:text-amber-400">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
           {issue.row ? `Row ${issue.row}: ` : ""}
           {issue.message}
@@ -196,7 +196,7 @@ export function MasterShelfSetupPanel({
     const { counts, preview } = importResult.validation;
     const warnings = importResult.validation.issues.filter((i) => i.severity === "warning").length;
     return (
-      <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/50 to-background">
+      <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-white  ">
         <div className="border-b border-brand/20 bg-brand/5 px-4 py-4 sm:px-5">
           <div className="flex items-start gap-3">
             <span className="flex size-10 items-center justify-center rounded-xl bg-brand text-white">
@@ -218,7 +218,7 @@ export function MasterShelfSetupPanel({
             {counts.shelves > 0 ? <SummaryStat label="Locations" value={counts.shelves} ok /> : null}
           </div>
           {warnings > 0 ? (
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+            <p className="text-xs text-[#04203F] dark:text-amber-400">
               {warnings} warning{warnings === 1 ? "" : "s"} · Audit can continue
             </p>
           ) : null}
@@ -294,7 +294,7 @@ export function MasterShelfSetupPanel({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border-2 border-brand/25 bg-gradient-to-br from-brand-soft/40 to-background">
+    <div className="overflow-hidden rounded-2xl border-2 border-brand/25 bg-white  ">
       <div className="space-y-5 px-4 py-4 sm:px-5 sm:py-5">
         <div>
           <p className="text-xs font-medium text-brand">

@@ -144,21 +144,20 @@ function Tile({
   value,
   sub,
   accent,
-  tint,
 }: {
   label: string;
   value: string;
   sub?: string;
   accent: string;
-  tint: string;
+  tint?: string;
 }) {
   return (
-    <div
-      className="rounded-xl border border-[#D9E2E8] px-3 py-3"
-      style={{ background: tint, borderTopColor: accent, borderTopWidth: 3 }}
-    >
+    <div className="rounded-xl border border-[#D9E2E8] bg-white px-3 py-3">
       <p className="font-display text-2xl font-semibold tabular-nums text-[#04203F]">{value}</p>
-      <p className="mt-0.5 text-[11px] font-medium text-[#04203F]">{label}</p>
+      <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-[#04203F]">
+        <span className="size-1.5 shrink-0 rounded-full" style={{ background: accent }} aria-hidden />
+        {label}
+      </p>
       {sub ? <p className="mt-0.5 text-[10px] text-[#667085]">{sub}</p> : null}
     </div>
   );
@@ -274,11 +273,11 @@ export function ReferenceMatchSection({
         csvDownload={{ onDownload: downloadLines }}
       >
         {verdict ? (
-          <div
-            className="rounded-xl border border-[#D9E2E8] px-4 py-3"
-            style={{ background: verdict.tint, borderLeftColor: verdict.accent, borderLeftWidth: 4 }}
-          >
-            <p className="font-display text-xl font-semibold text-[#04203F]">{verdict.label}</p>
+          <div className="rounded-xl border border-[#D9E2E8] bg-white px-4 py-3">
+            <p className="flex items-center gap-2 font-display text-xl font-semibold text-[#04203F]">
+              <span className="size-2 shrink-0 rounded-full" style={{ background: verdict.accent }} aria-hidden />
+              {verdict.label}
+            </p>
             <p className="mt-0.5 text-xs text-[#667085]">
               {doc.source === "csv"
                 ? "Lines from your file"

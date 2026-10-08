@@ -87,7 +87,7 @@ export function ControlTowerMetricsBoard({
             {(openFindings || critical) &&
             (parseInt(String(openFindings?.value ?? "0"), 10) > 0 ||
               parseInt(String(critical?.value ?? "0"), 10) > 0) ? (
-              <div className="mt-5 rounded-lg border border-dark-line bg-dark-bg px-3.5 py-3">
+              <div className="mt-5 rounded-lg border border-dark-line bg-white px-3.5 py-3">
                 <p className="text-[13px] font-semibold text-navy">
                   {critical?.value ?? 0} critical · {openFindings?.value ?? 0} open findings
                 </p>
@@ -116,7 +116,7 @@ export function ControlTowerMetricsBoard({
           </div>
         </MpCard>
 
-        <MpCard className="border-dark-line bg-dark-bg">
+        <MpCard>
           <MpCardHeader title="Exceptions" description="Open findings requiring attention." />
           <div className="grid grid-cols-2 gap-3 p-5">
             {[openFindings, critical].map((kpi) =>
@@ -125,7 +125,7 @@ export function ControlTowerMetricsBoard({
                   key={kpi.id}
                   type="button"
                   onClick={() => kpi.available && onDrill(kpi)}
-                  className="rounded-lg border border-dark-line bg-white/80 p-3 text-left"
+                  className="rounded-lg border border-border bg-white p-3 text-left hover:bg-muted"
                 >
                   <p className="text-xs font-medium text-mp-muted">{kpi.label}</p>
                   <p className="mt-1 font-display text-3xl font-semibold tabular-nums text-navy">{kpi.value}</p>
@@ -142,7 +142,7 @@ export function ControlTowerMetricsBoard({
           <button
             type="button"
             onClick={() => variance.available && onDrill(variance)}
-            className="lg:col-span-5 rounded-xl border border-warehouse-line bg-warehouse-bg p-5 text-left"
+            className="lg:col-span-5 rounded-xl border border-border bg-white p-5 text-left"
           >
             <p className="flex items-center gap-2 text-xs font-medium text-mp-muted">
               <IndianRupee className="size-3.5" /> {variance.label}
@@ -152,9 +152,9 @@ export function ControlTowerMetricsBoard({
           </button>
         ) : null}
 
-        <div className="lg:col-span-7 rounded-xl border border-market-line bg-market-bg p-5">
+        <div className="lg:col-span-7 rounded-xl border border-border bg-white p-5">
           <p className="text-xs font-medium text-mp-muted">Corrective action load</p>
-          <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-market-line bg-market-line sm:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
             {[
               { kpi: openActions, label: "Open" },
               { kpi: overdue, label: "Overdue" },
@@ -168,7 +168,7 @@ export function ControlTowerMetricsBoard({
                 onClick={() => {
                   if ("kpi" in cell && cell.kpi?.available) onDrill(cell.kpi);
                 }}
-                className="bg-white/80 p-3 text-left"
+                className="bg-white p-3 text-left hover:bg-muted"
               >
                 <p className="text-xs font-medium text-mp-muted">{cell.label}</p>
                 <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-navy">
@@ -181,7 +181,7 @@ export function ControlTowerMetricsBoard({
       </div>
 
       {pending.length > 0 ? (
-        <div className="rounded-xl border border-neutral-line bg-neutral-bg p-4">
+        <div className="rounded-xl border border-border bg-white p-4">
           <p className="text-xs font-medium text-mp-muted">Not computed yet</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {pending.map((kpi) => (
@@ -208,10 +208,7 @@ export function ControlTowerMetricsBoard({
               <span
                 key={kpi.id}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-navy",
-                  i % 3 === 0 && "border-warehouse-line bg-warehouse-bg",
-                  i % 3 === 1 && "border-market-line bg-market-bg",
-                  i % 3 === 2 && "border-neutral-line bg-neutral-bg",
+                  "inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs text-navy",
                 )}
               >
                 <span className="font-medium">{kpi.label}</span>

@@ -120,7 +120,7 @@ export function UsageOverviewCards() {
       ) : null}
 
       {(auditWarn === "full" || auditWarn === "strong") && !isPayg ? (
-        <p className="text-sm text-amber-700">
+        <p className="text-sm text-[#04203F]">
           Plan limit {auditWarn === "full" ? "reached" : "almost reached"}.{" "}
           <Link to="/pricing" className="font-medium text-brand underline-offset-2 hover:underline">
             Upgrade plan →

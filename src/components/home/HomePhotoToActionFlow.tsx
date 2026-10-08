@@ -95,31 +95,11 @@ const BENEFITS = [
 ];
 
 const TONE = {
-  local: {
-    card: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
-    ink: "text-[#2A6FA8]",
-    iconBg: "bg-white text-[#2A6FA8]",
-  },
-  supermarket: {
-    card: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
-    ink: "text-[#4F6B2E]",
-    iconBg: "bg-white text-[#4F6B2E]",
-  },
-  warehouse: {
-    card: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
-    ink: "text-[#1F6FB2]",
-    iconBg: "bg-white text-[#1F6FB2]",
-  },
-  darkstore: {
-    card: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
-    ink: "text-[#04203F]",
-    iconBg: "bg-white text-[#04203F]",
-  },
-  custom: {
-    card: "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
-    ink: "text-[#35658F]",
-    iconBg: "bg-white text-[#35658F]",
-  },
+  local: { dot: "#7DB7D6" },
+  supermarket: { dot: "#79E2A8" },
+  warehouse: { dot: "#8EC9E8" },
+  darkstore: { dot: "#ECBDCC" },
+  custom: { dot: "#9B86D9" },
 };
 
 function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
@@ -142,9 +122,9 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
   }
   if (step.n === 2) {
     return (
-      <div className="mt-4 rounded-xl border border-[var(--aislix-supermarket-border)] bg-white p-3">
+      <div className="mt-4 rounded-xl border border-border bg-white p-3">
         <div className="flex items-start gap-2.5">
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--aislix-supermarket-bg)] text-[#4F6B2E]">
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-[#04203F]">
             <MessageCircle className="size-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
@@ -154,7 +134,7 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
             <p className="mt-2 text-xs font-semibold text-foreground">Photo sent to Aislix</p>
             <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
               10:24 AM
-              <CheckCircle2 className="size-3 text-[#4F6B2E]" aria-hidden="true" />
+              <CheckCircle2 className="size-3 text-[#79E2A8]" aria-hidden="true" />
             </p>
           </div>
         </div>
@@ -179,10 +159,10 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
   }
   if (step.n === 4) {
     const rows = [
-      { icon: CheckCircle2, label: "Store audit completed", date: "12 Sep 2026", color: "text-[#4F6B2E]" },
+      { icon: CheckCircle2, label: "Store audit completed", date: "12 Sep 2026", color: "text-[#79E2A8]" },
       { icon: AlertTriangle, label: "Findings raised", date: "12 Sep 2026", color: "text-[#04203F]" },
       { icon: UserRound, label: "Action assigned", date: "13 Sep 2026", color: "text-[#9B86D9]" },
-      { icon: CheckCircle2, label: "Re-audit completed", date: "18 Sep 2026", color: "text-[#4F6B2E]" },
+      { icon: CheckCircle2, label: "Re-audit completed", date: "18 Sep 2026", color: "text-[#79E2A8]" },
     ];
     return (
       <ul className="mt-4 space-y-2 rounded-xl border border-border bg-white p-3">
@@ -199,8 +179,8 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
     );
   }
   return (
-    <div className="mt-4 rounded-xl border border-[var(--aislix-supermarket-border)] bg-white p-3">
-      <div className="flex items-center gap-2 text-[#4F6B2E]">
+    <div className="mt-4 rounded-xl border border-border bg-white p-3">
+      <div className="flex items-center gap-2 text-[#04203F]">
         <CheckCircle2 className="size-4" aria-hidden="true" />
         <p className="text-xs font-medium">Issue resolved</p>
       </div>
@@ -214,7 +194,7 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
         </div>
         <div className="flex flex-[1.4] flex-col items-center gap-1">
           <div className="h-16 w-full rounded-t bg-[#79E2A8]" />
-          <span className="text-[10px] font-semibold text-[#4F6B2E]">92%</span>
+          <span className="text-[10px] font-semibold text-[#04203F]">92%</span>
         </div>
       </div>
     </div>
@@ -232,7 +212,7 @@ export function HomePhotoToActionFlow() {
         <div className="mx-auto max-w-3xl text-center">
           <h2 id="flow-title" className="text-3xl font-semibold tracking-[-0.02em] text-foreground sm:text-4xl">
             From a photo to real action.{" "}
-            <span className="text-[#4F6B2E]">All in one place.</span>
+            <span className="text-muted-foreground">All in one place.</span>
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
             No more scattered photos on WhatsApp. Turn every store visit into structured audits,
@@ -247,11 +227,11 @@ export function HomePhotoToActionFlow() {
             return (
               <Fragment key={step.title}>
                 <article
-                  className={`flex flex-1 flex-col rounded-2xl border p-4 sm:p-5 ${tone.card}`}
+                  className="flex flex-1 flex-col rounded-xl border border-border bg-white p-4 sm:p-5"
                 >
                   <div className="flex items-start gap-3">
                     <span
-                      className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${tone.iconBg}`}
+                      className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-[#04203F]"
                     >
                       {Icon ? (
                         <Icon className="size-5" aria-hidden="true" />
@@ -260,7 +240,8 @@ export function HomePhotoToActionFlow() {
                       )}
                     </span>
                     <div>
-                      <p className={`text-sm font-bold ${tone.ink}`}>
+                      <p className="flex items-center gap-1.5 text-sm font-semibold text-[#04203F]">
+                        <span className="size-1.5 shrink-0 rounded-full" style={{ background: tone.dot }} aria-hidden="true" />
                         {step.n}. {step.title}
                       </p>
                       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
@@ -279,10 +260,10 @@ export function HomePhotoToActionFlow() {
         </div>
 
         <ul className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {BENEFITS.map(({ icon: Icon, title, body, tone }) => (
+          {BENEFITS.map(({ icon: Icon, title, body }) => (
             <li key={title} className="text-center">
               <span
-                className={`mx-auto flex size-11 items-center justify-center rounded-full border ${TONE[tone].card} ${TONE[tone].ink}`}
+                className="mx-auto flex size-11 items-center justify-center rounded-full bg-muted text-[#04203F]"
               >
                 <Icon className="size-5" aria-hidden="true" />
               </span>

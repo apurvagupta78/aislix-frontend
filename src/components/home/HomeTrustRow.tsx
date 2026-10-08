@@ -2,31 +2,31 @@ import { Building2, PackageSearch, ShoppingCart, Store, Warehouse } from "lucide
 
 const audiences = [
   {
-    modelClass: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
+    dot: "#7DB7D6",
     label: "Local stores",
     Icon: Store,
     body: "Turn everyday store visits into measurable shelf execution.",
   },
   {
-    modelClass: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
+    dot: "#79E2A8",
     label: "Supermarkets",
     Icon: ShoppingCart,
     body: "Improve availability, assortment, pricing, promotions and shelf execution.",
   },
   {
-    modelClass: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
+    dot: "#ECBDCC",
     label: "Dark stores",
     Icon: Building2,
     body: "Know what is available and whether products are in the right location.",
   },
   {
-    modelClass: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
+    dot: "#8EC9E8",
     label: "Warehouses",
     Icon: Warehouse,
     body: "Verify receiving, bin accuracy, putaway, picking and dispatch.",
   },
   {
-    modelClass: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
+    dot: "#9B86D9",
     label: "FMCG / Distributors",
     Icon: PackageSearch,
     body: "Measure shelf presence, outlet execution, pricing and Share of Shelf.",
@@ -45,15 +45,18 @@ export function HomeTrustRow() {
           One platform for retailers, brands, distributors and store teams.
         </p>
         <div className="mx-auto mt-8 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {audiences.map(({ label, Icon, body, modelClass }) => (
+          {audiences.map(({ label, Icon, body, dot }) => (
             <div
               key={label}
-              className={`card-hover flex flex-col items-center rounded-lg border p-5 text-center ${modelClass}`}
+              className="card-hover flex flex-col items-center rounded-lg border border-border bg-white p-5 text-center"
             >
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--aislix-border)] bg-white/80 text-[var(--aislix-primary)]">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-[var(--aislix-primary)]">
                 <Icon className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
               </div>
-              <h3 className="mt-3 text-sm font-semibold text-foreground">{label}</h3>
+              <h3 className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <span className="size-1.5 shrink-0 rounded-full" style={{ background: dot }} aria-hidden="true" />
+                {label}
+              </h3>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{body}</p>
             </div>
           ))}

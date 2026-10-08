@@ -219,7 +219,7 @@
   --aislix-primary: #04203F;
   --aislix-secondary: #667085;
   --aislix-border: #D9E2E8;
-  --aislix-surface: #EFF4F7;
+  --aislix-surface: #F4F7F9;
   --aislix-local-bg: #EAF6FD;
   --aislix-local-border: #C1E4F8;
   --aislix-supermarket-bg: #EAF1DF;
@@ -245,13 +245,13 @@
   --secondary-foreground: var(--aislix-primary);
   --muted: var(--aislix-surface);
   --muted-foreground: var(--aislix-secondary);
-  --accent: var(--aislix-local-bg);
+  --accent: var(--aislix-bg);
   --accent-foreground: var(--aislix-primary);
   --destructive: var(--aislix-darkstore-bg);
   --destructive-foreground: var(--aislix-primary);
   --border: var(--aislix-border);
   --input: var(--aislix-border);
-  --ring: var(--aislix-warehouse-border);
+  --ring: rgb(4 32 63 / 0.35);
   --chart-1: #9B86D9;
   --chart-2: #7DB7D6;
   --chart-3: #79E2A8;
@@ -263,14 +263,14 @@
   --sidebar-foreground: var(--aislix-secondary);
   --sidebar-primary: var(--aislix-primary);
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: var(--aislix-warehouse-bg);
+  --sidebar-accent: var(--aislix-bg);
   --sidebar-accent-foreground: var(--aislix-primary);
   --sidebar-border: var(--aislix-border);
-  --sidebar-ring: var(--aislix-warehouse-border);
+  --sidebar-ring: rgb(4 32 63 / 0.35);
 
   --brand: var(--aislix-primary);
   --brand-foreground: #FFFFFF;
-  --brand-soft: var(--aislix-local-bg);
+  --brand-soft: var(--aislix-bg);
   --brand-glow: var(--aislix-warehouse-bg);
   --brand-muted: var(--aislix-secondary);
   --accent-green: var(--aislix-supermarket-border);
@@ -278,8 +278,8 @@
   --surface: var(--aislix-surface);
   --success: var(--aislix-supermarket-bg);
   --warning: var(--aislix-darkstore-bg);
-  --semantic-info: var(--aislix-local-bg);
-  --semantic-ai: var(--aislix-warehouse-bg);
+  --semantic-info: var(--aislix-bg);
+  --semantic-ai: var(--aislix-bg);
   --semantic-evidence: var(--aislix-darkstore-bg);
 
   --status-good: var(--aislix-supermarket-border);
@@ -310,7 +310,7 @@
   --landing-navy-soft: var(--aislix-secondary);
   --landing-cyan: var(--aislix-warehouse-border);
   --landing-cyan-hover: var(--aislix-local-border);
-  --landing-cyan-soft: var(--aislix-local-bg);
+  --landing-cyan-soft: var(--aislix-bg);
   --landing-surface: #FFFFFF;
   --landing-border: var(--aislix-border);
 }
@@ -387,10 +387,7 @@
 }
 
 @utility grid-lines {
-  background-image:
-    linear-gradient(to right, color-mix(in oklab, var(--color-border) 70%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklab, var(--color-border) 70%, transparent) 1px, transparent 1px);
-  background-size: 56px 56px;
+  background-image: none;
 }
 
 @utility card-hover {
@@ -522,7 +519,7 @@
   background-color: var(--aislix-surface);
 }
 .nav-dark .bg-brand-soft {
-  background-color: var(--aislix-warehouse-bg);
+  background-color: var(--aislix-bg);
 }
 .nav-dark .text-brand,
 .nav-dark .text-foreground {

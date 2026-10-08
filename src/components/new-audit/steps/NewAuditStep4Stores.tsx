@@ -110,8 +110,8 @@ export function NewAuditStep4Stores({
         className={cn(
           "flex w-full flex-col rounded-xl border p-4 text-left transition-colors duration-200",
           selected
-            ? "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]"
-            : "border-[var(--aislix-border)] bg-white hover:border-[var(--aislix-local-border)] hover:bg-[var(--aislix-surface)]/50",
+            ? "border-[var(--aislix-primary)] bg-white"
+            : "border-[var(--aislix-border)] bg-white hover:border-[#9FB3C8] hover:bg-muted",
           compact && "p-3",
         )}
       >
@@ -158,7 +158,7 @@ export function NewAuditStep4Stores({
           ))}
         </div>
       ) : loadFailed ? (
-        <div className="rounded-xl border border-[var(--aislix-border)] bg-[#FFEAF1] p-6 text-center text-sm text-[var(--aislix-primary)]">
+        <div className="rounded-xl border bg-white p-6 text-center text-sm text-[var(--aislix-primary)] border-[#ECBDCC]">
           Could not load your {words.many}. Refresh the page to try again.
         </div>
       ) : !stores.length ? (

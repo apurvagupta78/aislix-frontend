@@ -125,7 +125,7 @@ export function FixRescanVerifyPanel({
       )}
 
       {needsFix && (
-        <div className="mt-4 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+        <div className="mt-4 rounded-xl border border-[#ECBDCC] bg-white px-4 py-3">
           <p className="text-sm font-medium text-warning">Fix shelf → re-audit → verify</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Correct the open issues on shelf, then re-audit the same assignment. Compliance updates

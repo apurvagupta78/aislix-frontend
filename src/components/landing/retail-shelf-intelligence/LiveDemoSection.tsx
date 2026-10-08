@@ -285,7 +285,7 @@ export function LiveDemoSection({
       <div className={homepageIntro ? "mx-auto max-w-7xl px-5 lg:px-8" : "mx-auto max-w-6xl px-5 sm:px-8"}>
         {homepageIntro ? (
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-[#2A6FA8]">Try Aislix free</p>
+            <p className="text-sm font-semibold text-[#04203F]">Try Aislix free</p>
             <h2 className="mt-3 text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl">
               See what Aislix can find on your shelf.
             </h2>
@@ -377,7 +377,7 @@ export function LiveDemoSection({
             )}
 
             {phase === "error" && error ? (
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-[#ECBDCC] bg-white p-3 text-sm text-destructive">
                 <AlertCircle className="mt-0.5 size-4 shrink-0" />
                 <span>{error}</span>
               </div>

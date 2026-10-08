@@ -79,7 +79,7 @@ export function DashboardCommandCenterV2({
   return (
     <div className="space-y-8">
       {sampleMode ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#ECBDCC] bg-white p-4 text-foreground">
           <div>
             <p className="text-sm font-semibold">Illustrative sample dashboard</p>
             <p className="text-xs">
@@ -250,13 +250,13 @@ function ExecutivePulse() {
                   key={location}
                   className={cn(
                     "rounded-lg border p-3",
-                    index < 6 ? "border-emerald-200 bg-emerald-50" : "bg-muted/40",
+                    index < 6 ? "border-border bg-white" : "bg-muted/40",
                   )}
                 >
                   <CheckCircle2
                     className={cn(
                       "mb-2 size-4",
-                      index < 6 ? "text-emerald-700" : "text-muted-foreground",
+                      index < 6 ? "text-[#04203F]" : "text-muted-foreground",
                     )}
                   />
                   {location}
@@ -330,9 +330,9 @@ function ActionRequired() {
 
 function heatTone(value: number) {
   if (value >= 92) return "bg-emerald-600 text-white";
-  if (value >= 85) return "bg-emerald-100 text-emerald-950";
-  if (value >= 80) return "bg-amber-100 text-amber-950";
-  return "bg-red-100 text-red-950";
+  if (value >= 85) return "bg-[#EFFAF4] text-[#04203F]";
+  if (value >= 80) return "bg-[#FFEAF1] text-[#04203F]";
+  return "bg-[#FFEAF1] text-[#04203F]";
 }
 
 function RetailPerformance() {
@@ -694,7 +694,7 @@ function ControlAccountability() {
           className="xl:col-span-1"
         >
           <div className="flex items-center gap-6">
-            <div className="grid size-28 shrink-0 place-items-center rounded-full border-8 border-emerald-500/70">
+            <div className="grid size-28 shrink-0 place-items-center rounded-full border-8 border-[#79E2A8]">
               <div className="text-center">
                 <p className="text-2xl font-semibold">91%</p>
                 <p className="text-[0.6rem] text-muted-foreground">within SLA</p>
@@ -707,7 +707,7 @@ function ControlAccountability() {
               <p>
                 <strong>9</strong> overdue actions
               </p>
-              <p className="text-emerald-700">
+              <p className="text-[#04203F]">
                 <TrendingUp className="mr-1 inline size-4" />
                 4.2% improvement
               </p>

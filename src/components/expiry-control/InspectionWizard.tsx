@@ -390,8 +390,8 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
           </p>
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
             <div className="rounded-lg border bg-muted/40 p-3">Unchecked</div>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">Sellable</div>
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3">Remove / hold</div>
+            <div className="rounded-lg border border-border bg-white p-3">Sellable</div>
+            <div className="rounded-lg border border-[#ECBDCC] bg-white p-3">Remove / hold</div>
           </div>
           {(attempt.assurance_level === "high" || recording) && !assuranceFallback ? (
             <div className="space-y-2">
@@ -422,7 +422,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
               {videoError ? <p className="text-xs text-destructive">{videoError}</p> : null}
             </div>
           ) : assuranceFallback ? (
-            <p className="text-xs text-amber-700">Lower-assurance — photos only; extra manager review required.</p>
+            <p className="text-xs text-[#04203F]">Lower-assurance — photos only; extra manager review required.</p>
           ) : (
             <Button size="sm" variant="outline" onClick={() => void startVideoSession()}>
               Optional: record session video
@@ -461,7 +461,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
                 AI suggested <strong>{ocrState.date ?? "—"}</strong>. Check the printed marking before confirming.
               </p>
               {ocrState.simulated ? (
-                <p className="text-xs font-medium text-amber-700">Simulated — development only</p>
+                <p className="text-xs font-medium text-[#04203F]">Simulated — development only</p>
               ) : null}
               <div className="grid grid-cols-2 gap-2">
                 <Button size="sm" onClick={() => confirmReading("confirm")}>
@@ -557,7 +557,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
           <Button className="w-full" disabled={!transferForm.containerCode} onClick={handleTransfer}>
             Submit inspection
           </Button>
-          {submitMessage ? <p className="text-sm font-medium text-amber-800">{submitMessage}</p> : null}
+          {submitMessage ? <p className="text-sm font-medium text-[#04203F]">{submitMessage}</p> : null}
           <p className="text-xs text-muted-foreground">
             POS blocking: not configured — inventory non-saleable marking requires separate integration.
           </p>

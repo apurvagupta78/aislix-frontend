@@ -351,7 +351,7 @@ function ActionDetailPage() {
             {escalation ? (
               <span
                 className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold text-navy"
-                style={{ background: AISLIX_PALETTE.pink, borderColor: CA_PINK_BAR }}
+                style={{ background: AISLIX_PALETTE.card, borderColor: CA_PINK_BAR }}
               >
                 <ShieldAlert className="size-3" /> {escalation}
               </span>
@@ -432,7 +432,7 @@ function ActionDetailPage() {
               ) : needsPlan ? (
                 <span
                   className="rounded-full border px-2 py-0.5 text-[11px] font-semibold text-navy"
-                  style={{ background: AISLIX_PALETTE.pink, borderColor: CA_PINK_BAR }}
+                  style={{ background: AISLIX_PALETTE.card, borderColor: CA_PINK_BAR }}
                 >
                   Required
                 </span>
@@ -518,13 +518,13 @@ function ActionDetailPage() {
           {rejectReasonBanner(action)}
 
           {open && needsPlan && !planDone ? (
-            <p className="mb-4 rounded-lg border px-3 py-2 text-sm text-navy" style={{ background: ACCENT_TINT.pink, borderColor: CA_PINK_BAR }}>
+            <p className="mb-4 rounded-lg border px-3 py-2 text-sm text-navy" style={{ background: AISLIX_PALETTE.card, borderColor: CA_PINK_BAR }}>
               Save the root cause and preventive action above before submitting this fix.
             </p>
           ) : null}
 
           {open && aiVerify ? (
-            <div className="rounded-xl border p-4" style={{ borderColor: AISLIX_PALETTE.border, background: ACCENT_TINT.blue }}>
+            <div className="rounded-xl border p-4" style={{ borderColor: AISLIX_PALETTE.border, background: AISLIX_PALETTE.card }}>
               <p className="flex items-center gap-2 text-sm font-semibold text-navy">
                 <Bot className="size-4" /> AI re-check
               </p>
@@ -637,7 +637,7 @@ function ActionDetailPage() {
                 className="rounded-xl border p-4"
                 style={{
                   borderColor: recheckStatus === "passed" ? AISLIX_PALETTE.green : recheckStatus === "failed" ? CA_PINK_BAR : AISLIX_PALETTE.border,
-                  background: recheckStatus === "passed" ? ACCENT_TINT.green : recheckStatus === "failed" ? ACCENT_TINT.pink : AISLIX_PALETTE.grey,
+                  background: AISLIX_PALETTE.card,
                 }}
               >
                 <p className="text-sm font-semibold text-navy">{RECHECK_MESSAGE[recheckStatus]}</p>
@@ -773,7 +773,7 @@ function ActionDetailPage() {
 function rejectReasonBanner(action: LifecycleAction) {
   if (!action.rejection_reason || actionStage(action.status) !== "in_progress") return null;
   return (
-    <p className="mb-4 rounded-lg border px-3 py-2 text-sm text-navy" style={{ background: ACCENT_TINT.pink, borderColor: CA_PINK_BAR }}>
+    <p className="mb-4 rounded-lg border px-3 py-2 text-sm text-navy" style={{ background: AISLIX_PALETTE.card, borderColor: CA_PINK_BAR }}>
       Sent back: {hideModelNames(action.rejection_reason)}
     </p>
   );
