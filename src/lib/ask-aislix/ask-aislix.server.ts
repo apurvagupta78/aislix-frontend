@@ -286,8 +286,13 @@ async function runToolLoop(
         args,
         result: compactToolResultForModel(result),
       });
-      if (result.pendingImages?.length) pendingImages.push(...result.pendingImages);
-      if (result.visionImages?.length) visionAssets.push(...result.visionImages);
+      for (const image of result.pendingImages ?? []) {
+        if (!pendingImages.some((seen) => seen.evidenceId === image.evidenceId)) pendingImages.push(image);
+      }
+      for (const asset of result.visionImages ?? []) {
+        const id = asset.source?.evidenceId;
+        if (!id || !visionAssets.some((seen) => seen.source?.evidenceId === id)) visionAssets.push(asset);
+      }
       input.push({
         type: "function_call_output",
         call_id: call.call_id,

@@ -8,6 +8,13 @@ export const MAX_VISION_BYTES = 5 * 1024 * 1024;
 
 export type ImageSelectionMode = "analysis" | "gallery";
 
+/** Digital / custom audit photos are uploaded to audit-evidence; shelf scans use scan-images. */
+export function evidenceBucketForPath(storagePath: string): "scan-images" | "audit-evidence" {
+  return storagePath.includes("/custom-audit/") || storagePath.startsWith("custom-audit/")
+    ? "audit-evidence"
+    : "scan-images";
+}
+
 export function selectImagesForMode(
   items: ImageGalleryItem[],
   mode: ImageSelectionMode,
@@ -29,7 +36,14 @@ export async function downloadVisionAssets(
   for (const item of items) {
     if (assets.length >= MAX_VISION_IMAGES) break;
     try {
-      const { data: blob } = await supabase.storage.from(item.storageBucket).download(item.storagePath);
+      let blob: Blob | null = null;
+      for (const bucket of [...new Set([item.storageBucket, "scan-images", "audit-evidence"])]) {
+        const { data } = await supabase.storage.from(bucket).download(item.storagePath);
+        if (data) {
+          blob = data;
+          break;
+        }
+      }
       if (!blob) continue;
 
       const buffer = Buffer.from(await blob.arrayBuffer());

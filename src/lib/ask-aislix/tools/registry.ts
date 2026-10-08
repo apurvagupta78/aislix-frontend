@@ -12,6 +12,7 @@ import {
 } from "@/lib/ask-aislix/ask-aislix.types";
 import { clampFiltersToScope, resolveStoreQuery, storeIdsForQuery } from "@/lib/ask-aislix/context";
 import { fetchScopedControlTowerDataset } from "@/lib/ask-aislix/dataset";
+import { evidenceBucketForPath } from "@/lib/ask-aislix/tools/audit-vision";
 import {
   completionPct,
   UNWIRED_UNIVERSAL_KPI_IDS,
@@ -223,7 +224,8 @@ const TOOL_SPECS: ToolSpec[] = [
   },
   {
     name: "get_audit_evidence_images",
-    description: "Audit evidence images. intent=analysis sends pixels to Luna; intent=gallery fills UI only.",
+    description:
+      "Audit evidence images. intent=analysis sends pixels to Luna; intent=gallery fills UI only. When the question is about one audit, pass its scan_id so only that audit's photos are returned.",
     parameters: {
       type: "object",
       properties: {
@@ -519,6 +521,7 @@ async function getAuditEvidenceImages(ctx: ToolContext, args: Record<string, unk
   const auditType = String(args.audit_type ?? "all");
   const storeQuery = String(args.store_query ?? "").trim();
   let storeId = String(args.store_id ?? "").trim();
+  const scanId = String(args.scan_id ?? "").trim();
 
   const { data: stores } = await ctx.supabase
     .from("stores")
@@ -551,6 +554,7 @@ async function getAuditEvidenceImages(ctx: ToolContext, args: Record<string, unk
   if (!ctx.scope.isOrgAdmin) {
     assignmentQuery = assignmentQuery.in("id", ctx.scope.accessibleAssignmentIds);
   }
+  if (scanId) assignmentQuery = assignmentQuery.eq("scan_id", scanId);
 
   const { data: assignments } = await assignmentQuery;
   const filtered = (assignments ?? []).filter((a) => {
@@ -569,12 +573,18 @@ async function getAuditEvidenceImages(ctx: ToolContext, args: Record<string, unk
   if (!scanIds.length) return { available: true, data: { count: 0, images: [] }, pendingImages: [] };
 
   const [{ data: evidence }, { data: scanImages }] = await Promise.all([
-    ctx.supabase.from("audit_evidence").select("id, scan_id, storage_path, captured_at, bin_key").in("scan_id", scanIds).limit(limit),
+    ctx.supabase
+      .from("audit_evidence")
+      .select("id, scan_id, storage_path, captured_at, bin_key")
+      .in("scan_id", scanIds)
+      .order("captured_at", { ascending: false })
+      .limit(limit),
     ctx.supabase
       .from("scan_images")
       .select("id, scan_id, storage_bucket, storage_path, created_at, kind")
       .in("scan_id", scanIds)
       .eq("kind", "original")
+      .order("created_at", { ascending: false })
       .limit(limit),
   ]);
 
@@ -602,7 +612,7 @@ async function getAuditEvidenceImages(ctx: ToolContext, args: Record<string, unk
       evidenceId: row.id as string,
       scanId: row.scan_id as string,
       assignmentId: assignment?.id as string | undefined,
-      storageBucket: "scan-images",
+      storageBucket: evidenceBucketForPath(row.storage_path as string),
       storagePath: row.storage_path as string,
       caption: `Evidence · ${row.bin_key ?? "audit"}`,
       capturedAt: row.captured_at as string,
