@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { fetchFindings, findingSeverityMeta, findingsKpis } from "@/lib/findings";
+import { findingSubjectLabel } from "@/lib/finding-subject";
 import { daysOpen, fetchLifecycleActions, slaRemainingLabel } from "@/lib/corrective-action-lifecycle";
 import type { DashboardFilterState } from "@/lib/dashboard-filters";
 
@@ -43,7 +44,7 @@ export function FindingsActionsSection({ filters }: { filters: DashboardFilterSt
       (acc, row) => {
         const key = `${row.store_id}|${row.sku}|${row.finding_type}`;
         const cur = acc[key] ?? {
-          sku: row.product_name || row.sku || "SKU",
+          sku: findingSubjectLabel(row),
           store: row.store_name,
           type: row.finding_type,
           count: 0,

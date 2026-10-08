@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId } from "@/lib/db/context";
 import { fetchFindings, findingTypeLabel } from "@/lib/findings";
+import { findingSubjectLabel } from "@/lib/finding-subject";
 import { fetchLifecycleActions } from "@/lib/corrective-action-lifecycle";
 
 export type StoreVariancePoint = {
@@ -111,7 +112,7 @@ export async function fetchStoreGovernanceSnapshot(storeId: string): Promise<Sto
     const key = `${f.sku}|${f.finding_type}`;
     const cur = recurringMap.get(key) ?? {
       sku: f.sku ?? "—",
-      product_name: f.product_name ?? f.sku ?? "SKU",
+      product_name: findingSubjectLabel(f),
       finding_type: findingTypeLabel(f.finding_type),
       frequency: 0,
       last_seen: f.created_at,

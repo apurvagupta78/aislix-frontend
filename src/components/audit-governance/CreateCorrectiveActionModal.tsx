@@ -26,6 +26,7 @@ import { fetchAssignableMembers } from "@/lib/assignments";
 import type { Finding } from "@/lib/findings";
 import { createActionFromFinding } from "@/lib/corrective-action-lifecycle";
 import { findingTypeLabel } from "@/lib/findings";
+import { findingSubjectLabel } from "@/lib/finding-subject";
 
 const SLA_OPTIONS = [
   { hours: 4, label: "4 hours" },
@@ -86,7 +87,7 @@ export function CreateCorrectiveActionModal({
       if (!assigneeId) throw new Error("Select an owner.");
       const actionTitle =
         title.trim() ||
-        `Investigate ${findingTypeLabel(finding.finding_type).toLowerCase()} — ${finding.product_name || finding.sku || "SKU"}`;
+        `Investigate ${findingTypeLabel(finding.finding_type).toLowerCase()} — ${findingSubjectLabel(finding)}`;
       const actionDescription =
         [description.trim(), notes.trim()].filter(Boolean).join("\n\n") ||
         undefined;

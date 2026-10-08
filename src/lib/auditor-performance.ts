@@ -11,10 +11,13 @@ export type AuditorScore = {
   assignments_total: number;
   completed: number;
   on_time: number;
+  /** Completed assignments that had a due date — the on-time denominator. */
+  completed_with_due: number;
   pending_review: number;
   rejected: number;
   completion_rate: number;
-  on_time_rate: number;
+  /** Null when no completed assignment had a due date. */
+  on_time_rate: number | null;
   rejection_rate: number;
   photo_compliance: number;
 };
@@ -73,10 +76,11 @@ export async function fetchAuditorPerformance(days = 90): Promise<AuditorScore[]
         assignments_total: 0,
         completed: 0,
         on_time: 0,
+        completed_with_due: 0,
         pending_review: 0,
         rejected: 0,
         completion_rate: 0,
-        on_time_rate: 0,
+        on_time_rate: null,
         rejection_rate: 0,
         photo_compliance: 0,
       } satisfies AuditorScore);
@@ -87,6 +91,7 @@ export async function fetchAuditorPerformance(days = 90): Promise<AuditorScore[]
     if (row.approval_status === "rejected") score.rejected++;
 
     if (row.status === "completed" && row.due_at && row.completed_at) {
+      score.completed_with_due++;
       if (new Date(row.completed_at as string) <= new Date(row.due_at as string)) {
         score.on_time++;
       }
@@ -98,7 +103,8 @@ export async function fetchAuditorPerformance(days = 90): Promise<AuditorScore[]
   const results = [...byUser.values()].map((s) => {
     s.completion_rate =
       s.assignments_total > 0 ? Math.round((s.completed / s.assignments_total) * 100) : 0;
-    s.on_time_rate = s.completed > 0 ? Math.round((s.on_time / s.completed) * 100) : 0;
+    s.on_time_rate =
+      s.completed_with_due > 0 ? Math.round((s.on_time / s.completed_with_due) * 100) : null;
     s.rejection_rate =
       s.assignments_total > 0 ? Math.round((s.rejected / s.assignments_total) * 100) : 0;
     s.photo_compliance = 85;

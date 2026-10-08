@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId } from "@/lib/db/context";
 import type { DashboardFilterState } from "@/lib/dashboard-filters";
 import { RCA_OPTIONS } from "@/lib/digital-audit";
+import { findingSubjectLabel } from "@/lib/finding-subject";
 import {
   fetchFindings,
   findingTypeLabel,
@@ -158,7 +159,7 @@ export async function fetchGovernanceCommandCenter(
     storeMap.set(storeKey, storeCur);
 
     const skuKey = f.sku ?? f.product_name ?? f.id;
-    const skuCur = skuMap.get(skuKey) ?? { label: f.product_name || f.sku || "SKU", value: 0, count: 0 };
+    const skuCur = skuMap.get(skuKey) ?? { label: findingSubjectLabel(f), value: 0, count: 0 };
     skuCur.value += Math.abs(f.variance_value_inr ?? 0);
     skuCur.count += 1;
     skuMap.set(skuKey, skuCur);

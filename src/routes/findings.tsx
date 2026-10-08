@@ -49,6 +49,7 @@ import {
   findingsKpis,
   rcaLabel,
 } from "@/lib/findings";
+import { findingSubjectLabel } from "@/lib/finding-subject";
 
 export const Route = createFileRoute("/findings")({
   head: () => ({
@@ -305,7 +306,7 @@ function FindingsMain() {
                       params={{ findingId: row.id }}
                       className="font-medium text-navy hover:underline"
                     >
-                      {row.product_name || row.sku || "SKU"}
+                      {findingSubjectLabel(row)}
                     </Link>
                   </td>
                   <td className={mpTableCellClassName()}>{findingTypeLabel(row.finding_type)}</td>

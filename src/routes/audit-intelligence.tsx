@@ -248,7 +248,7 @@ function AuditIntelligencePage() {
                 <tr key={row.user_id} className={mpTableRowClassName()}>
                   <td className={`${mpTableCellClassName()} font-medium`}>{row.name}</td>
                   <td className={`${mpTableCellClassName()} tabular-nums`}>{row.completion_rate}%</td>
-                  <td className={`${mpTableCellClassName()} tabular-nums`}>{row.on_time_rate}%</td>
+                  <td className={`${mpTableCellClassName()} tabular-nums`}>{row.on_time_rate == null ? "N/A" : `${row.on_time_rate}%`}</td>
                   <td className={`${mpTableCellClassName()} tabular-nums`}>{row.rejection_rate}%</td>
                   <td className={`${mpTableCellClassName()} tabular-nums`}>{row.assignments_total}</td>
                 </tr>

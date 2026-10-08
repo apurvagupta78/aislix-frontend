@@ -9,6 +9,7 @@ import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import type { RcaCode } from "@/lib/digital-audit";
 import { RCA_OPTIONS } from "@/lib/digital-audit";
 import type { DashboardFilterState } from "@/lib/dashboard-filters";
+import { collapseRepeatedWords, findingRecurrenceKey } from "@/lib/finding-subject";
 
 export type FindingType =
   | "inventory_shortage"
@@ -273,7 +274,7 @@ export function findingsKpis(rows: Finding[]): FindingsKpis {
   const now = Date.now();
   const groups = new Map<string, { open: number; closed: number; total: number }>();
   for (const r of rows) {
-    const key = `${r.store_id ?? ""}|${r.sku ?? ""}|${r.finding_type}`;
+    const key = findingRecurrenceKey(r);
     const g = groups.get(key) ?? { open: 0, closed: 0, total: 0 };
     g.total += 1;
     if (["closed", "resolved"].includes(r.status)) g.closed += 1;
@@ -362,7 +363,7 @@ function mapFinding(
     title: String(row.title),
     description: (row.description as string) ?? null,
     sku: (row.sku as string) ?? null,
-    product_name: (row.product_name as string) ?? null,
+    product_name: row.product_name ? collapseRepeatedWords(String(row.product_name)) : null,
     category: (row.category as string) ?? null,
     shelf_label: (row.shelf_label as string) ?? null,
     expected_value: row.expected_value == null ? null : Number(row.expected_value),

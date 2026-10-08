@@ -5,6 +5,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { getUser, requireOrgId } from "@/lib/db/context";
+import { findingRecurrenceKey } from "@/lib/finding-subject";
 import {
   listScanFieldVerificationsForScans,
   operationalActual,
@@ -1032,7 +1033,7 @@ export async function fetchDigitalDashboardMetrics(
   {
     let findingsQuery = supabase
       .from("findings")
-      .select("id, status, store_id, sku, finding_type, created_at")
+      .select("id, status, store_id, sku, product_name, finding_type, created_at")
       .eq("org_id", orgId)
       .limit(800);
     if (!experience.labeledDemo) {
@@ -1042,7 +1043,7 @@ export async function fetchDigitalDashboardMetrics(
     if (findings?.length) {
       const groups = new Map<string, { open: number; closed: number; total: number }>();
       for (const f of findings) {
-        const key = `${f.store_id ?? ""}|${f.sku ?? ""}|${f.finding_type ?? ""}`;
+        const key = findingRecurrenceKey(f);
         const g = groups.get(key) ?? { open: 0, closed: 0, total: 0 };
         g.total += 1;
         if (["closed", "resolved"].includes(String(f.status))) g.closed += 1;

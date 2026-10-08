@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import type { ExceptionTier } from "@/lib/audit-intelligence";
+import { collapseRepeatedWords } from "@/lib/finding-subject";
 
 export type ExceptionLifecycle =
   | "open"
@@ -169,7 +170,7 @@ async function syncVirtualExceptions(orgId: string): Promise<void> {
         severity: priority === "critical" ? "critical" : priority === "low" ? "normal" : "attention",
         lifecycle: ACTION_LIFECYCLE[String(action.status)] ?? "open",
         due_at: (action.due_at as string | null) ?? null,
-        title: String(action.title || action.suggestion || "Corrective action"),
+        title: collapseRepeatedWords(String(action.title || action.suggestion || "Corrective action")),
         description: String(action.suggestion ?? ""),
         shelf_label: comp ? "Planogram" : "Shelf",
         sku_label: (action.sku as string | null) || "—",
@@ -195,15 +196,50 @@ async function syncVirtualExceptions(orgId: string): Promise<void> {
     }
   }
 
+  if (pendingReview) {
+    const stillPending = new Set(pendingReview.map((row) => row.id as string));
+    const { data: trackedReviews } = await supabase
+      .from("audit_exceptions")
+      .select("id, source_id")
+      .eq("org_id", orgId)
+      .eq("source_type", "pending_review")
+      .neq("lifecycle", "resolved")
+      .limit(1000);
+    const reviewed = (trackedReviews ?? [])
+      .filter((row) => !stillPending.has(row.source_id as string))
+      .map((row) => row.id as string);
+    if (reviewed.length) {
+      await supabase.from("audit_exceptions").update({ lifecycle: "resolved" }).in("id", reviewed);
+    }
+    if (stillPending.size) {
+      await supabase
+        .from("audit_exceptions")
+        .update({ lifecycle: "reopened" })
+        .eq("org_id", orgId)
+        .eq("source_type", "pending_review")
+        .eq("lifecycle", "resolved")
+        .in("source_id", [...stillPending]);
+    }
+  }
+
   if (!inserts.length) return;
 
-  const { error } = await supabase.from("audit_exceptions").upsert(inserts, {
-    onConflict: "org_id,source_type,source_id",
-    ignoreDuplicates: false,
-  });
-  if (error) {
-    // The queue still lists what is already materialized; a failed refresh must not blank the page.
-    console.error("[exceptions] sync failed", error.message);
+  // One upsert per source type: a mixed batch sends NULL for keys only some rows have
+  // (e.g. lifecycle), which violates NOT NULL and drops the whole refresh.
+  const bySource = new Map<string, Record<string, unknown>[]>();
+  for (const row of inserts) {
+    const key = String(row.source_type);
+    bySource.set(key, [...(bySource.get(key) ?? []), row]);
+  }
+  for (const [sourceType, rows] of bySource) {
+    const { error } = await supabase.from("audit_exceptions").upsert(rows as never, {
+      onConflict: "org_id,source_type,source_id",
+      ignoreDuplicates: false,
+    });
+    if (error) {
+      // The queue still lists what is already materialized; a failed refresh must not blank the page.
+      console.error(`[exceptions] sync failed for ${sourceType}`, error.message);
+    }
   }
 }
 

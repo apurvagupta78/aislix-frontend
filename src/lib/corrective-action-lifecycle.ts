@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import type { Finding, FindingSeverity } from "@/lib/findings";
+import { collapseRepeatedWords, findingSubjectLabel } from "@/lib/finding-subject";
 import { notifyMember } from "@/lib/notifications.functions";
 import { requiresRootCause } from "@/lib/corrective-action-catalog";
 
@@ -354,7 +355,7 @@ export async function createActionFromFinding(input: {
     input.dueAt ?? new Date(Date.now() + hours * 36e5).toISOString();
   const title =
     input.title?.trim() ||
-    `Investigate ${input.finding.title.toLowerCase()} — ${input.finding.product_name || input.finding.sku || "SKU"}`;
+    `Investigate ${input.finding.title.toLowerCase()} — ${findingSubjectLabel(input.finding)}`;
   const description =
     input.description?.trim() ||
     `Investigate and reconcile ${Math.abs(input.finding.variance_units ?? 0)}-unit variance.`;
@@ -600,7 +601,7 @@ function mapAction(
     scan_id: (row.scan_id as string) ?? null,
     store_id: (row.store_id as string) ?? null,
     org_id: String(row.org_id),
-    title: String(row.title || row.suggestion || "Corrective action"),
+    title: collapseRepeatedWords(String(row.title || row.suggestion || "Corrective action")),
     description: (row.description as string) ?? null,
     suggestion: String(row.suggestion ?? ""),
     issue_type: String(row.issue_type ?? ""),
