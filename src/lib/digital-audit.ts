@@ -1293,11 +1293,14 @@ export async function submitDigitalAudit(input: {
   );
 
   const now = new Date().toISOString();
+  const { data: authUser } = await supabase.auth.getUser();
   await supabase
     .from("shelf_scans")
     .update({
       submission_status: "pending_review",
       submitted_at: now,
+      finalized_by: authUser.user?.id ?? null,
+      finalized_at: now,
       submitted_lat: input.lat ?? null,
       submitted_lng: input.lng ?? null,
       geofence_status: geo,
@@ -1323,12 +1326,11 @@ export async function submitDigitalAudit(input: {
 
   try {
     const { notifyManagersAuditSubmitted } = await import("@/lib/audit-alerts");
-    const { data: profile } = await supabase.auth.getUser();
     await notifyManagersAuditSubmitted({
       assignmentId: input.assignmentId,
       scanId: input.scanId,
       storeName: session.store_name,
-      assigneeName: profile.user?.email ?? "Auditor",
+      assigneeName: authUser.user?.email ?? "Auditor",
     });
   } catch (e) {
     console.error("[digital-audit] submit notification failed", e);

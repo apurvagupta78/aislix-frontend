@@ -127,9 +127,15 @@ export const Route = createFileRoute("/history")({
 
 /* --------------------------------- helpers -------------------------------- */
 
-function AssignmentStatusBadge({ status }: { status: string | null }) {
+function AssignmentStatusBadge({
+  status,
+  approvalStatus,
+}: {
+  status: string | null;
+  approvalStatus?: string | null;
+}) {
   if (!status) return <span className="text-muted-foreground">—</span>;
-  const display = resolveAssignmentDisplayStatus({ status });
+  const display = resolveAssignmentDisplayStatus({ status, approval_status: approvalStatus });
   const known = [
     "pending",
     "in_progress",
@@ -579,7 +585,10 @@ function HistoryPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">
-                          <AssignmentStatusBadge status={scan.assignment_status ?? null} />
+                          <AssignmentStatusBadge
+                            status={scan.assignment_status ?? null}
+                            approvalStatus={scan.assignment_approval_status}
+                          />
                         </TableCell>
                         <TableCell
                           className={`text-right tabular-nums font-medium ${complianceTone(

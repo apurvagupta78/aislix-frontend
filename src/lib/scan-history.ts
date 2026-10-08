@@ -28,6 +28,8 @@ export type ScanHistoryItem = {
   /** Set when the scan was run against a delegated assignment. */
   assignment_id?: string | null;
   assignment_status?: ScanAssignmentStatus | null;
+  /** scan_assignments.approval_status — review outcome shown alongside status. */
+  assignment_approval_status?: string | null;
   /** Planogram compliance of the assignment attempt, 0-100. */
   planogram_compliance?: number | null;
   assignee_name?: string | null;
@@ -203,7 +205,8 @@ export async function fetchScanHistory(
     };
     if (row.shelf_label) item.location = row.shelf_label as string;
     if (row.category) item.category = row.category as string;
-    if (row.total_products !== null && row.total_products !== undefined) {
+    // Digital audits never write total_products; its 0 default is not a count.
+    if (item.audit_mode !== "digital" && row.total_products !== null && row.total_products !== undefined) {
       item.products_detected = row.total_products;
     }
     if (row.low_stock_count !== null && row.out_of_stock_count !== null) {
@@ -230,9 +233,17 @@ export async function fetchScanHistory(
     const { data: assignmentRows } = assignmentIds.length
       ? await supabase
           .from("scan_assignments")
-          .select("id, status, last_compliance_percent, assignee_id")
+          .select("id, status, approval_status, last_compliance_percent, assignee_id")
           .in("id", assignmentIds)
-      : { data: [] as { id: string; status: string; last_compliance_percent: number | null; assignee_id: string | null }[] };
+      : {
+          data: [] as {
+            id: string;
+            status: string;
+            approval_status: string | null;
+            last_compliance_percent: number | null;
+            assignee_id: string | null;
+          }[],
+        };
     const assigneeIds = Array.from(
       new Set((assignmentRows ?? []).map((row) => row.assignee_id as string).filter(Boolean)),
     );
@@ -251,6 +262,7 @@ export async function fetchScanHistory(
       const assignment = assignmentById.get(item.assignment_id);
       if (!assignment) continue;
       item.assignment_status = assignment.status as ScanAssignmentStatus;
+      item.assignment_approval_status = (assignment.approval_status as string | null) ?? null;
       item.planogram_compliance =
         assignment.last_compliance_percent === null ||
         assignment.last_compliance_percent === undefined

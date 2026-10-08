@@ -45,12 +45,12 @@ export function resolveAssignmentDisplayStatus(input: {
   overdue?: boolean;
 }): string {
   if (input.overdue) return "overdue";
+  const status = (input.status ?? "").toLowerCase();
+  if (status === "needs_correction" || status === "reaudit_required") return "needs_correction";
   const approval = (input.approval_status ?? "").toLowerCase();
   if (approval === "pending_review") return "pending_review";
   if (approval === "approved") return "approved";
   if (approval === "rejected" || approval === "flagged") return "needs_correction";
-  const status = (input.status ?? "").toLowerCase();
-  if (status === "needs_correction" || status === "reaudit_required") return "needs_correction";
   if (status === "completed") return "approved";
   if (status === "in_progress") return "in_progress";
   if (status === "pending") return "pending";
