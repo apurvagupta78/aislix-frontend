@@ -16,12 +16,11 @@ import {
 import {
   ArrowDownRight,
   ArrowUpRight,
-  Building2,
+  ChevronDown,
+  ChevronRight,
   Info,
   Plus,
-  ShoppingCart,
   Trash2,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,6 +40,7 @@ import {
   SortableMetricCard,
   useSectionDrag,
   visibleSectionIds,
+  type MetricCardSpan,
 } from "@/components/dashboard/DashboardLayoutControls";
 import { CreateCustomMetricDialog } from "@/components/dashboard/CreateCustomMetricDialog";
 import { PageHeader } from "@/components/design-system/PageHeader";
@@ -51,7 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AISLIX, NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
+import { AISLIX } from "@/lib/aislix-theme";
 import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
 import { DashboardOverviewPanel } from "@/components/dashboard/DashboardOverviewPanel";
 import { SegmentHomePanel } from "@/components/dashboard/SegmentHomePanel";
@@ -64,6 +64,7 @@ import {
   defaultDashboardLayout,
   defaultTabLayout,
   isCustomCardId,
+  isPrimaryCard,
   metricCatalogForTab,
   parseDashboardLayout,
   type DashboardLayoutPrefs,
@@ -113,6 +114,22 @@ const SPAN2_CARD_IDS = new Set([
   "chart_variance_rank",
   "chart_compare",
 ]);
+
+function cardSpan(id: string): MetricCardSpan {
+  if (id.startsWith("kpi_") || isCustomCardId(id)) return "one";
+  return SPAN2_CARD_IDS.has(id) ? "full" : "half";
+}
+
+type KpiStatus = "risk";
+
+const STATUS_DOT: Record<KpiStatus, { color: string; label: string }> = {
+  risk: { color: "#ECBDCC", label: "Needs attention" },
+};
+
+/** Pink dot only when a count of overdue items is above zero. */
+function overdueStatus(empty: boolean, value: number | null | undefined): KpiStatus | undefined {
+  return !empty && value != null && Number.isFinite(value) && value > 0 ? "risk" : undefined;
+}
 
 type AssignmentFilter = "all" | "assigned_to_me" | "assigned_by_me";
 
@@ -184,18 +201,18 @@ function digitalRowToAnalysisReport(row: DigitalLastTenRow): LastAuditReport {
 
 function EmptyScopeBanner({ kind }: { kind: "ai" | "digital" }) {
   return (
-    <div className="rounded-xl border border-[#D9E2E8] bg-[#EEF1F4]/80 px-4 py-4">
+    <div className="rounded-xl border border-[#D9E2E8] bg-white px-4 py-4">
       <p className="text-sm font-semibold text-[#04203F]">
-        No {kind === "ai" ? "AI" : "digital"} audits in your scope yet
+        No {kind === "ai" ? "AI" : "digital"} audits yet
       </p>
       <p className="mt-1 text-sm text-[#667085]">
-        Metrics show N/A until you run an audit. Start an audit to populate this dashboard.
+        Numbers show N/A until your first audit is done.
       </p>
       <Link
         to="/new-audit"
         className="mt-3 inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white"
       >
-        Start Audit
+        Start an audit
       </Link>
     </div>
   );
@@ -209,24 +226,31 @@ function withTab(
   return tab === "ai" ? { ...prefs, ai: fn(prefs.ai) } : { ...prefs, digital: fn(prefs.digital) };
 }
 
+const STAGE_DOT: Record<LastTenAuditRow["completionStage"], { label: string; color: string }> = {
+  completed: { label: "Completed", color: AISLIX_PALETTE.green },
+  in_progress: { label: "In progress", color: AISLIX_PALETTE.purple },
+  not_started: { label: "Not started", color: AISLIX_PALETTE.grey },
+};
+
 function StagePill({ stage }: { stage: LastTenAuditRow["completionStage"] }) {
-  const map = {
-    completed: { label: "Completed", className: "bg-[#EAF1DF] text-[#04203F] border-[#C5D0B2]" },
-    in_progress: { label: "In Progress", className: "bg-[#EAF6FD] text-[#04203F] border-[#C1E4F8]" },
-    not_started: { label: "Not Started", className: "bg-[#FFEAF1] text-[#04203F] border-[#ECBDCC]" },
-  } as const;
-  const m = map[stage];
+  const m = STAGE_DOT[stage];
   return (
-    <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", m.className)}>
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-[#04203F]">
+      <span className="size-2 rounded-full" style={{ background: m.color }} aria-hidden />
       {m.label}
     </span>
   );
 }
 
+const CARD_CLASS = "block h-full rounded-xl border border-[#D9E2E8] bg-white p-4";
+const CARD_LINK_CLASS = "transition-colors duration-150 hover:border-[#9FB3C8]";
+
+/** Neutral KPI card: label, big number, optional status dot. The whole card links when `moreTo` is set. */
 function KpiCard({
   label,
   value,
-  accent,
+  accent: _accent,
+  status,
   delta,
   moreTo,
   context,
@@ -235,56 +259,75 @@ function KpiCard({
 }: {
   label: string;
   value: string;
-  accent: string;
+  /** Accepted for compatibility; cards are neutral. */
+  accent?: string;
+  status?: KpiStatus;
   delta?: number | null;
   moreTo?: string;
   context?: string;
   footer?: React.ReactNode;
   formula?: string;
 }) {
-  return (
-    <div
-      className="h-full rounded-xl border border-[#D9E2E8] bg-white p-4"
-      style={{ borderLeftWidth: 3, borderLeftColor: accent }}
-    >
+  void _accent;
+  const dot = status ? STATUS_DOT[status] : null;
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">{label}</p>
+        <p className="flex items-center gap-1.5 text-sm text-[#667085]">
+          {label}
+          {dot ? (
+            <span
+              className="size-2 shrink-0 rounded-full"
+              style={{ background: dot.color }}
+              role="img"
+              aria-label={dot.label}
+            />
+          ) : null}
+        </p>
         <div className="flex items-center gap-1">
           {formula ? (
-            <span title={formula} className="text-[#667085]">
-              <Info className="size-3.5" aria-label="KPI formula" />
+            <span title={formula} className="text-[#98A2B3]">
+              <Info className="size-3.5" aria-label="How this is calculated" />
             </span>
           ) : null}
           {delta != null && Number.isFinite(delta) ? (
-            <span
-              className={cn(
-                "inline-flex items-center text-xs font-semibold",
-                delta >= 0 ? "text-[#3d7a55]" : "text-[#04203F]",
-              )}
-            >
+            <span className="inline-flex items-center text-xs font-medium text-[#667085]">
               {delta >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
               {Math.abs(delta).toFixed(0)}
             </span>
           ) : null}
         </div>
       </div>
-      <p className="mt-2 text-2xl font-semibold text-[#04203F]">{value}</p>
-      {context ? <p className="mt-1 text-xs text-[#557187]">{context}</p> : null}
-      {moreTo ? (
-        <Link to={moreTo} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
-          View more
-        </Link>
-      ) : null}
+      <p className="mt-1.5 text-2xl font-semibold tabular-nums text-[#04203F]">{value}</p>
+      {context ? <p className="mt-1 text-xs text-[#667085]">{context}</p> : null}
+    </>
+  );
+
+  if (moreTo && !footer) {
+    return (
+      <Link to={moreTo} className={cn(CARD_CLASS, CARD_LINK_CLASS)}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <div className={CARD_CLASS}>
+      {body}
       {footer}
     </div>
   );
 }
 
-function ViewMore({ to, label = "View more" }: { to: string; label?: string }) {
+/** Section title that doubles as the link to the full page (replaces "View more"). */
+function TitleLink({ title, to }: { title: string; to?: string }) {
+  if (!to) return <h3 className="text-sm font-semibold text-[#04203F]">{title}</h3>;
   return (
-    <a href={to} className="text-xs font-medium text-[#557187] hover:underline">
-      {label}
-    </a>
+    <h3 className="text-sm font-semibold text-[#04203F]">
+      <Link to={to} className="group inline-flex items-center gap-0.5 hover:underline">
+        {title}
+        <ChevronRight className="size-4 text-[#98A2B3] group-hover:text-[#04203F]" aria-hidden />
+      </Link>
+    </h3>
   );
 }
 
@@ -301,11 +344,42 @@ function ChartCard({
 }) {
   return (
     <div className={cn("h-full rounded-xl border border-[#D9E2E8] bg-white p-4", className)}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[#04203F]">{title}</h3>
-        {moreTo ? <ViewMore to={moreTo} /> : null}
+      <div className="mb-3">
+        <TitleLink title={title} to={moreTo} />
       </div>
       {children}
+    </div>
+  );
+}
+
+/** One quiet line of headline counts; findings and actions link to their pages. */
+function SummaryLine({ parts, links }: { parts: string[]; links: { to: string; label: string }[] }) {
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#667085]">
+      {parts.map((p, i) => (
+        <span key={p} className="inline-flex items-center gap-2">
+          {i > 0 ? <span aria-hidden>·</span> : null}
+          {p}
+        </span>
+      ))}
+      {links.map((l) => (
+        <span key={l.to} className="inline-flex items-center gap-2">
+          <span aria-hidden>·</span>
+          <Link to={l.to} className="font-medium text-[#04203F] hover:underline">
+            {l.label}
+          </Link>
+        </span>
+      ))}
+    </p>
+  );
+}
+
+/** Small label/value pair used in the "last audit" panels instead of tinted pills. */
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-[#667085]">{label}</dt>
+      <dd className="text-sm font-semibold tabular-nums text-[#04203F]">{value}</dd>
     </div>
   );
 }
@@ -325,27 +399,21 @@ function AiAnalysisModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-[#04203F]">AI Analysis</DialogTitle>
+          <DialogTitle className="text-[#04203F]">AI analysis</DialogTitle>
         </DialogHeader>
         {incomplete ? (
-          <p className="text-sm text-[#667085]">Complete the audit first to generate an AI Analysis report.</p>
+          <p className="text-sm text-[#667085]">Finish the audit first to see its AI analysis.</p>
         ) : report ? (
           <div className="space-y-3 text-sm text-[#04203F]">
             <p className="font-medium">
               {report.auditName} · {report.storeName} · {fmtDate(report.date)}
             </p>
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-lg bg-[#EAF1DF] px-2 py-1 text-xs">
-                Compliance {fmt(report.compliancePct, "%")}
-              </span>
-              <span className="rounded-lg bg-[#FFEAF1] px-2 py-1 text-xs">
-                Findings {report.findingsCount}
-              </span>
-              <span className="rounded-lg bg-[#EAF6FD] px-2 py-1 text-xs">
-                Confidence {fmt(report.confidencePct, "%")}
-              </span>
-            </div>
-            <ul className="list-disc space-y-1 pl-5 text-[#557187]">
+            <dl className="flex flex-wrap gap-x-6 gap-y-2">
+              <Stat label="Compliance" value={fmt(report.compliancePct, "%")} />
+              <Stat label="Findings" value={String(report.findingsCount)} />
+              <Stat label="Confidence" value={fmt(report.confidencePct, "%")} />
+            </dl>
+            <ul className="list-disc space-y-1 pl-5 text-[#667085]">
               <li>
                 <span className="font-medium text-[#04203F]">Good:</span> {report.good}
               </li>
@@ -361,7 +429,7 @@ function AiAnalysisModal({
                 href={`/results?scan=${encodeURIComponent(report.scanId)}`}
                 className="inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white"
               >
-                View full report
+                Open full report
               </a>
             ) : null}
           </div>
@@ -388,8 +456,8 @@ function CompletionChips({
         [
           ["all", "All"],
           ["completed", "Completed"],
-          ["in_progress", "In Progress"],
-          ["not_started", "Not Started"],
+          ["in_progress", "In progress"],
+          ["not_started", "Not started"],
         ] as const
       ).map(([id, label]) => (
         <button
@@ -397,24 +465,16 @@ function CompletionChips({
           type="button"
           onClick={() => onChange(id)}
           className={cn(
-            "rounded-full border px-3 py-1 text-xs font-medium",
+            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
             completion === id
               ? "border-[#04203F] bg-[#04203F] text-white"
-              : id === "completed"
-                ? "border-[#C5D0B2] bg-[#EAF1DF] text-[#04203F]"
-                : id === "in_progress"
-                  ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#04203F]"
-                  : id === "not_started"
-                    ? "border-[#ECBDCC] bg-[#FFEAF1] text-[#04203F]"
-                    : "border-[#D9E2E8] bg-white text-[#667085]",
+              : "border-[#D9E2E8] bg-white text-[#667085] hover:text-[#04203F]",
           )}
         >
           {label}
         </button>
       ))}
-      <span className="rounded-full border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1 text-xs text-[#04203F]">
-        {scopeLabel ?? "Showing your stores"}
-      </span>
+      <span className="text-xs text-[#667085]">{scopeLabel ?? "Showing your stores"}</span>
     </>
   );
 }
@@ -446,6 +506,7 @@ export function AiDigitalDashboardShell() {
   const [layoutSaving, setLayoutSaving] = useState(false);
   const [customMetrics, setCustomMetrics] = useState<DashboardCustomMetricsPrefs>({ items: [] });
   const [customOpen, setCustomOpen] = useState(false);
+  const [showAllMetrics, setShowAllMetrics] = useState(false);
 
   const filterKey = global?.filters
     ? {
@@ -866,22 +927,23 @@ export function AiDigitalDashboardShell() {
     switch (id) {
       case "panel_last_audit":
         return (
-          <div className="rounded-xl border border-[#C1E4F8] bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-[#04203F]">
-                Last completed audit — AI Analysis Report
-              </h3>
+          <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold text-[#04203F]">Last completed audit</h3>
+                {data?.lastReport ? (
+                  <p className="mt-0.5 text-xs text-[#667085]">
+                    {data.lastReport.auditName} · {data.lastReport.storeName} ·{" "}
+                    {fmtDate(data.lastReport.date)}
+                  </p>
+                ) : null}
+              </div>
               {data?.lastReport ? (
                 <div className="flex gap-2">
-                  <Link
-                    to="/history"
-                    className="rounded-lg bg-[#7DB7D6] px-3 py-1.5 text-xs font-medium text-white"
-                  >
-                    View full report
-                  </Link>
-                  <button
+                  <Button
                     type="button"
-                    className="rounded-lg bg-[#FFEAF1] px-3 py-1.5 text-xs font-medium text-[#04203F]"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       if (data.lastReport) {
                         setModalIncomplete(false);
@@ -890,29 +952,28 @@ export function AiDigitalDashboardShell() {
                       }
                     }}
                   >
-                    Share
-                  </button>
+                    Summary
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    {data.lastReport.scanId ? (
+                      <Link to="/results" search={{ scan: data.lastReport.scanId }}>
+                        Open report
+                      </Link>
+                    ) : (
+                      <Link to="/history">Open report</Link>
+                    )}
+                  </Button>
                 </div>
               ) : null}
             </div>
             {data?.lastReport ? (
               <div className="mt-3 space-y-3">
-                <p className="text-sm text-[#557187]">
-                  Audit: {data.lastReport.auditName} | Store: {data.lastReport.storeName} | Date:{" "}
-                  {fmtDate(data.lastReport.date)}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-lg bg-[#EAF1DF] px-3 py-1 text-xs font-medium text-[#04203F]">
-                    Compliance: {fmt(data.lastReport.compliancePct, "%")}
-                  </span>
-                  <span className="rounded-lg bg-[#F0E9FF] px-3 py-1 text-xs font-medium text-[#04203F]">
-                    Findings: {data.lastReport.findingsCount}
-                  </span>
-                  <span className="rounded-lg bg-[#EAF6FD] px-3 py-1 text-xs font-medium text-[#04203F]">
-                    Confidence: {fmt(data.lastReport.confidencePct, "%")}
-                  </span>
-                </div>
-                <ul className="space-y-2 text-sm text-[#557187]">
+                <dl className="flex flex-wrap gap-x-8 gap-y-2">
+                  <Stat label="Compliance" value={fmt(data.lastReport.compliancePct, "%")} />
+                  <Stat label="Findings" value={String(data.lastReport.findingsCount)} />
+                  <Stat label="Confidence" value={fmt(data.lastReport.confidencePct, "%")} />
+                </dl>
+                <ul className="space-y-1.5 text-sm text-[#667085]">
                   <li>
                     <span className="font-semibold text-[#04203F]">Good:</span> {data.lastReport.good}
                   </li>
@@ -941,8 +1002,8 @@ export function AiDigitalDashboardShell() {
             ) : (
               <p className="mt-3 text-sm text-[#667085]">
                 {emptyRealAi
-                  ? "N/A — start an audit to see the AI Analysis Report."
-                  : "No completed audit in range — run an audit to see the AI Analysis Report."}
+                  ? "N/A — start an audit to see its AI analysis here."
+                  : "No completed audit in this period."}
               </p>
             )}
           </div>
@@ -950,7 +1011,7 @@ export function AiDigitalDashboardShell() {
       case "kpi_verification":
         return (
           <KpiCard
-            label="Verification Coverage %"
+            label="Verification coverage"
             value={fmtOrEmpty(emptyRealAi, ai?.verificationCoveragePct, "%")}
             accent={accent}
             moreTo="/history"
@@ -959,7 +1020,7 @@ export function AiDigitalDashboardShell() {
       case "kpi_planogram":
         return (
           <KpiCard
-            label="Planogram Compliance %"
+            label="Planogram compliance"
             value={fmtOrEmpty(emptyRealAi, ai?.planogram.compliancePct, "%")}
             accent={accent}
             moreTo="/history"
@@ -968,7 +1029,7 @@ export function AiDigitalDashboardShell() {
       case "kpi_total_audits":
         return (
           <KpiCard
-            label="Total Audits"
+            label="Total audits"
             value={fmtOrEmpty(
               emptyRealAi,
               data?.executive.audits
@@ -983,7 +1044,7 @@ export function AiDigitalDashboardShell() {
       case "kpi_confidence":
         return (
           <KpiCard
-            label="Avg Confidence"
+            label="Average confidence"
             value={fmtOrEmpty(emptyRealAi, confPct, "%")}
             accent={accent}
             moreTo="/history"
@@ -992,7 +1053,7 @@ export function AiDigitalDashboardShell() {
       case "kpi_products":
         return (
           <KpiCard
-            label="Products Identified"
+            label="Products identified"
             value={fmtOrEmpty(emptyRealAi, ai?.productsIdentified)}
             accent={accent}
           />
@@ -1000,7 +1061,7 @@ export function AiDigitalDashboardShell() {
       case "kpi_brands":
         return (
           <KpiCard
-            label="Brands Identified"
+            label="Brands identified"
             value={fmtOrEmpty(emptyRealAi, ai?.brandsIdentified)}
             accent={accent}
           />
@@ -1008,7 +1069,7 @@ export function AiDigitalDashboardShell() {
       case "kpi_facings":
         return (
           <KpiCard
-            label="Total Facings"
+            label="Total facings"
             value={fmtOrEmpty(emptyRealAi, ai?.totalFacings)}
             accent={accent}
           />
@@ -1016,14 +1077,14 @@ export function AiDigitalDashboardShell() {
       case "kpi_units":
         return (
           <KpiCard
-            label="Visible Units"
+            label="Visible units"
             value={fmtOrEmpty(emptyRealAi, ai?.totalVisibleUnits)}
             accent={accent}
           />
         );
       case "chart_planogram":
         return (
-          <ChartCard title="Planogram Compliance — Expected vs Actual" moreTo="/history">
+          <ChartCard title="Planogram: expected vs actual" moreTo="/history">
             {planogramGrouped.length ? (
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
@@ -1032,8 +1093,8 @@ export function AiDigitalDashboardShell() {
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="expected" fill={AISLIX.localBorder} name="Expected" />
-                    <Bar dataKey="actual" fill={AISLIX.supermarketBorder} name="Actual" />
+                    <Bar dataKey="expected" fill={AISLIX_PALETTE.blue} name="Expected" />
+                    <Bar dataKey="actual" fill={AISLIX_PALETTE.purple} name="Actual" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1102,7 +1163,7 @@ export function AiDigitalDashboardShell() {
         );
       case "chart_trend":
         return (
-          <ChartCard title="AI Audit Trend (audits)" moreTo="/history">
+          <ChartCard title="Audits over time" moreTo="/history">
             {(data?.auditTrend ?? []).length ? (
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
@@ -1114,9 +1175,9 @@ export function AiDigitalDashboardShell() {
                     <Line
                       type="monotone"
                       dataKey="value"
-                      stroke={AISLIX.primary}
+                      stroke={AISLIX_PALETTE.purple}
                       strokeWidth={2}
-                      dot={{ fill: AISLIX.warehouseBorder }}
+                      dot={{ fill: AISLIX_PALETTE.purple }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -1128,25 +1189,25 @@ export function AiDigitalDashboardShell() {
         );
       case "chart_brand":
         return (
-          <ChartCard title="Brand Share of Facings" moreTo="/audit-intelligence">
+          <ChartCard title="Brand share of facings" moreTo="/audit-intelligence">
             <BrandShareMultiRing rows={ai?.brandShare ?? []} />
           </ChartCard>
         );
       case "chart_category":
         return (
-          <ChartCard title="Category Share of Facings" moreTo="/audit-intelligence">
+          <ChartCard title="Category share of facings" moreTo="/audit-intelligence">
             <CategoryShareDonut rows={ai?.categoryShare ?? []} />
           </ChartCard>
         );
       case "chart_units":
         return (
-          <ChartCard title="Top Products by Visible Units" moreTo="/audit-intelligence">
+          <ChartCard title="Top products by visible units" moreTo="/audit-intelligence">
             <ProductRankingCards rows={ai?.topProductsByUnits ?? []} />
           </ChartCard>
         );
       case "chart_low_compliance":
         return (
-          <ChartCard title="Top 5 stores — low planogram compliance (need visits)" moreTo="/history">
+          <ChartCard title="Stores with low planogram compliance" moreTo="/history">
             <BrandShareMultiRing
               rows={(data?.lowComplianceStores ?? []).map((s) => ({
                 label: s.storeName,
@@ -1158,7 +1219,7 @@ export function AiDigitalDashboardShell() {
         );
       case "chart_performers_high":
         return (
-          <ChartCard title="Highest Audit Performance" moreTo="/history">
+          <ChartCard title="Best-performing stores" moreTo="/history">
             <PerformanceLeaderboard
               tone="high"
               rows={(data?.topPerformers ?? []).map((p) => ({
@@ -1170,7 +1231,7 @@ export function AiDigitalDashboardShell() {
         );
       case "chart_performers_low":
         return (
-          <ChartCard title="Lowest Audit Performance" moreTo="/history">
+          <ChartCard title="Stores that need attention" moreTo="/history">
             <PerformanceLeaderboard
               tone="low"
               rows={(data?.worstPerformers ?? []).map((p) => ({
@@ -1191,87 +1252,61 @@ export function AiDigitalDashboardShell() {
     if (id === "panel_last_digital") {
       const row = digLastCompleted;
       return (
-        <div className="rounded-xl border border-[#C1E4F8] bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-[#04203F]">
-              Last completed digital audit — summary
-            </h3>
+        <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-[#04203F]">Last completed digital audit</h3>
+              {row ? (
+                <p className="mt-0.5 text-xs text-[#667085]">
+                  {row.auditName} · {row.store} · {fmtDate(row.date)}
+                </p>
+              ) : null}
+            </div>
             {row ? (
               <div className="flex gap-2">
-                {row.scanId ? (
-                  <Link
-                    to="/results"
-                    search={{ scan: row.scanId }}
-                    className="rounded-lg bg-[#7DB7D6] px-3 py-1.5 text-xs font-medium text-white"
-                  >
-                    View full report
-                  </Link>
-                ) : (
-                  <Link
-                    to="/history"
-                    className="rounded-lg bg-[#7DB7D6] px-3 py-1.5 text-xs font-medium text-white"
-                  >
-                    View history
-                  </Link>
-                )}
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
-                  className="border-[#C1E4F8] text-[#04203F]"
+                  variant="ghost"
                   onClick={() => void openDigitalAnalysis(row)}
                 >
-                  AI Analysis
+                  Summary
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  {row.scanId ? (
+                    <Link to="/results" search={{ scan: row.scanId }}>
+                      Open report
+                    </Link>
+                  ) : (
+                    <Link to="/history">Open history</Link>
+                  )}
                 </Button>
               </div>
             ) : null}
           </div>
           {row ? (
-            <div className="mt-3 space-y-3">
-              <p className="text-sm text-[#557187]">
-                Audit: {row.auditName} | Template: {row.templateName || row.auditName} | Store:{" "}
-                {row.store} | Date: {fmtDate(row.date)}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-lg bg-[#EAF1DF] px-3 py-1 text-xs font-medium text-[#04203F]">
-                  Expected: {fmt(row.expected)}
-                </span>
-                <span className="rounded-lg bg-[#F0E9FF] px-3 py-1 text-xs font-medium text-[#04203F]">
-                  Actual: {fmt(row.actual)}
-                </span>
-                <span className="rounded-lg bg-[#EAF6FD] px-3 py-1 text-xs font-medium text-[#04203F]">
-                  Variance: {fmt(row.variance)}
-                </span>
-                <span className="rounded-lg bg-[#FFEAF1] px-3 py-1 text-xs font-medium text-[#04203F]">
-                  Status: {assignmentStatusLabel(row.status)}
-                </span>
-              </div>
-              <ul className="space-y-1 text-sm text-[#557187]">
-                <li>
-                  <span className="font-semibold text-[#04203F]">Findings:</span> {fmt(row.findingsCount)}
-                </li>
-                <li>
-                  <span className="font-semibold text-[#04203F]">Corrective actions:</span>{" "}
-                  {fmt(row.caCount)}
-                </li>
-                <li>
-                  <span className="font-semibold text-[#04203F]">Re-audit:</span> {row.reauditStatus}
-                </li>
-              </ul>
-            </div>
+            <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
+              <Stat label="Expected" value={fmt(row.expected)} />
+              <Stat label="Actual" value={fmt(row.actual)} />
+              <Stat label="Variance" value={fmt(row.variance)} />
+              <Stat label="Status" value={assignmentStatusLabel(row.status)} />
+              <Stat label="Findings" value={fmt(row.findingsCount)} />
+              <Stat label="Actions" value={fmt(row.caCount)} />
+              <Stat label="Re-audit" value={row.reauditStatus} />
+            </dl>
           ) : (
             <div className="mt-3 space-y-3">
               <p className="text-sm text-[#667085]">
                 {emptyRealDigital
-                  ? "N/A — start a digital audit to see the summary."
-                  : "No digital audits in range — run a digital audit to see the summary."}
+                  ? "N/A — start a digital audit to see its summary here."
+                  : "No digital audits in this period."}
               </p>
               {emptyRealDigital ? (
                 <Link
                   to="/new-audit"
                   className="inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white"
                 >
-                  Start Audit
+                  Start an audit
                 </Link>
               ) : null}
             </div>
@@ -1280,29 +1315,37 @@ export function AiDigitalDashboardShell() {
       );
     }
     const tip = digitalKpiTooltip(id);
-    const kpis: Record<string, [string, string]> = {
-      kpi_total: ["Total Digital Audits", fmtOrEmpty(emptyRealDigital, dig?.totalAudits)],
+    const kpis: Record<string, [string, string, KpiStatus?]> = {
+      kpi_total: ["Total digital audits", fmtOrEmpty(emptyRealDigital, dig?.totalAudits)],
       kpi_completed: ["Completed", fmtOrEmpty(emptyRealDigital, dig?.completed)],
-      kpi_in_progress: ["In Progress", fmtOrEmpty(emptyRealDigital, dig?.inProgress)],
-      kpi_pending_review: ["Pending Review", fmtOrEmpty(emptyRealDigital, dig?.pendingReview)],
+      kpi_in_progress: ["In progress", fmtOrEmpty(emptyRealDigital, dig?.inProgress)],
+      kpi_pending_review: ["Pending review", fmtOrEmpty(emptyRealDigital, dig?.pendingReview)],
       kpi_reaudit_requested: [
-        "Re-audit Requested",
+        "Re-audit requested",
         fmtOrEmpty(emptyRealDigital, dig?.reauditRequested),
       ],
-      kpi_overdue: ["Overdue", fmtOrEmpty(emptyRealDigital, dig?.overdue)],
-      kpi_completion_pct: ["Completion %", fmtOrEmpty(emptyRealDigital, dig?.completionPct, "%")],
-      kpi_ontime_pct: ["On-Time Completion %", fmtOrEmpty(emptyRealDigital, dig?.onTimePct, "%")],
-      kpi_total_expected: ["Total Expected", fmtOrEmpty(emptyRealDigital, dig?.totalExpected)],
-      kpi_total_actual: ["Total Actual", fmtOrEmpty(emptyRealDigital, dig?.totalActual)],
-      kpi_net_variance: ["Net Variance", fmtOrEmpty(emptyRealDigital, dig?.netVariance)],
-      kpi_abs_variance: ["Absolute Variance", fmtOrEmpty(emptyRealDigital, dig?.absoluteVariance)],
-      kpi_variance_pct: ["Variance %", fmtOrEmpty(emptyRealDigital, dig?.variancePct, "%")],
-      kpi_ca_open: ["Open CA", fmtOrEmpty(emptyRealDigital, dig?.caOpen)],
-      kpi_ca_in_progress: ["CA In Progress", fmtOrEmpty(emptyRealDigital, dig?.caInProgress)],
-      kpi_ca_completed: ["CA Completed", fmtOrEmpty(emptyRealDigital, dig?.caClosed)],
-      kpi_ca_overdue: ["Overdue CA", fmtOrEmpty(emptyRealDigital, dig?.caOverdue)],
-      kpi_ca_closure: ["Action Closure Rate", fmtOrEmpty(emptyRealDigital, dig?.caClosurePct, "%")],
-      kpi_ca_sla: ["SLA Compliance %", fmtOrEmpty(emptyRealDigital, dig?.caSlaPct, "%")],
+      kpi_overdue: [
+        "Overdue audits",
+        fmtOrEmpty(emptyRealDigital, dig?.overdue),
+        overdueStatus(emptyRealDigital, dig?.overdue),
+      ],
+      kpi_completion_pct: ["Completion", fmtOrEmpty(emptyRealDigital, dig?.completionPct, "%")],
+      kpi_ontime_pct: ["On-time completion", fmtOrEmpty(emptyRealDigital, dig?.onTimePct, "%")],
+      kpi_total_expected: ["Total expected", fmtOrEmpty(emptyRealDigital, dig?.totalExpected)],
+      kpi_total_actual: ["Total actual", fmtOrEmpty(emptyRealDigital, dig?.totalActual)],
+      kpi_net_variance: ["Net variance", fmtOrEmpty(emptyRealDigital, dig?.netVariance)],
+      kpi_abs_variance: ["Absolute variance", fmtOrEmpty(emptyRealDigital, dig?.absoluteVariance)],
+      kpi_variance_pct: ["Variance", fmtOrEmpty(emptyRealDigital, dig?.variancePct, "%")],
+      kpi_ca_open: ["Open actions", fmtOrEmpty(emptyRealDigital, dig?.caOpen)],
+      kpi_ca_in_progress: ["Actions in progress", fmtOrEmpty(emptyRealDigital, dig?.caInProgress)],
+      kpi_ca_completed: ["Actions completed", fmtOrEmpty(emptyRealDigital, dig?.caClosed)],
+      kpi_ca_overdue: [
+        "Overdue actions",
+        fmtOrEmpty(emptyRealDigital, dig?.caOverdue),
+        overdueStatus(emptyRealDigital, dig?.caOverdue),
+      ],
+      kpi_ca_closure: ["Closure rate", fmtOrEmpty(emptyRealDigital, dig?.caClosurePct, "%")],
+      kpi_ca_sla: ["SLA compliance", fmtOrEmpty(emptyRealDigital, dig?.caSlaPct, "%")],
     };
     const kpi = kpis[id];
     if (kpi) {
@@ -1310,6 +1353,7 @@ export function AiDigitalDashboardShell() {
         <KpiCard
           label={kpi[0]}
           value={kpi[1]}
+          status={kpi[2]}
           accent={accent}
           formula={tip}
           moreTo={id.startsWith("kpi_ca") ? "/corrective-actions" : "/history"}
@@ -1321,27 +1365,18 @@ export function AiDigitalDashboardShell() {
       const mix = dig?.caStatusMix ?? [];
       const totalMix = mix.reduce((s, m) => s + m.value, 0) || 1;
       return (
-        <ChartCard title="Corrective Actions summary" moreTo="/corrective-actions">
-          <div className="mb-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            {[
-              ["Total", emptyRealDigital ? null : dig?.caTotal],
-              ["Open", emptyRealDigital ? null : dig?.caOpen],
-              ["In Progress", emptyRealDigital ? null : dig?.caInProgress],
-              ["Completed", emptyRealDigital ? null : dig?.caClosed],
-              ["Overdue", emptyRealDigital ? null : dig?.caOverdue],
-              ["Closure %", emptyRealDigital ? null : dig?.caClosurePct],
-            ].map(([label, val], i) => (
-              <div key={String(label)} className="rounded-lg border border-[#D9E2E8] bg-[#F4F7F9] px-2 py-2">
-                <p className="text-[10px] uppercase text-[#667085]">{label}</p>
-                <p className="text-sm font-semibold text-[#04203F]">
-                  {i === 5 ? fmt(val as number | null, "%") : fmt(val as number | null)}
-                </p>
-              </div>
-            ))}
-          </div>
+        <ChartCard title="Corrective actions" moreTo="/corrective-actions">
+          <dl className="mb-4 flex flex-wrap gap-x-8 gap-y-2">
+            <Stat label="Total" value={fmt(emptyRealDigital ? null : dig?.caTotal)} />
+            <Stat label="Open" value={fmt(emptyRealDigital ? null : dig?.caOpen)} />
+            <Stat label="In progress" value={fmt(emptyRealDigital ? null : dig?.caInProgress)} />
+            <Stat label="Completed" value={fmt(emptyRealDigital ? null : dig?.caClosed)} />
+            <Stat label="Overdue" value={fmt(emptyRealDigital ? null : dig?.caOverdue)} />
+            <Stat label="Closure rate" value={fmt(emptyRealDigital ? null : dig?.caClosurePct, "%")} />
+          </dl>
           {mix.length && !emptyRealDigital ? (
             <div className="space-y-2">
-              <div className="flex h-3 overflow-hidden rounded-full border border-[#D9E2E8]">
+              <div className="flex h-3 overflow-hidden rounded-full">
                 {mix.map((s, i) => (
                   <div
                     key={s.label}
@@ -1364,11 +1399,11 @@ export function AiDigitalDashboardShell() {
                   </span>
                 ))}
               </div>
-              <p className="text-xs text-[#557187]">SLA Compliance: {fmt(dig?.caSlaPct, "%")}</p>
+              <p className="text-xs text-[#667085]">SLA compliance {fmt(dig?.caSlaPct, "%")}</p>
             </div>
           ) : (
             <p className="text-sm text-[#667085]">
-              {emptyRealDigital ? "N/A — start an audit to get CA data." : "Data unavailable"}
+              {emptyRealDigital ? "N/A — start an audit to see corrective actions." : "Data unavailable"}
             </p>
           )}
         </ChartCard>
@@ -1378,7 +1413,7 @@ export function AiDigitalDashboardShell() {
     if (id === "chart_variance_rank") {
       const rows = (dig?.varianceByStore?.length ? dig.varianceByStore : dig?.varianceByCategory) ?? [];
       return (
-        <ChartCard title="Variance ranking (absolute units)" moreTo="/intelligence/inventory-variance">
+        <ChartCard title="Largest variances (units)" moreTo="/intelligence/inventory-variance">
           {rows.length && !emptyRealDigital ? (
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -1404,7 +1439,7 @@ export function AiDigitalDashboardShell() {
             <p className="text-sm text-[#667085]">
               {emptyRealDigital
                 ? "N/A — start an audit to get variance data."
-                : "N/A — variance requires Expected + Actual mapped fields"}
+                : "N/A — needs expected and actual counts"}
             </p>
           )}
         </ChartCard>
@@ -1455,7 +1490,7 @@ export function AiDigitalDashboardShell() {
             <p className="text-sm text-[#667085]">
               {emptyRealDigital
                 ? "N/A — start an audit to compare results."
-                : "Comparison unavailable — no audits with Expected + Actual mapped."}
+                : "Comparison unavailable — no audits with expected and actual counts."}
             </p>
           ) : !compatible ? (
             <p className="text-sm text-[#667085]">
@@ -1463,11 +1498,9 @@ export function AiDigitalDashboardShell() {
             </p>
           ) : (
             <>
-              <div className="mb-3 flex flex-wrap gap-2 text-xs text-[#04203F]">
-                <span className="rounded-lg bg-[#EAF6FD] px-2 py-1">
-                  A net {fmt(a?.variance)} · B net {fmt(b?.variance)}
-                </span>
-              </div>
+              <p className="mb-3 text-xs text-[#667085]">
+                Net variance: A {fmt(a?.variance)} · B {fmt(b?.variance)}
+              </p>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} layout="vertical" margin={{ left: 8 }}>
@@ -1491,34 +1524,63 @@ export function AiDigitalDashboardShell() {
 
   const renderMetricGrid = (render: (id: string, accent: string) => React.ReactNode) => {
     let accentIndex = 0;
+    const cards: { id: string; title: string; body: React.ReactNode }[] = [];
+    for (const id of visibleIds) {
+      const def = catalog.find((c) => c.id === id);
+      if (!def) continue;
+      const accent = CHART_COLORS[accentIndex % CHART_COLORS.length]!;
+      const body = render(id, accent);
+      if (body == null) continue;
+      accentIndex += 1;
+      cards.push({ id, title: def.title, body });
+    }
+    // While customizing, every card is shown so drag-and-drop covers the whole layout.
+    const primary = editLayout ? cards : cards.filter((c) => isPrimaryCard(tabKey, c.id));
+    const extra = editLayout ? [] : cards.filter((c) => !isPrimaryCard(tabKey, c.id));
+
+    const grid = (list: typeof cards) => (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {list.map((c) => (
+          <SortableMetricCard
+            key={c.id}
+            id={c.id}
+            title={c.title}
+            editMode={editLayout}
+            span={cardSpan(c.id)}
+            onHide={() => hideCard(c.id)}
+            onDragStart={sectionDrag.onDragStart}
+            onDragOver={sectionDrag.onDragOver}
+            onDrop={sectionDrag.onDrop}
+          >
+            {c.body}
+          </SortableMetricCard>
+        ))}
+      </div>
+    );
+
     return (
-      <div className="grid gap-3 sm:grid-cols-2">
-        {visibleIds.map((id) => {
-          const def = catalog.find((c) => c.id === id);
-          if (!def) return null;
-          const accent = CHART_COLORS[accentIndex % CHART_COLORS.length]!;
-          const body = render(id, accent);
-          if (body == null) return null;
-          accentIndex += 1;
-          return (
-            <SortableMetricCard
-              key={id}
-              id={id}
-              title={def.title}
-              editMode={editLayout}
-              span2={SPAN2_CARD_IDS.has(id)}
-              onHide={() => hideCard(id)}
-              onDragStart={sectionDrag.onDragStart}
-              onDragOver={sectionDrag.onDragOver}
-              onDrop={sectionDrag.onDrop}
+      <div className="space-y-3">
+        {primary.length ? grid(primary) : null}
+        {extra.length ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowAllMetrics((v) => !v)}
+              aria-expanded={showAllMetrics}
+              className="inline-flex items-center gap-1 rounded-lg py-1 text-sm font-medium text-[#04203F] hover:underline"
             >
-              {body}
-            </SortableMetricCard>
-          );
-        })}
+              {showAllMetrics ? "Show fewer metrics" : `Show all metrics (${extra.length})`}
+              <ChevronDown
+                className={cn("size-4 transition-transform", showAllMetrics && "rotate-180")}
+                aria-hidden
+              />
+            </button>
+            {showAllMetrics ? grid(extra) : null}
+          </>
+        ) : null}
         {!visibleIds.length ? (
-          <p className="rounded-xl border border-dashed border-[#D9E2E8] bg-[#EEF1F4]/60 p-4 text-sm text-[#667085] sm:col-span-2">
-            All metric cards are hidden. Use Customize Dashboard → Add card to bring them back.
+          <p className="rounded-xl border border-dashed border-[#D9E2E8] p-4 text-sm text-[#667085]">
+            All cards are hidden. Use Customize → Add card to bring them back.
           </p>
         ) : null}
       </div>
@@ -1528,46 +1590,38 @@ export function AiDigitalDashboardShell() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Dashboard"
-        title="Operations AI Dashboard"
-        description="Ask Aislix, audit intelligence, planogram compliance, and execution performance."
+        title="Dashboard"
+        description="Your stores, audits and actions at a glance."
         actions={
-          <>
-            <DemoPreviewToggle
-              compact
-              locked={isGuest}
-              enabled={demoPreview.previewDemo}
-              onChange={demoPreview.setPreviewDemo}
-            />
-            <Button variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS} asChild>
-              {isGuest ? (
-                <Link to="/guest" search={{ intent: "sample" } as never}>
-                  New Audit
-                </Link>
-              ) : (
-                <Link to="/new-audit">New Audit</Link>
-              )}
-            </Button>
-          </>
+          <DemoPreviewToggle
+            compact
+            locked={isGuest}
+            enabled={demoPreview.previewDemo}
+            onChange={demoPreview.setPreviewDemo}
+          />
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-2 rounded-xl border border-[#D9E2E8] bg-white p-1">
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[#D9E2E8]">
+        <div role="tablist" aria-label="Dashboard view" className="-mb-px flex gap-5">
           {(
             [
               ["overview", "Overview"],
-              ["ai", "AI Audits"],
-              ["digital", "Digital Audits"],
+              ["ai", "AI audits"],
+              ["digital", "Digital audits"],
             ] as const
           ).map(([id, label]) => (
             <button
               key={id}
               type="button"
+              role="tab"
+              aria-selected={tab === id}
               onClick={() => setTab(id)}
               className={cn(
-                "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-                tab === id ? "bg-[#04203F] text-white" : "text-[#667085] hover:bg-[#F4F7F9]",
+                "border-b-2 pb-2.5 pt-1 text-sm font-medium transition-colors",
+                tab === id
+                  ? "border-[#04203F] text-[#04203F]"
+                  : "border-transparent text-[#667085] hover:text-[#04203F]",
               )}
             >
               {label}
@@ -1579,13 +1633,13 @@ export function AiDigitalDashboardShell() {
             type="button"
             onClick={() => setEditLayout((v) => !v)}
             className={cn(
-              "rounded-lg border px-3 py-2 text-xs font-medium",
+              "mb-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
               editLayout
-                ? "border-[#04203F] bg-[#04203F] text-white"
-                : "border-[#D9E2E8] bg-white text-[#667085]",
+                ? "bg-[#04203F] text-white"
+                : "text-[#667085] hover:bg-[#F4F7F9] hover:text-[#04203F]",
             )}
           >
-            {editLayout ? "Done customizing" : "Customize Dashboard"}
+            {editLayout ? "Done" : "Customize"}
           </button>
         ) : null}
       </div>
@@ -1597,11 +1651,6 @@ export function AiDigitalDashboardShell() {
             dataAvailability={askDataAvailability}
             city={global?.filters?.city ?? null}
           />
-          <SegmentHomePanel
-            filters={global?.filters ?? null}
-            previewDemo={demoPreview.previewDemo}
-            userEmail={demoPreview.userEmail}
-          />
           <DashboardOverviewPanel
             ai={data}
             digital={dig}
@@ -1609,8 +1658,13 @@ export function AiDigitalDashboardShell() {
             digitalLoading={digitalQuery.isPending}
             emptyAi={emptyRealAi}
             emptyDigital={emptyRealDigital}
-            onOpenTab={setTab}
-          />
+          >
+            <SegmentHomePanel
+              filters={global?.filters ?? null}
+              previewDemo={demoPreview.previewDemo}
+              userEmail={demoPreview.userEmail}
+            />
+          </DashboardOverviewPanel>
         </div>
       ) : null}
 
@@ -1643,7 +1697,7 @@ export function AiDigitalDashboardShell() {
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="h-24 animate-pulse rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/70"
+                    className="h-24 animate-pulse rounded-xl border border-[#D9E2E8] bg-[#F4F7F9]"
                   />
                 ))}
               </div>
@@ -1655,65 +1709,29 @@ export function AiDigitalDashboardShell() {
           ) : (
             <>
               {emptyRealAi ? <EmptyScopeBanner kind="ai" /> : null}
-              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#04203F]">
-                {emptyRealAi
-                  ? "N/A audits · N/A complete · N/A open critical"
-                  : `${data?.executive.audits ?? 0} audits · ${fmt(data?.executive.completionPct, "%")} complete · ${data?.executive.openCritical ?? 0} open critical`}
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {[
-                  {
-                    title: "Findings",
-                    body: emptyRealAi ? "N/A" : `${data?.synopsis.findingsOpen ?? 0} open`,
-                    to: "/findings",
-                    bg: AISLIX.localBg,
-                    border: AISLIX.localBorder,
-                    Icon: Building2,
-                  },
-                  {
-                    title: "Corrective Actions",
-                    body: emptyRealAi ? "N/A" : `${data?.synopsis.caOpen ?? 0} open`,
-                    to: "/corrective-actions",
-                    bg: AISLIX.supermarketBg,
-                    border: AISLIX.supermarketBorder,
-                    Icon: ShoppingCart,
-                  },
-                  {
-                    title: "History",
-                    body: emptyRealAi ? "N/A" : `${data?.synopsis.historyCount ?? 0} audits`,
-                    to: "/history",
-                    bg: AISLIX.warehouseBg,
-                    border: AISLIX.warehouseBorder,
-                    Icon: Building2,
-                  },
-                  {
-                    title: "Team",
-                    body: `${data?.synopsis.teamCount ?? 0} members`,
-                    to: "/team",
-                    bg: AISLIX.darkstoreBg,
-                    border: AISLIX.darkstoreBorder,
-                    Icon: Users,
-                  },
-                ].map((card) => (
-                  <div
-                    key={card.title}
-                    className="rounded-xl border p-3"
-                    style={{ background: card.bg, borderColor: card.border }}
-                  >
-                    <card.Icon className="size-4 text-[#04203F]" />
-                    <p className="mt-2 text-sm font-semibold text-[#04203F]">{card.title}</p>
-                    <p className="mt-1 text-xs text-[#557187]">{card.body}</p>
-                    <Link to={card.to} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
-                      View more
-                    </Link>
-                  </div>
-                ))}
-              </div>
+              <SummaryLine
+                parts={
+                  emptyRealAi
+                    ? ["N/A audits", "N/A complete", "N/A open critical"]
+                    : [
+                        `${data?.executive.audits ?? 0} audits`,
+                        `${fmt(data?.executive.completionPct, "%")} complete`,
+                        `${data?.executive.openCritical ?? 0} open critical`,
+                      ]
+                }
+                links={
+                  emptyRealAi
+                    ? []
+                    : [
+                        { to: "/findings", label: `${data?.synopsis.findingsOpen ?? 0} open findings` },
+                        { to: "/corrective-actions", label: `${data?.synopsis.caOpen ?? 0} open actions` },
+                      ]
+                }
+              />
 
               {renderMetricGrid(renderAiCard)}
 
-              <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white shadow-sm">
+              <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
                 <WorkspaceFilterBar
                   embedded
                   footer={
@@ -1725,9 +1743,8 @@ export function AiDigitalDashboardShell() {
                   }
                 />
                 <div className="border-t border-[#D9E2E8] p-4">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-[#04203F]">Last 10 Audits</h3>
-                  <ViewMore to="/history" />
+                <div className="mb-3">
+                  <TitleLink title="Last 10 audits" to="/history" />
                 </div>
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <div className="flex gap-1 rounded-lg border border-[#D9E2E8] bg-white p-0.5">
@@ -1756,8 +1773,8 @@ export function AiDigitalDashboardShell() {
                   <select className={selectClass} value={tableStage} onChange={(e) => setTableStage(e.target.value)}>
                     <option value="all">Completion stage</option>
                     <option value="completed">Completed</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="not_started">Not Started</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="not_started">Not started</option>
                   </select>
                   <select
                     className={selectClass}
@@ -1796,31 +1813,31 @@ export function AiDigitalDashboardShell() {
                     value={sortKey}
                     onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
                   >
-                    <option value="date">Sort: Date</option>
-                    <option value="score">Sort: Score</option>
-                    <option value="completion">Sort: Completion</option>
+                    <option value="date">Sort by date</option>
+                    <option value="score">Sort by score</option>
+                    <option value="completion">Sort by completion</option>
                   </select>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[960px] text-left text-sm">
                     <thead>
-                      <tr className="border-b border-[#D9E2E8] text-xs uppercase text-[#667085]">
-                        <th className="py-2 pr-3">Audit</th>
-                        <th className="py-2 pr-3">Template</th>
-                        <th className="py-2 pr-3">Store</th>
-                        <th className="py-2 pr-3">Assignee</th>
-                        <th className="py-2 pr-3">Type</th>
-                        <th className="py-2 pr-3">Completion</th>
-                        <th className="py-2 pr-3">Date</th>
-                        <th className="py-2 pr-3">Score</th>
-                        <th className="py-2">Actions</th>
+                      <tr className="border-b border-[#D9E2E8] text-xs font-medium text-[#667085]">
+                        <th className="py-2 pr-3 font-medium">Audit</th>
+                        <th className="py-2 pr-3 font-medium">Template</th>
+                        <th className="py-2 pr-3 font-medium">Store</th>
+                        <th className="py-2 pr-3 font-medium">Assignee</th>
+                        <th className="py-2 pr-3 font-medium">Type</th>
+                        <th className="py-2 pr-3 font-medium">Completion</th>
+                        <th className="py-2 pr-3 font-medium">Date</th>
+                        <th className="py-2 pr-3 font-medium">Score</th>
+                        <th className="py-2 font-medium"><span className="sr-only">Actions</span></th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredLastTen.map((row) => (
                         <tr key={row.id} className="border-b border-[#EEF1F4]">
                           <td className="py-2 pr-3 font-medium text-[#04203F]">{row.auditName}</td>
-                          <td className="py-2 pr-3 text-[#557187]">{row.templateName || "—"}</td>
+                          <td className="py-2 pr-3 text-[#667085]">{row.templateName || "—"}</td>
                           <td className="py-2 pr-3">{row.storeName}</td>
                           <td className="py-2 pr-3">{row.assigneeName}</td>
                           <td className="py-2 pr-3">{row.type}</td>
@@ -1834,10 +1851,9 @@ export function AiDigitalDashboardShell() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="border-[#C1E4F8] text-[#04203F]"
                               onClick={() => void openAiAnalysis(row)}
                             >
-                              AI Analysis
+                              AI analysis
                             </Button>
                           </td>
                         </tr>
@@ -1872,69 +1888,31 @@ export function AiDigitalDashboardShell() {
           ) : (
             <>
               {emptyRealDigital ? <EmptyScopeBanner kind="digital" /> : null}
-              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#04203F]">
-                {emptyRealDigital
-                  ? "N/A digital audits · N/A complete · N/A overdue"
-                  : `${dig?.totalAudits ?? 0} digital audits · ${fmt(dig?.completionPct, "%")} complete · ${dig?.overdue ?? 0} overdue`}
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {[
-                  {
-                    title: "Findings",
-                    body: emptyRealDigital ? "N/A" : `${data?.synopsis.findingsOpen ?? 0} open`,
-                    to: "/findings",
-                    bg: AISLIX.localBg,
-                    border: AISLIX.localBorder,
-                    Icon: Building2,
-                  },
-                  {
-                    title: "Corrective Actions",
-                    body: emptyRealDigital
-                      ? "N/A"
-                      : dig?.caOpen != null
-                        ? `${dig.caOpen} open`
-                        : "N/A",
-                    to: "/corrective-actions",
-                    bg: AISLIX.supermarketBg,
-                    border: AISLIX.supermarketBorder,
-                    Icon: ShoppingCart,
-                  },
-                  {
-                    title: "History",
-                    body: emptyRealDigital ? "N/A" : `${dig?.totalAudits ?? 0} digital audits`,
-                    to: "/history",
-                    bg: AISLIX.warehouseBg,
-                    border: AISLIX.warehouseBorder,
-                    Icon: Building2,
-                  },
-                  {
-                    title: "Team",
-                    body: `${data?.synopsis.teamCount ?? 0} members`,
-                    to: "/team",
-                    bg: AISLIX.darkstoreBg,
-                    border: AISLIX.darkstoreBorder,
-                    Icon: Users,
-                  },
-                ].map((card) => (
-                  <div
-                    key={card.title}
-                    className="rounded-xl border p-3"
-                    style={{ background: card.bg, borderColor: card.border }}
-                  >
-                    <card.Icon className="size-4 text-[#04203F]" />
-                    <p className="mt-2 text-sm font-semibold text-[#04203F]">{card.title}</p>
-                    <p className="mt-1 text-xs text-[#557187]">{card.body}</p>
-                    <Link to={card.to} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
-                      View more
-                    </Link>
-                  </div>
-                ))}
-              </div>
+              <SummaryLine
+                parts={
+                  emptyRealDigital
+                    ? ["N/A digital audits", "N/A complete", "N/A overdue"]
+                    : [
+                        `${dig?.totalAudits ?? 0} digital audits`,
+                        `${fmt(dig?.completionPct, "%")} complete`,
+                        `${dig?.overdue ?? 0} overdue`,
+                      ]
+                }
+                links={
+                  emptyRealDigital
+                    ? []
+                    : [
+                        { to: "/findings", label: `${data?.synopsis.findingsOpen ?? 0} open findings` },
+                        ...(dig?.caOpen != null
+                          ? [{ to: "/corrective-actions", label: `${dig.caOpen} open actions` }]
+                          : []),
+                      ]
+                }
+              />
 
               {renderMetricGrid(renderDigitalCard)}
 
-              <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white shadow-sm">
+              <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
                 <WorkspaceFilterBar
                   embedded
                   footer={
@@ -1946,9 +1924,8 @@ export function AiDigitalDashboardShell() {
                   }
                 />
                 <div className="border-t border-[#D9E2E8] p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-[#04203F]">Last 10 Digital Audits</h3>
-                    <ViewMore to="/history" />
+                  <div className="mb-3">
+                    <TitleLink title="Last 10 digital audits" to="/history" />
                   </div>
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <div className="flex gap-1 rounded-lg border border-[#D9E2E8] bg-white p-0.5">
@@ -1978,27 +1955,27 @@ export function AiDigitalDashboardShell() {
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[1200px] text-left text-sm">
                       <thead>
-                        <tr className="border-b border-[#D9E2E8] text-xs uppercase text-[#667085]">
-                          <th className="py-2 pr-3">Audit</th>
-                          <th className="py-2 pr-3">Template</th>
-                          <th className="py-2 pr-3">Location</th>
-                          <th className="py-2 pr-3">Assignee</th>
-                          <th className="py-2 pr-3">Date</th>
-                          <th className="py-2 pr-3">Status</th>
-                          <th className="py-2 pr-3">Expected</th>
-                          <th className="py-2 pr-3">Actual</th>
-                          <th className="py-2 pr-3">Variance</th>
-                          <th className="py-2 pr-3">Findings</th>
-                          <th className="py-2 pr-3">CA</th>
-                          <th className="py-2 pr-3">Re-audit</th>
-                          <th className="py-2">Actions</th>
+                        <tr className="border-b border-[#D9E2E8] text-xs font-medium text-[#667085]">
+                          <th className="py-2 pr-3 font-medium">Audit</th>
+                          <th className="py-2 pr-3 font-medium">Template</th>
+                          <th className="py-2 pr-3 font-medium">Location</th>
+                          <th className="py-2 pr-3 font-medium">Assignee</th>
+                          <th className="py-2 pr-3 font-medium">Date</th>
+                          <th className="py-2 pr-3 font-medium">Status</th>
+                          <th className="py-2 pr-3 font-medium">Expected</th>
+                          <th className="py-2 pr-3 font-medium">Actual</th>
+                          <th className="py-2 pr-3 font-medium">Variance</th>
+                          <th className="py-2 pr-3 font-medium">Findings</th>
+                          <th className="py-2 pr-3 font-medium">CA</th>
+                          <th className="py-2 pr-3 font-medium">Re-audit</th>
+                          <th className="py-2 font-medium"><span className="sr-only">Actions</span></th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredDigLastTen.map((row: DigitalLastTenRow) => (
                           <tr key={row.id} className="border-b border-[#EEF1F4]">
                             <td className="py-2 pr-3 font-medium text-[#04203F]">{row.auditName}</td>
-                            <td className="py-2 pr-3 text-[#557187]">
+                            <td className="py-2 pr-3 text-[#667085]">
                               {row.templateName || row.auditName}
                             </td>
                             <td className="py-2 pr-3">{row.store}</td>
@@ -2016,10 +1993,9 @@ export function AiDigitalDashboardShell() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="border-[#C1E4F8] text-[#04203F]"
                                 onClick={() => void openDigitalAnalysis(row)}
                               >
-                                AI Analysis
+                                AI analysis
                               </Button>
                             </td>
                           </tr>
@@ -2028,7 +2004,7 @@ export function AiDigitalDashboardShell() {
                           <tr>
                             <td colSpan={13} className="py-6 text-[#667085]">
                               {emptyRealDigital
-                                ? "N/A — start an audit to populate Last 10 Digital Audits"
+                                ? "N/A — start an audit to see it here"
                                 : digRelation === "all"
                                   ? "Data unavailable"
                                   : "No audits match this assignment filter"}

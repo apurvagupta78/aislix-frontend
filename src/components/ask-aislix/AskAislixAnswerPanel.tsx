@@ -12,7 +12,7 @@ export function AskAislixAnswerPanel({
   onFollowUp: (question: string) => void;
 }) {
   return (
-    <section className="space-y-4 rounded-xl border border-line bg-white p-5 shadow-card md:p-6">
+    <section className="space-y-4 rounded-xl border border-line bg-white p-5 md:p-6">
       <div>
         <p className="text-base font-semibold text-navy">{response.answer}</p>
         {response.summary ? <p className="mt-2 text-sm text-mp-muted">{response.summary}</p> : null}
@@ -44,7 +44,7 @@ export function AskAislixAnswerPanel({
       {response.table?.rows?.length ? (
         <div className="overflow-x-auto rounded-xl border border-line">
           <table className="min-w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs uppercase text-mp-muted">
+            <thead className="text-left text-xs font-medium text-mp-muted">
               <tr>
                 {response.table.columns.map((col) => (
                   <th key={col} className="px-3 py-2">

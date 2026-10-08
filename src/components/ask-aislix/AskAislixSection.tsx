@@ -211,68 +211,32 @@ export function AskAislixSection({
   const showSuggestions = !loading && !response && !error;
 
   return (
-    <section
-      aria-labelledby="ask-aislix-heading"
-      className="w-full overflow-hidden rounded-3xl border shadow-card"
-      style={{
-        backgroundColor: "#FFFFFF",
-        borderColor: ASK_AISLIX_SECTION.bandBorder,
-      }}
-    >
-      <div
-        className="border-b px-5 pb-14 pt-5 md:px-8 md:pb-16 md:pt-6"
-        style={{
-          backgroundColor: ASK_AISLIX_SECTION.background,
-          borderColor: ASK_AISLIX_SECTION.bandBorder,
-        }}
-      >
-        <header className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <span
-              className="flex h-11 w-11 items-center justify-center rounded-xl border bg-white shadow-[0_1px_2px_rgba(15,42,68,0.08)]"
-              style={{
-                borderColor: ASK_AISLIX_SECTION.composerBorder,
-                color: ASK_AISLIX_SECTION.sparkle,
-              }}
-            >
-              <Sparkles className="h-5 w-5" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <h2
-                id="ask-aislix-heading"
-                className="font-display text-[22px] font-semibold tracking-tight"
-                style={{ color: ASK_AISLIX_SECTION.heading }}
-              >
-                Ask AISLIX
-              </h2>
-              <p className="mt-0.5 text-[14px]" style={{ color: ASK_AISLIX_SECTION.subtitle }}>
-                {isGuest
-                  ? "Guest demo answers use showcase data. Create a free account for live Ask Aislix."
-                  : "Your retail operations copilot for audits, stores, inventory and actions."}
-              </p>
-              {isGuest ? (
-                <Link
-                  to="/signup"
-                  className="mt-1.5 inline-block text-sm font-medium text-[#2A6FA8] underline-offset-2 hover:underline"
-                >
-                  Create free account
-                </Link>
-              ) : null}
-            </div>
-          </div>
-          <kbd
-            className="hidden items-center gap-1 rounded-lg border bg-white px-2.5 py-1 font-sans text-[12px] font-medium shadow-[0_1px_2px_rgba(15,42,68,0.08)] md:flex"
-            style={{
-              borderColor: ASK_AISLIX_SECTION.bandBorder,
-              color: ASK_AISLIX_SECTION.blueInk,
-            }}
-          >
-            ⌘ K
-          </kbd>
-        </header>
-      </div>
+    <section aria-labelledby="ask-aislix-heading" className="w-full">
+      <header className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <h2
+          id="ask-aislix-heading"
+          className="flex items-center gap-1.5 text-base font-semibold"
+          style={{ color: ASK_AISLIX_SECTION.heading }}
+        >
+          <Sparkles className="h-4 w-4" aria-hidden />
+          Ask Aislix
+        </h2>
+        <p className="text-sm" style={{ color: ASK_AISLIX_SECTION.subtitle }}>
+          {isGuest ? (
+            <>
+              Demo answers.{" "}
+              <Link to="/signup" className="font-medium text-[#04203F] underline-offset-2 hover:underline">
+                Create a free account
+              </Link>{" "}
+              for your own data.
+            </>
+          ) : (
+            "Questions about your stores, audits and actions."
+          )}
+        </p>
+      </header>
 
-      <div className="-mt-11 space-y-5 px-5 pb-5 md:px-8 md:pb-8">
+      <div className="space-y-4">
         <AskAislixInput
           value={question}
           onChange={setQuestion}
@@ -307,7 +271,7 @@ export function AskAislixSection({
 
         {loading ? <AskAislixLoading /> : null}
         {error ? (
-          <p className="rounded-lg border border-[#f5b8cb] bg-[#fde8ef] px-4 py-3 text-sm text-[#0f2a44]">
+          <p className="rounded-lg border border-[#ECBDCC] bg-[#FFEAF1] px-4 py-3 text-sm text-[#04203F]">
             {error}
           </p>
         ) : null}

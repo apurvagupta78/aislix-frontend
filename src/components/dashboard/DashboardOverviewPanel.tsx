@@ -1,8 +1,9 @@
+import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Info } from "lucide-react";
+import { ChevronDown, ChevronRight, Info } from "lucide-react";
 
 import { MpRankBars } from "@/components/control-tower/MpCharts";
-import { AISLIX_PALETTE, type AislixAccent } from "@/lib/ai-audit/kpi-palette";
+import { AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
 import type { DigitalDashboardMetrics } from "@/lib/dashboard-ai-digital";
 import type { OpsAiDashboardData } from "@/lib/dashboard-ops-ai";
 
@@ -13,7 +14,8 @@ type Props = {
   digitalLoading: boolean;
   emptyAi: boolean;
   emptyDigital: boolean;
-  onOpenTab: (tab: "ai" | "digital") => void;
+  /** Rendered between the headline KPIs and the rest of the overview. */
+  children?: ReactNode;
 };
 
 type CombinedRow = {
@@ -38,44 +40,63 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-/** Two rows of four: no repeat side-by-side or stacked. */
-const KPI_ACCENTS: AislixAccent[] = ["purple", "blue", "pink", "green", "cyan", "purple", "blue", "pink"];
-
 const STAGE_LABEL = {
   completed: "Completed",
   in_progress: "In progress",
   not_started: "Not started",
 } as const;
 
-function OverviewKpi({
-  label,
-  value,
-  context,
-  formula,
-  index,
-}: {
+type OverviewKpiDef = {
   label: string;
   value: string;
   context: string;
   formula: string;
-  index: number;
-}) {
+  primary?: boolean;
+  risk?: boolean;
+};
+
+function OverviewKpi({ label, value, context, formula, risk }: OverviewKpiDef) {
   return (
-    <div
-      className="h-full rounded-xl border border-[#D9E2E8] bg-white p-4"
-      style={{
-        borderLeftWidth: 3,
-        borderLeftColor: AISLIX_PALETTE[KPI_ACCENTS[index % KPI_ACCENTS.length]!],
-      }}
-    >
+    <div className="h-full rounded-xl border border-[#D9E2E8] bg-white p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">{label}</p>
-        <span title={formula} className="text-[#667085]">
+        <p className="flex items-center gap-1.5 text-sm text-[#667085]">
+          {risk ? (
+            <span
+              className="size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: "#ECBDCC" }}
+              aria-label="Needs attention"
+            />
+          ) : null}
+          {label}
+        </p>
+        <span title={formula} className="text-[#98A2B3]">
           <Info className="size-3.5" aria-label="How this is calculated" />
         </span>
       </div>
-      <p className="mt-2 text-2xl font-semibold text-[#04203F]">{value}</p>
+      <p
+        className={
+          value === "N/A"
+            ? "mt-2 text-2xl font-semibold tabular-nums text-[#667085]"
+            : "mt-2 text-2xl font-semibold tabular-nums text-[#04203F]"
+        }
+      >
+        {value}
+      </p>
       <p className="mt-1 text-xs text-[#667085]">{context}</p>
+    </div>
+  );
+}
+
+function isPositive(value: number | null | undefined): boolean {
+  return value != null && Number.isFinite(value) && value > 0;
+}
+
+function KpiSkeleton({ count }: { count: number }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-busy="true">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="h-24 animate-pulse rounded-xl border border-[#D9E2E8] bg-[#F4F7F9]" />
+      ))}
     </div>
   );
 }
@@ -87,14 +108,15 @@ export function DashboardOverviewPanel({
   digitalLoading,
   emptyAi,
   emptyDigital,
-  onOpenTab,
+  children,
 }: Props) {
+  const [showAll, setShowAll] = useState(false);
+
   if (aiLoading && digitalLoading) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-busy="true">
-        {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl border border-[#D9E2E8] bg-[#F4F7F9]" />
-        ))}
+      <div className="flex flex-col gap-6">
+        <KpiSkeleton count={4} />
+        {children}
       </div>
     );
   }
@@ -105,24 +127,42 @@ export function DashboardOverviewPanel({
   const totalAudits = aiCount == null && digCount == null ? null : (aiCount ?? 0) + (digCount ?? 0);
   const planogramApplicable = Boolean(m?.planogram.applicable);
 
-  const kpis = [
+  const kpis: OverviewKpiDef[] = [
     {
       label: "Total audits",
       value: fmt(totalAudits),
       context: `${fmt(aiCount)} AI · ${fmt(digCount)} digital`,
       formula: "AI audits plus digital audits in your current filters and store scope.",
-    },
-    {
-      label: "Evidence coverage",
-      value: emptyAi ? "N/A" : fmt(m?.verificationCoveragePct, "%"),
-      context: "AI audits with human-verified evidence",
-      formula: "Share of AI audit products confirmed against photo evidence.",
+      primary: true,
     },
     {
       label: "Open critical",
       value: emptyAi ? "N/A" : fmt(ai?.executive.openCritical),
       context: "Critical findings still open",
       formula: "Open findings with critical severity across your stores.",
+      primary: true,
+      risk: !emptyAi && isPositive(ai?.executive.openCritical),
+    },
+    {
+      label: "Open findings",
+      value: emptyAi && emptyDigital ? "N/A" : fmt(ai?.synopsis.findingsOpen),
+      context: "Issues waiting for action",
+      formula: "Findings not yet resolved across AI and digital audits.",
+      primary: true,
+    },
+    {
+      label: "Overdue actions",
+      value: emptyDigital ? "N/A" : fmt(digital?.caOverdue),
+      context: `${fmt(digital?.caOpen ?? ai?.synopsis.caOpen)} corrective actions open`,
+      formula: "Corrective actions past their SLA due date.",
+      primary: true,
+      risk: !emptyDigital && isPositive(digital?.caOverdue),
+    },
+    {
+      label: "Evidence coverage",
+      value: emptyAi ? "N/A" : fmt(m?.verificationCoveragePct, "%"),
+      context: "AI audits with human-verified evidence",
+      formula: "Share of AI audit products confirmed against photo evidence.",
     },
     {
       label: "Planogram compliance",
@@ -144,19 +184,9 @@ export function DashboardOverviewPanel({
         : `${fmt(digital?.completed)} of ${fmt(digital?.totalAudits)} completed`,
       formula: "Completed digital audits divided by all digital audits in scope.",
     },
-    {
-      label: "Open findings",
-      value: emptyAi && emptyDigital ? "N/A" : fmt(ai?.synopsis.findingsOpen),
-      context: "Issues waiting for action",
-      formula: "Findings not yet resolved across AI and digital audits.",
-    },
-    {
-      label: "Overdue actions",
-      value: emptyDigital ? "N/A" : fmt(digital?.caOverdue),
-      context: `${fmt(digital?.caOpen ?? ai?.synopsis.caOpen)} corrective actions open`,
-      formula: "Corrective actions past their SLA due date.",
-    },
   ];
+  const primaryKpis = kpis.filter((k) => k.primary);
+  const extraKpis = kpis.filter((k) => !k.primary);
 
   const combined: CombinedRow[] = [
     ...(emptyAi ? [] : (ai?.lastTen ?? [])).map((r) => ({
@@ -194,82 +224,80 @@ export function DashboardOverviewPanel({
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi, i) => (
-          <OverviewKpi key={kpi.label} index={i} {...kpi} />
+        {primaryKpis.map((kpi) => (
+          <OverviewKpi key={kpi.label} {...kpi} />
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-          <h3 className="text-sm font-semibold text-[#04203F]">Audit mix</h3>
-          <p className="mb-3 text-xs text-[#667085]">How many AI and digital audits are in your scope.</p>
-          {mix.length ? (
-            <MpRankBars data={mix} />
-          ) : (
-            <p className="rounded-lg bg-[#EEF1F4] px-3 py-6 text-center text-sm text-[#667085]">
-              Data unavailable — run your first audit to see the mix.
-            </p>
-          )}
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(
-            [
-              ["ai", "AI Audits", "Shelf photos, products, brands, planogram compliance."],
-              ["digital", "Digital Audits", "Counts, variance, corrective actions, re-audits."],
-            ] as const
-          ).map(([id, title, body]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onOpenTab(id)}
-              className="flex flex-col justify-between rounded-xl border border-[#D9E2E8] bg-white p-4 text-left transition-colors hover:bg-[#F4F7F9]"
-            >
-              <span>
-                <span className="block text-sm font-semibold text-[#04203F]">{title}</span>
-                <span className="mt-1 block text-xs text-[#667085]">{body}</span>
-              </span>
-              <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-[#04203F]">
-                Open detailed dashboard <ArrowRight className="size-3.5" />
-              </span>
-            </button>
-          ))}
-        </div>
+      {children}
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          aria-expanded={showAll}
+          className="inline-flex items-center gap-1 rounded-lg text-sm font-medium text-[#04203F] hover:underline"
+        >
+          {showAll ? "Show fewer metrics" : `Show all metrics (${extraKpis.length + 1})`}
+          {showAll ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        </button>
+        {showAll ? (
+          <div className="mt-3 flex flex-col gap-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {extraKpis.map((kpi) => (
+                <OverviewKpi key={kpi.label} {...kpi} />
+              ))}
+            </div>
+            <div className="rounded-xl border border-[#D9E2E8] bg-white p-4 lg:max-w-[50%]">
+              <h3 className="text-sm font-semibold text-[#04203F]">Audit mix</h3>
+              <p className="mb-3 text-xs text-[#667085]">AI and digital audits in your scope.</p>
+              {mix.length ? (
+                <MpRankBars data={mix} />
+              ) : (
+                <p className="rounded-lg bg-[#EEF1F4] px-3 py-6 text-center text-sm text-[#667085]">
+                  Data unavailable until your first audit.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-        <h3 className="text-sm font-semibold text-[#04203F]">Latest audits — AI and digital</h3>
-        <p className="mb-3 text-xs text-[#667085]">The 10 most recent audits across both audit types.</p>
+        <Link
+          to="/history"
+          className="group inline-flex items-center gap-1 text-sm font-semibold text-[#04203F] hover:underline"
+        >
+          Latest audits
+          <ChevronRight className="size-4 text-[#667085] group-hover:text-[#04203F]" />
+        </Link>
+        <p className="mb-3 text-xs text-[#667085]">The 10 most recent AI and digital audits.</p>
         {combined.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-[#D9E2E8] text-left text-xs uppercase tracking-wide text-[#667085]">
+                <tr className="border-b border-[#D9E2E8] text-left text-xs text-[#667085]">
                   <th className="py-2 pr-3 font-medium">Type</th>
                   <th className="py-2 pr-3 font-medium">Audit</th>
                   <th className="py-2 pr-3 font-medium">Store</th>
                   <th className="py-2 pr-3 font-medium">Date</th>
                   <th className="py-2 pr-3 font-medium">Status</th>
                   <th className="py-2 pr-3 font-medium">Result</th>
-                  <th className="py-2 font-medium" />
+                  <th className="py-2 font-medium">
+                    <span className="sr-only">Report</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {combined.map((row) => (
                   <tr key={row.key} className="border-b border-[#EEF1F4] last:border-0">
-                    <td className="py-2 pr-3">
-                      <span
-                        className="rounded-full border px-2 py-0.5 text-xs font-medium text-[#04203F]"
-                        style={{
-                          borderColor: row.kind === "AI audit" ? AISLIX_PALETTE.purple : AISLIX_PALETTE.blue,
-                        }}
-                      >
-                        {row.kind}
-                      </span>
-                    </td>
+                    <td className="py-2 pr-3 text-[#667085]">{row.kind === "AI audit" ? "AI" : "Digital"}</td>
                     <td className="max-w-[200px] truncate py-2 pr-3 text-[#04203F]">{row.name}</td>
                     <td className="max-w-[160px] truncate py-2 pr-3 text-[#04203F]">{row.store || "—"}</td>
                     <td className="py-2 pr-3 text-[#667085]">{fmtDate(row.date)}</td>
-                    <td className="py-2 pr-3 capitalize text-[#04203F]">{row.status.replace(/_/g, " ")}</td>
+                    <td className="py-2 pr-3 text-[#04203F] first-letter:uppercase">
+                      {row.status.replace(/_/g, " ").toLowerCase()}
+                    </td>
                     <td className="py-2 pr-3 tabular-nums text-[#04203F]">{row.result}</td>
                     <td className="py-2 text-right">
                       {row.scanId ? (
@@ -278,7 +306,7 @@ export function DashboardOverviewPanel({
                           search={{ scan: row.scanId } as never}
                           className="text-xs font-medium text-[#04203F] hover:underline"
                         >
-                          View report
+                          Open report
                         </Link>
                       ) : null}
                     </td>

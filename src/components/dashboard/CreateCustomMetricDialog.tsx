@@ -147,7 +147,7 @@ export function CreateCustomMetricDialog({
         ) : (
           <div className="space-y-4">
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase text-[#667085]">1. Select audits</p>
+              <p className="mb-2 text-sm font-medium text-[#04203F]">1. Select audits</p>
               <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-[#D9E2E8] p-2">
                 {audits.slice(0, 30).map((a) => (
                   <li key={a.id}>
@@ -174,7 +174,7 @@ export function CreateCustomMetricDialog({
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase text-[#667085]">2. Metric type</p>
+              <p className="mb-2 text-sm font-medium text-[#04203F]">2. Choose a metric</p>
               <div className="mb-2 flex gap-2">
                 {(
                   [
@@ -229,12 +229,12 @@ export function CreateCustomMetricDialog({
             </div>
 
             {preview ? (
-              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/50 p-3">
-                <p className="text-xs uppercase text-[#667085]">Preview</p>
-                <p className="mt-1 text-sm font-semibold text-[#04203F]">{preview.title}</p>
-                <p className="text-2xl font-semibold text-[#04203F]">{preview.value}</p>
+              <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+                <p className="text-xs text-[#667085]">Preview</p>
+                <p className="mt-1 text-sm text-[#667085]">{preview.title}</p>
+                <p className="text-2xl font-semibold tabular-nums text-[#04203F]">{preview.value}</p>
                 {preview.context ? (
-                  <p className="mt-1 text-xs text-[#557187]">{preview.context}</p>
+                  <p className="mt-1 text-xs text-[#667085]">{preview.context}</p>
                 ) : null}
               </div>
             ) : null}

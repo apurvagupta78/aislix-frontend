@@ -43,7 +43,7 @@ export function AskAislixScopeSelect({
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
         className={cn(
           "flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-medium transition-colors",
-          "hover:bg-[#EAF6FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1E4F8]",
+          "hover:bg-[#F4F7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9E2E8]",
           "disabled:cursor-not-allowed disabled:opacity-50",
         )}
         style={{
@@ -59,7 +59,7 @@ export function AskAislixScopeSelect({
       {open ? (
         <ul
           role="listbox"
-          className="absolute bottom-full left-0 z-20 mb-2 w-48 origin-bottom-left rounded-xl border border-[#dde5ec] bg-white p-1 shadow-card"
+          className="absolute bottom-full left-0 z-20 mb-2 w-48 origin-bottom-left rounded-xl border border-[#dde5ec] bg-white p-1 shadow-lift"
         >
           {options.map((opt) => (
             <li key={opt}>
@@ -75,7 +75,7 @@ export function AskAislixScopeSelect({
               >
                 {opt}
                 {opt === value ? (
-                  <Check className="h-3.5 w-3.5 text-[#1f7ac2]" aria-hidden />
+                  <Check className="h-3.5 w-3.5 text-[#04203F]" aria-hidden />
                 ) : null}
               </button>
             </li>

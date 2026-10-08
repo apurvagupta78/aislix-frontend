@@ -63,7 +63,7 @@ export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"
     const row = visual.data[0] as { label?: string; value?: string };
     return (
       <div className="rounded-xl border border-line bg-white p-5 shadow-card">
-        <p className="text-xs uppercase tracking-wide text-mp-muted">{row.label ?? visual.title}</p>
+        <p className="text-sm text-mp-muted">{row.label ?? visual.title}</p>
         <p className="mt-2 font-display text-3xl font-semibold text-navy">{row.value ?? "—"}</p>
       </div>
     );
@@ -158,10 +158,10 @@ export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"
     return (
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="min-w-full text-sm">
-          <thead className="bg-muted/40 text-left text-xs uppercase text-mp-muted">
+          <thead className="text-left text-xs text-mp-muted">
             <tr>
               {keys.map((k) => (
-                <th key={k} className="px-3 py-2">
+                <th key={k} className="px-3 py-2 font-medium first-letter:uppercase">
                   {k}
                 </th>
               ))}

@@ -28,40 +28,37 @@ export const AISLIX = {
 } as const;
 
 /**
- * Ask Aislix palette — light blue matches Demo Data toggle (`#EAF6FD` / `#C1E4F8`).
+ * Ask Aislix palette — neutral search box: white, thin grey border, navy Ask button.
  * Do not reuse on KPI cards (those stay on AISLIX / AISLIX_PALETTE).
  */
 export const ASK_AISLIX_SECTION = {
-  /** Header band — same as Demo Data toggle chip */
-  background: "#EAF6FD",
-  bandBorder: "#C1E4F8",
+  background: "#FFFFFF",
+  bandBorder: "#D9E2E8",
   heading: "#04203F",
-  subtitle: "#557187",
+  subtitle: "#667085",
   muted: "#667085",
   inputBackground: "#FFFFFF",
-  composerBorder: "#C1E4F8",
-  /** Ask CTA */
-  askButton: "#1f7ac2",
-  askButtonHover: "#1a68a6",
+  composerBorder: "#D9E2E8",
+  /** Ask CTA — the one accent in the box */
+  askButton: "#04203F",
+  askButtonHover: "#0B3360",
   askButtonText: "#FFFFFF",
-  askButtonDisabled: "#EAF6FD",
-  askButtonDisabledText: "rgba(16, 42, 67, 0.45)",
-  focusRing: "#C1E4F8",
-  accentSoft: "#EAF6FD",
-  accentRing: "#C1E4F8",
-  /** Enhance — soft green tint */
-  enhanceBg: "#e9efdc",
-  enhanceBorder: "#c8d4ae",
-  enhanceText: "#4d6b22",
-  chipBackground: "#EAF6FD",
-  chipBorder: "#C1E4F8",
+  askButtonDisabled: "#EEF1F4",
+  askButtonDisabledText: "rgba(4, 32, 63, 0.4)",
+  focusRing: "#9FB3C8",
+  accentSoft: "#F4F7F9",
+  accentRing: "#D9E2E8",
+  enhanceBg: "#FFFFFF",
+  enhanceBorder: "#D9E2E8",
+  enhanceText: "#04203F",
+  chipBackground: "#FFFFFF",
+  chipBorder: "#D9E2E8",
   chipText: "#04203F",
-  /** Scope chips — same Demo Data blue */
-  scopeBg: "#EAF6FD",
-  scopeBorder: "#C1E4F8",
+  scopeBg: "#FFFFFF",
+  scopeBorder: "#D9E2E8",
   scopeText: "#04203F",
   blueInk: "#04203F",
-  sparkle: "#1f7ac2",
+  sparkle: "#04203F",
 } as const;
 
 /** Chart series order from the design spec — never rainbow / library defaults. */

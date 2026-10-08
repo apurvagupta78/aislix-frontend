@@ -643,14 +643,14 @@ export function AppShell({
                       </Button>
                       <Button asChild variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS}>
                         <Link to="/guest" search={{ intent: "sample" } as never}>
-                          <Plus className="size-4" /> New Audit
+                          <Plus className="size-4" /> New audit
                         </Link>
                       </Button>
                     </>
                   ) : (
                     <Button asChild variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS}>
                       <Link to="/new-audit">
-                        <Plus className="size-4" /> New Audit
+                        <Plus className="size-4" /> New audit
                       </Link>
                     </Button>
                   )}

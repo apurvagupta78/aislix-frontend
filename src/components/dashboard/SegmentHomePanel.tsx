@@ -12,10 +12,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ArrowDownRight, ArrowUpRight, Info, Sparkles } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronRight } from "lucide-react";
 
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
-import { AISLIX_PALETTE, accentHex } from "@/lib/ai-audit/kpi-palette";
+import { AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
 import {
   buildSegmentKpis,
   formatInr,
@@ -85,10 +85,7 @@ export function SegmentHomePanel({ filters, previewDemo, userEmail }: Props) {
   const audits = data?.totals?.audits ?? 0;
 
   return (
-    <section
-      aria-labelledby="segment-home-title"
-      className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm sm:p-5"
-    >
+    <section aria-labelledby="segment-home-title">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -96,22 +93,16 @@ export function SegmentHomePanel({ filters, previewDemo, userEmail }: Props) {
               {config.question}
             </h2>
             {result?.labeledDemo ? (
-              <span className="rounded-full border border-[#D9E2E8] bg-[#EEF1F4] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#667085]">
+              <span className="rounded-full border border-[#D9E2E8] px-2 py-0.5 text-xs text-[#667085]">
                 Demo data
               </span>
             ) : null}
           </div>
-          <p className="mt-1 text-sm text-[#667085]">{config.value}</p>
+          <p className="mt-1 text-sm text-[#667085]">
+            From completed AI audits{result?.periodLabel ? ` · ${result.periodLabel}` : ""}
+          </p>
         </div>
         <SegmentSwitcher value={segmentId} workspaceSegment={workspaceSegment} onChange={choose} />
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#667085]">
-        <span className="inline-flex items-center gap-1 rounded-full border border-[#C1E4F8] bg-[#EEF6FA] px-2 py-0.5 text-[#04203F]">
-          <Sparkles className="size-3" aria-hidden />
-          AI detected · completed AI audits only
-        </span>
-        {result?.periodLabel ? <span>{result.periodLabel}</span> : null}
       </div>
 
       {query.isPending ? (
@@ -134,11 +125,7 @@ export function SegmentHomePanel({ filters, previewDemo, userEmail }: Props) {
         />
       ) : (
         <>
-          {headline ? (
-            <p className="mt-4 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-3 py-2 text-sm text-[#04203F]">
-              {headline}
-            </p>
-          ) : null}
+          {headline ? <p className="mt-3 text-sm font-medium text-[#04203F]">{headline}</p> : null}
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {kpis.map((kpi) => (
@@ -199,44 +186,45 @@ function SegmentSwitcher({
 }
 
 export function SegmentKpiCard({ kpi }: { kpi: SegmentKpiView }) {
-  const accent = accentHex(kpi.accent);
   const good = kpi.delta != null && (kpi.lowerIsBetter ? kpi.delta < 0 : kpi.delta > 0);
+  const risk = kpi.accent === "pink" && !kpi.unavailable;
   return (
-    <div
-      className="h-full rounded-xl border border-[#D9E2E8] bg-white p-4"
-      style={{ borderLeftWidth: 3, borderLeftColor: accent }}
-    >
+    <div className="h-full rounded-xl border border-[#D9E2E8] bg-white p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">{kpi.label}</p>
-        <div className="flex items-center gap-1">
-          {kpi.delta != null && kpi.delta !== 0 ? (
+        <p className="flex items-center gap-1.5 text-sm text-[#667085]">
+          {risk ? (
             <span
-              className={cn(
-                "inline-flex items-center text-xs font-semibold",
-                good ? "text-[#3d7a55]" : "text-[#04203F]",
-              )}
-              title="Change vs the previous period of the same length"
-            >
-              {kpi.delta > 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
-              {Number.isInteger(kpi.delta) || Math.abs(kpi.delta) >= 10
-                ? Math.abs(kpi.delta).toFixed(0)
-                : Math.abs(kpi.delta).toFixed(1)}
-            </span>
+              className="size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: "#ECBDCC" }}
+              aria-label="Needs attention"
+            />
           ) : null}
-          <span title={kpi.context} className="text-[#667085]">
-            <Info className="size-3.5" aria-label={kpi.context} />
+          {kpi.label}
+        </p>
+        {kpi.delta != null && kpi.delta !== 0 ? (
+          <span
+            className={cn(
+              "inline-flex items-center text-xs font-medium",
+              good ? "text-[#2F7A52]" : "text-[#667085]",
+            )}
+            title="Change vs the previous period of the same length"
+          >
+            {kpi.delta > 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
+            {Number.isInteger(kpi.delta) || Math.abs(kpi.delta) >= 10
+              ? Math.abs(kpi.delta).toFixed(0)
+              : Math.abs(kpi.delta).toFixed(1)}
           </span>
-        </div>
+        ) : null}
       </div>
       <p
         className={cn(
-          "mt-2 text-2xl font-semibold",
+          "mt-2 text-2xl font-semibold tabular-nums",
           kpi.unavailable ? "text-[#667085]" : "text-[#04203F]",
         )}
       >
         {kpi.value}
       </p>
-      <p className="mt-1 text-xs text-[#557187]">{kpi.context}</p>
+      <p className="mt-1 text-xs text-[#667085]">{kpi.context}</p>
     </div>
   );
 }
@@ -363,7 +351,7 @@ function FixesCard({ data }: { data: SegmentDashboard | null }) {
     { label: "Closed this period", value: a?.closed_in_period, tone: P.green },
   ];
   return (
-    <ChartShell title="Fixes raised from AI findings" provenance="Calculated by Aislix">
+    <ChartShell title="Fixes from AI findings" provenance="Calculated by Aislix" to="/corrective-actions">
       {!a ? (
         <Unavailable text="Data unavailable" />
       ) : (
@@ -385,9 +373,6 @@ function FixesCard({ data }: { data: SegmentDashboard | null }) {
           ))}
         </ul>
       )}
-      <Link to="/corrective-actions" className="mt-2 inline-block text-xs font-medium text-[#557187] hover:underline">
-        View fixes
-      </Link>
     </ChartShell>
   );
 }
@@ -425,7 +410,7 @@ function StoresTable({ config, stores }: { config: SegmentConfig; stores: Segmen
   const rows = stores.slice(0, 8);
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-[#D9E2E8]">
-      <div className="flex items-center justify-between gap-2 border-b border-[#D9E2E8] bg-[#F4F7F9] px-4 py-2.5">
+      <div className="flex items-center justify-between gap-2 border-b border-[#D9E2E8] px-4 py-2.5">
         <h3 className="text-sm font-semibold text-[#04203F]">{config.storesTitle}</h3>
         <span className="text-xs text-[#667085]">
           {stores.length > rows.length ? `Top ${rows.length} of ${stores.length}` : `${stores.length} total`}
@@ -473,17 +458,29 @@ function StoresTable({ config, stores }: { config: SegmentConfig; stores: Segmen
 function ChartShell({
   title,
   provenance,
+  to,
   children,
 }: {
   title: string;
   provenance: string;
+  to?: "/corrective-actions";
   children: React.ReactNode;
 }) {
   return (
     <div className="h-full rounded-xl border border-[#D9E2E8] bg-white p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[#04203F]">{title}</h3>
-        <span className="text-[10px] font-medium uppercase tracking-wide text-[#667085]">{provenance}</span>
+        {to ? (
+          <Link
+            to={to}
+            className="group inline-flex items-center gap-1 text-sm font-semibold text-[#04203F] hover:underline"
+          >
+            {title}
+            <ChevronRight className="size-4 text-[#667085] group-hover:text-[#04203F]" />
+          </Link>
+        ) : (
+          <h3 className="text-sm font-semibold text-[#04203F]">{title}</h3>
+        )}
+        <span className="text-xs text-[#667085]">{provenance}</span>
       </div>
       {children}
     </div>
@@ -500,16 +497,16 @@ function Unavailable({ text }: { text: string }) {
 
 function EmptyCard({ title, body, cta }: { title: string; body: string; cta?: boolean }) {
   return (
-    <div className="mt-4 rounded-xl border border-[#D9E2E8] bg-[#EEF1F4]/80 px-4 py-4">
+    <div className="mt-4 rounded-xl border border-[#D9E2E8] bg-white px-4 py-4">
       <p className="text-sm font-semibold text-[#04203F]">{title}</p>
       <p className="mt-1 text-sm text-[#667085]">{body}</p>
       {cta ? (
         <Link
           to="/new-audit"
           search={{ templateId: undefined, systemKey: undefined, assign: false }}
-          className="mt-3 inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white"
+          className="mt-3 inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white hover:bg-[#0B3360]"
         >
-          Start Audit
+          Start an audit
         </Link>
       ) : null}
     </div>

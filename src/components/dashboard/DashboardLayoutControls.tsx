@@ -40,7 +40,7 @@ export function DashboardLayoutToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#D9E2E8] bg-white px-3 py-2">
       <p className="mr-auto text-xs text-[#667085]">
-        Drag metric cards to reorder. Layout saves to your profile.
+        Drag cards to reorder.
         {dirty ? <span className="ml-1 font-medium text-[#04203F]">Unsaved changes</span> : null}
       </p>
       <Button
@@ -65,7 +65,7 @@ export function DashboardLayoutToolbar({
           <Plus className="size-3.5" /> Add card
         </Button>
         {addOpen && hiddenCatalog.length ? (
-          <div className="absolute right-0 z-20 mt-1 max-h-64 min-w-[240px] overflow-y-auto rounded-xl border border-[#D9E2E8] bg-white p-1 shadow-lg">
+          <div className="absolute right-0 z-20 mt-1 max-h-64 min-w-[240px] overflow-y-auto rounded-xl border border-[#D9E2E8] bg-white p-1 shadow-lift">
             {hiddenCatalog.map((s) => (
               <button
                 key={s.id}
@@ -94,7 +94,7 @@ export function DashboardLayoutToolbar({
         disabled={!dirty || saving}
         onClick={onSave}
       >
-        <Save className="size-3.5" /> Save as Default
+        <Save className="size-3.5" /> Save layout
       </Button>
       <Button
         type="button"
@@ -104,17 +104,27 @@ export function DashboardLayoutToolbar({
         disabled={saving}
         onClick={onReset}
       >
-        <RotateCcw className="size-3.5" /> Reset to Aislix Default
+        <RotateCcw className="size-3.5" /> Reset
       </Button>
     </div>
   );
 }
+
+/** Width in a `sm:grid-cols-2 lg:grid-cols-4` grid. */
+export type MetricCardSpan = "one" | "half" | "full";
+
+const SPAN_CLASS: Record<MetricCardSpan, string> = {
+  one: "",
+  half: "sm:col-span-2",
+  full: "sm:col-span-2 lg:col-span-4",
+};
 
 export function SortableMetricCard({
   id,
   title,
   editMode,
   span2,
+  span,
   children,
   onHide,
   onDragStart,
@@ -125,15 +135,17 @@ export function SortableMetricCard({
   title: string;
   editMode: boolean;
   span2?: boolean;
+  span?: MetricCardSpan;
   children: React.ReactNode;
   onHide?: () => void;
   onDragStart: (id: string) => void;
   onDragOver: (e: React.DragEvent, id: string) => void;
   onDrop: (id: string) => void;
 }) {
+  const width = span ?? (span2 ? "half" : "one");
   return (
     <div
-      className={cn("relative min-w-0", span2 && "sm:col-span-2")}
+      className={cn("relative min-w-0", SPAN_CLASS[width])}
       draggable={editMode}
       onDragStart={() => onDragStart(id)}
       onDragOver={(e) => onDragOver(e, id)}
@@ -141,13 +153,13 @@ export function SortableMetricCard({
     >
       {editMode ? (
         <div className="mb-1.5 flex items-center gap-2">
-          <span className="inline-flex cursor-grab items-center gap-1 rounded-md border border-[#D9E2E8] bg-white px-2 py-0.5 text-[10px] text-[#667085] active:cursor-grabbing">
+          <span className="inline-flex cursor-grab items-center gap-1 rounded-md border border-[#D9E2E8] bg-white px-2 py-0.5 text-[11px] text-[#667085] active:cursor-grabbing">
             <GripVertical className="size-3" /> {title}
           </span>
           {onHide ? (
             <button
               type="button"
-              className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#ECBDCC] bg-[#FFEAF1] px-2 py-0.5 text-[10px] text-[#04203F]"
+              className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#D9E2E8] bg-white px-2 py-0.5 text-[11px] text-[#04203F] hover:bg-[#F4F7F9]"
               onClick={onHide}
             >
               <X className="size-3" /> Hide

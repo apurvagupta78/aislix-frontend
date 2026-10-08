@@ -112,9 +112,8 @@ export function AskAislixInput({
     >
       <div
         className={cn(
-          "rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,42,68,0.06),0_10px_28px_-14px_rgba(31,122,194,0.35)]",
-          "transition-[box-shadow,border-color] duration-200",
-          "focus-within:border-[#C1E4F8] focus-within:shadow-[0_0_0_4px_#EAF6FD,0_10px_28px_-14px_rgba(31,122,194,0.35)]",
+          "rounded-xl border bg-white transition-colors duration-150",
+          "focus-within:!border-[#9FB3C8]",
         )}
         style={{ borderColor: ASK_AISLIX_SECTION.composerBorder }}
       >
@@ -125,7 +124,7 @@ export function AskAislixInput({
                 key={`${attachment.name}-${index}`}
                 className="flex max-w-full items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[12.5px]"
                 style={{
-                  backgroundColor: ASK_AISLIX_SECTION.background,
+                  backgroundColor: ASK_AISLIX_SECTION.accentSoft,
                   borderColor: ASK_AISLIX_SECTION.bandBorder,
                   color: ASK_AISLIX_SECTION.scopeText,
                 }}
@@ -151,16 +150,16 @@ export function AskAislixInput({
         ) : null}
 
         <label htmlFor="ask-aislix-input" className="sr-only">
-          Ask AISLIX a question
+          Ask Aislix a question
         </label>
         <textarea
           id="ask-aislix-input"
           ref={textareaRef}
-          rows={2}
+          rows={1}
           value={value}
           disabled={loading}
           placeholder="What needs attention in my stores today?"
-          className="block w-full resize-none bg-transparent px-5 pt-5 text-[16px] leading-relaxed text-[#0f2a44] placeholder:text-[#6b7b8c]/80 focus:outline-none disabled:opacity-60"
+          className="block w-full resize-none bg-transparent px-4 pt-3.5 text-[15px] leading-relaxed text-[#04203F] placeholder:text-[#667085] focus:outline-none disabled:opacity-60"
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -170,7 +169,7 @@ export function AskAislixInput({
           }}
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#eef3f7] px-3 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 pb-2.5 pt-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
@@ -182,8 +181,8 @@ export function AskAislixInput({
                   : "Attach file"
               }
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-lg border border-[#dde5ec] bg-white text-[#557187] transition-colors",
-                "hover:border-[#C1E4F8] hover:bg-[#EAF6FD] hover:text-[#04203F]",
+                "flex h-8 w-8 items-center justify-center rounded-lg text-[#667085] transition-colors",
+                "hover:bg-[#F4F7F9] hover:text-[#04203F]",
                 "disabled:cursor-not-allowed disabled:opacity-40",
               )}
               onClick={() => fileInputRef.current?.click()}
@@ -221,33 +220,31 @@ export function AskAislixInput({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleEnhance}
-              disabled={!canEnhance}
-              className={cn(
-                "flex h-9 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-[13px] font-medium transition-colors",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-              )}
-              style={{
-                backgroundColor: ASK_AISLIX_SECTION.enhanceBg,
-                borderColor: ASK_AISLIX_SECTION.enhanceBorder,
-                color: ASK_AISLIX_SECTION.enhanceText,
-              }}
-            >
-              {enhancing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              ) : (
-                <Wand2 className="h-3.5 w-3.5" aria-hidden />
-              )}
-              {enhancing ? "Enhancing…" : "Enhance prompt"}
-            </button>
+            {canEnhance || enhancing ? (
+              <button
+                type="button"
+                onClick={handleEnhance}
+                disabled={!canEnhance}
+                title="Add scope and ask for root cause and next action"
+                className={cn(
+                  "flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium text-[#667085] transition-colors",
+                  "hover:bg-[#F4F7F9] hover:text-[#04203F] disabled:cursor-not-allowed disabled:opacity-60",
+                )}
+              >
+                {enhancing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <Wand2 className="h-3.5 w-3.5" aria-hidden />
+                )}
+                <span className="hidden sm:inline">{enhancing ? "Improving…" : "Improve question"}</span>
+              </button>
+            ) : null}
             <button
               type="submit"
               disabled={!canSubmit}
               className={cn(
-                "flex h-9 items-center gap-1.5 rounded-xl px-4 text-[13.5px] font-semibold shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_12px_-4px_rgba(31,122,194,0.6)] transition-[background-color,transform] duration-150",
-                "active:scale-[0.97] disabled:cursor-not-allowed disabled:shadow-none",
+                "flex h-9 items-center gap-1.5 rounded-lg px-4 text-[13.5px] font-semibold transition-colors duration-150",
+                "disabled:cursor-not-allowed",
               )}
               style={
                 canSubmit
@@ -272,10 +269,6 @@ export function AskAislixInput({
         </div>
       </div>
 
-      <p className="mt-2.5 px-1 text-[12px] text-[#6b7b8c]">
-        Press <span className="font-medium text-[#3d5166]">Enter</span> to ask,{" "}
-        <span className="font-medium text-[#3d5166]">Shift + Enter</span> for a new line.
-      </p>
     </form>
   );
 }
