@@ -20,7 +20,7 @@ import { listPlatformUsers } from "@/lib/platform-admin.functions";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({
-    meta: [{ title: "Users — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "Users — Platform admin" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminUsersPage,
 });

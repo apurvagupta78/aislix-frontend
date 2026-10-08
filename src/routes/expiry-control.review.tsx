@@ -10,7 +10,7 @@ export const Route = createFileRoute("/expiry-control/review")({
   validateSearch: (s: Record<string, unknown>) => ({
     attemptId: typeof s.attemptId === "string" ? s.attemptId : undefined,
   }),
-  head: () => ({ meta: [{ title: "Review Queue — Expiry Control" }] }),
+  head: () => ({ meta: [{ title: "Review queue — Expiry control" }] }),
   component: ReviewPage,
 });
 

@@ -25,7 +25,7 @@ export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
       { property: "og:url", content: "https://aislix.com/pricing" },
-      { title: "Pricing — Aislix AI Shelf Intelligence" },
+      { title: "Pricing — Aislix AI shelf intelligence" },
       {
         name: "description",
         content:
@@ -116,7 +116,7 @@ function Pricing() {
         <section className="mx-auto max-w-3xl px-6 py-6 text-center sm:px-8">
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>No credit card required for Free.</p>
-            <p>For Pay as You Go, you only pay for completed AI audits.</p>
+            <p>On Pay as you go, you only pay for completed AI audits.</p>
             <p className="inline-flex items-center justify-center gap-1.5">
               <ShieldCheck className="size-4 text-brand" aria-hidden />
               Upgrade or change plans as your retail operation grows.

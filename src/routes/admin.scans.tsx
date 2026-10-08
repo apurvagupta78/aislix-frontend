@@ -43,7 +43,7 @@ export const Route = createFileRoute("/admin/scans")({
     scanId: typeof search.scanId === "string" ? search.scanId : undefined,
   }),
   head: () => ({
-    meta: [{ title: "All Audits — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "All audits — Platform admin" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminScansPage,
 });

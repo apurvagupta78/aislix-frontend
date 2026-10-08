@@ -12,7 +12,7 @@ import { useGlobalFilters } from "@/lib/global-filters";
 
 export const Route = createFileRoute("/dashboard/audit-execution")({
   validateSearch: parseControlTowerPageSearch,
-  head: () => ({ meta: [{ title: "Audit Execution — Control Tower" }] }),
+  head: () => ({ meta: [{ title: "Audit execution — Control tower" }] }),
   component: AuditExecutionPage,
 });
 

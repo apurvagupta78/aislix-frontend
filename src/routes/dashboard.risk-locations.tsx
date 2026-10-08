@@ -13,7 +13,7 @@ import { useGlobalFilters } from "@/lib/global-filters";
 
 export const Route = createFileRoute("/dashboard/risk-locations")({
   validateSearch: parseControlTowerPageSearch,
-  head: () => ({ meta: [{ title: "Location Risk — Control Tower" }] }),
+  head: () => ({ meta: [{ title: "Location risk — Control tower" }] }),
   component: RiskLocationsPage,
 });
 

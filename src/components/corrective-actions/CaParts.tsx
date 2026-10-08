@@ -31,15 +31,14 @@ export function CaKpiCard({
   info: string;
   accent: AislixAccent;
 }) {
-  const bar = accent === "pink" ? CA_PINK_BAR : accent === "grey" ? AISLIX_PALETTE.border : AISLIX_PALETTE[accent];
+  const dot = accent === "pink" ? CA_PINK_BAR : accent === "grey" ? AISLIX_PALETTE.border : AISLIX_PALETTE[accent];
   return (
-    <div
-      className="relative overflow-hidden rounded-xl border bg-white p-4"
-      style={{ borderColor: AISLIX_PALETTE.border, background: `linear-gradient(180deg, ${ACCENT_TINT[accent]} 0%, #FFFFFF 55%)` }}
-    >
-      <span className="absolute inset-y-0 left-0 w-1" style={{ background: bar }} aria-hidden />
+    <div className="rounded-lg border bg-white p-4" style={{ borderColor: AISLIX_PALETTE.border }}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium text-mp-muted">{label}</p>
+        <p className="flex items-center gap-2 text-sm text-mp-muted">
+          <span className="size-1.5 shrink-0 rounded-full" style={{ background: dot }} aria-hidden />
+          {label}
+        </p>
         <span title={info} aria-label={info} className="text-mp-muted">
           <Info className="size-3.5" />
         </span>

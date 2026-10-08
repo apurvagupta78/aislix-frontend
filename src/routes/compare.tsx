@@ -25,7 +25,7 @@ export const Route = createFileRoute("/compare")({
   },
   head: () => ({
     meta: [
-      { title: "Compare Audits — Aislix Shelf Intelligence" },
+      { title: "Compare audits — Aislix shelf intelligence" },
       {
         name: "description",
         content:

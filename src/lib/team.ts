@@ -28,7 +28,7 @@ export const userRoleLabels: Record<UserRole, string> = {
   admin: "Admin",
   manager: "Manager",
   member: "Member",
-  store_manager: "Store Manager",
+  store_manager: "Store manager",
   viewer: "Viewer",
 };
 

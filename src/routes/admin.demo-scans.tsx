@@ -20,7 +20,7 @@ import { listLandingDemoScans } from "@/lib/landing-demo-admin.functions";
 
 export const Route = createFileRoute("/admin/demo-scans")({
   head: () => ({
-    meta: [{ title: "Demo Audits — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "Demo audits — Platform admin" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminDemoScansPage,
 });

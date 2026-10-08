@@ -12,7 +12,7 @@ import { useGlobalFilters } from "@/lib/global-filters";
 
 export const Route = createFileRoute("/dashboard/operational-trend")({
   validateSearch: parseControlTowerPageSearch,
-  head: () => ({ meta: [{ title: "Operational Trend — Control Tower" }] }),
+  head: () => ({ meta: [{ title: "Operational trend — Control tower" }] }),
   component: OperationalTrendPage,
 });
 

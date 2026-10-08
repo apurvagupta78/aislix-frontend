@@ -52,7 +52,7 @@ import { useTheme, type ThemeChoice } from "@/lib/theme";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "Your Profile — Aislix Account" },
+      { title: "Your profile — Aislix account" },
       {
         name: "description",
         content:

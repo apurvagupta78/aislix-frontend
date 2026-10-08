@@ -20,7 +20,7 @@ import { fetchAssignableMembers } from "@/lib/assignments";
 import { requireUserId } from "@/lib/db/context";
 
 export const Route = createFileRoute("/expiry-control/planner")({
-  head: () => ({ meta: [{ title: "Inspection Planner — Expiry Control" }] }),
+  head: () => ({ meta: [{ title: "Inspection planner — Expiry control" }] }),
   component: PlannerPage,
 });
 

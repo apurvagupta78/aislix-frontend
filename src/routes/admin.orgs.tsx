@@ -20,7 +20,7 @@ import { listPlatformOrgs } from "@/lib/platform-admin.functions";
 
 export const Route = createFileRoute("/admin/orgs")({
   head: () => ({
-    meta: [{ title: "Organizations — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "Organizations — Platform admin" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminOrgsPage,
 });

@@ -5,7 +5,7 @@ import { InspectionWizard } from "@/components/expiry-control/InspectionWizard";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/expiry-control/inspect/$attemptId")({
-  head: () => ({ meta: [{ title: "Inspect — Expiry Control" }] }),
+  head: () => ({ meta: [{ title: "Inspect — Expiry control" }] }),
   component: InspectPage,
 });
 

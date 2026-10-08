@@ -15,7 +15,7 @@ import { toUserMessage } from "@/lib/api/errors";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Log in — Aislix Shelf Intelligence" },
+      { title: "Log in — Aislix shelf intelligence" },
       { name: "description", content: "Log in to your Aislix workspace to run and review AI shelf audits." },
       { property: "og:title", content: "Log in — Aislix" },
       { property: "og:description", content: "Access your Aislix retail shelf intelligence workspace." },

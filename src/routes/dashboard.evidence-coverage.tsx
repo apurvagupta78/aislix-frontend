@@ -12,7 +12,7 @@ import { useGlobalFilters } from "@/lib/global-filters";
 
 export const Route = createFileRoute("/dashboard/evidence-coverage")({
   validateSearch: parseControlTowerPageSearch,
-  head: () => ({ meta: [{ title: "Evidence Coverage — Control Tower" }] }),
+  head: () => ({ meta: [{ title: "Evidence coverage — Control tower" }] }),
   component: EvidenceCoveragePage,
 });
 

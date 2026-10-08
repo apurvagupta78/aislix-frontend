@@ -7,7 +7,7 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/States";
 import { fetchMyInspections, INSPECTION_STATUS_LABEL } from "@/lib/expiry-control";
 
 export const Route = createFileRoute("/expiry-control/my-inspections")({
-  head: () => ({ meta: [{ title: "My Inspections — Expiry Control" }] }),
+  head: () => ({ meta: [{ title: "My inspections — Expiry control" }] }),
   component: MyInspectionsPage,
 });
 

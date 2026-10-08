@@ -55,7 +55,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/corrective-actions")({
   head: () => ({
     meta: [
-      { title: "Corrective Actions — Close shelf gaps | Aislix" },
+      { title: "Corrective actions — Close shelf gaps | Aislix" },
       {
         name: "description",
         content:

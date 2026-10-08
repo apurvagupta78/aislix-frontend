@@ -12,7 +12,7 @@ import { useGlobalFilters } from "@/lib/global-filters";
 
 export const Route = createFileRoute("/dashboard/kpis")({
   validateSearch: parseControlTowerPageSearch,
-  head: () => ({ meta: [{ title: "KPIs — Control Tower" }] }),
+  head: () => ({ meta: [{ title: "KPIs — Control tower" }] }),
   component: KpisPage,
 });
 

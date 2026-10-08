@@ -29,7 +29,7 @@ import {
 } from "@/lib/escalation-settings";
 
 export const Route = createFileRoute("/escalation-settings")({
-  head: () => ({ meta: [{ title: "SLA & Escalation — Aislix" }] }),
+  head: () => ({ meta: [{ title: "SLA & escalation — Aislix" }] }),
   component: EscalationSettingsPage,
 });
 

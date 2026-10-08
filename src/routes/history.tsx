@@ -107,7 +107,7 @@ export const Route = createFileRoute("/history")({
   },
   head: () => ({
     meta: [
-      { title: "Audit History — Aislix Shelf Audits" },
+      { title: "Audit history — Aislix shelf audits" },
       {
         name: "description",
         content:
@@ -535,9 +535,10 @@ function HistoryPage() {
                           <Link
                             to="/results"
                             search={{ scan: scan.scan_id }}
-                            className="font-medium text-foreground hover:text-brand"
+                            className="whitespace-nowrap font-medium text-foreground hover:text-brand"
+                            title={scan.scan_id}
                           >
-                            {scan.scan_id}
+                            {scan.scan_id.slice(0, 8)}
                           </Link>
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate font-medium">{scan.store}</TableCell>

@@ -13,7 +13,7 @@ import { backfillDemoEvidence } from "@/lib/demo-evidence-backfill.functions";
 export const Route = createFileRoute("/admin/demo-seed")({
   head: () => ({
     meta: [
-      { title: "Demo Evidence Backfill — Platform Admin" },
+      { title: "Demo evidence backfill — Platform admin" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),

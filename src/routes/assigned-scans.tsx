@@ -65,7 +65,7 @@ export const Route = createFileRoute("/assigned-scans")({
 
   head: () => ({
     meta: [
-      { title: "Review & Approvals — Aislix audit queue" },
+      { title: "Review & approvals — Aislix audit queue" },
       {
         name: "description",
         content:

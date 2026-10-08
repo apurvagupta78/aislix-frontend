@@ -24,14 +24,14 @@ export function DemoPreviewToggle({
           htmlFor="demo-data-toggle"
           className={cn("text-sm font-medium text-navy", locked ? "cursor-default" : "cursor-pointer")}
         >
-          Demo Data
+          Demo data
         </Label>
         <Switch
           id="demo-data-toggle"
           checked={enabled}
           disabled={locked}
           onCheckedChange={locked ? undefined : onChange}
-          aria-label="Demo Data"
+          aria-label="Demo data"
         />
       </div>
     );
@@ -46,7 +46,7 @@ export function DemoPreviewToggle({
       <FlaskConical className="size-4 shrink-0 text-[#667085]" aria-hidden />
       <div className="min-w-0 flex-1">
         <Label htmlFor="demo-preview-toggle" className="text-sm font-medium text-navy">
-          Demo Data
+          Demo data
         </Label>
         <p className="text-xs text-mp-muted">
           {locked
@@ -59,7 +59,7 @@ export function DemoPreviewToggle({
         checked={enabled}
         disabled={locked}
         onCheckedChange={locked ? undefined : onChange}
-        aria-label="Demo Data"
+        aria-label="Demo data"
       />
     </div>
   );

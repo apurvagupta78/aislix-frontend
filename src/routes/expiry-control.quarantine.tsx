@@ -9,7 +9,7 @@ import { expiryTransition, fetchQuarantineTransfers } from "@/lib/expiry-control
 import { useState } from "react";
 
 export const Route = createFileRoute("/expiry-control/quarantine")({
-  head: () => ({ meta: [{ title: "Quarantine & Disposition — Expiry Control" }] }),
+  head: () => ({ meta: [{ title: "Quarantine & disposition — Expiry control" }] }),
   component: QuarantinePage,
 });
 

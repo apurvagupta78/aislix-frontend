@@ -39,7 +39,7 @@ export const Route = createFileRoute("/my-scans")({
 
   head: () => ({
     meta: [
-      { title: "My Work — Aislix audit assignments" },
+      { title: "My work — Aislix audit assignments" },
       {
         name: "description",
         content:
