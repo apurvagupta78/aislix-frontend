@@ -1,4 +1,8 @@
-import { AiAstraOutputSections, AiImageQualityBanner } from "@/components/ai-audit/results/AiAstraExtrasSections";
+import {
+  AiAstraOutputSections,
+  AiCountApproximateNote,
+  AiImageQualityBanner,
+} from "@/components/ai-audit/results/AiAstraExtrasSections";
 import { statusDonutSlices } from "@/components/ai-audit/results/AiAuditCharts";
 import {
   AiAuditMetricTable,
@@ -403,6 +407,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       />
       <AiExecutiveSummary text={summaryText} scanId={data.scan_id} />
       <AiImageQualityBanner extras={ctx.extras} />
+      <AiCountApproximateNote metrics={data.metrics} />
 
       <AiAuditCard
         title="Shelf context"

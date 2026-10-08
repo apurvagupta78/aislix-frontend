@@ -1,6 +1,7 @@
 import { AiAuditCard } from "@/components/ai-audit/results/AiAuditUi";
 import { Badge } from "@/components/ui/badge";
 import type { AstraOutputExtras } from "@/lib/ai-audit/astra-display";
+import { countApproximateGap } from "@/lib/ai-audit/astra-response";
 import { downloadKeyValueCsv } from "@/lib/ai-audit/section-csv";
 import type { ScanAlert, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,23 @@ export function AiImageQualityBanner({ extras }: { extras: AstraOutputExtras }) 
     >
       <p className="font-medium">Image quality: {iq.status}</p>
       {iq.reason ? <p className="mt-1 text-xs text-muted-foreground">{iq.reason}</p> : null}
+    </div>
+  );
+}
+
+export function AiCountApproximateNote({ metrics }: { metrics: unknown }) {
+  const gap = countApproximateGap(metrics);
+  if (gap == null) return null;
+  return (
+    <div className="rounded-xl border border-[#D9E2E8] bg-white px-4 py-3 text-sm" role="status">
+      <p className="flex items-center gap-2 font-medium text-[#04203F]">
+        <span className="size-1.5 rounded-full bg-[#7DB7D6]" aria-hidden />
+        Counts approximate
+      </p>
+      <p className="mt-1 text-xs text-[#667085]">
+        Product counts and the shelf total differ by {gap} {gap === 1 ? "unit" : "units"}. Totals use the
+        product counts.
+      </p>
     </div>
   );
 }

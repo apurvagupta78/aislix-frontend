@@ -995,6 +995,18 @@ function isCountVerificationPending(root: Record<string, unknown>): boolean {
   return false;
 }
 
+/** Largest product-vs-summary gap when the backend accepted counts as approximate; otherwise null. */
+export function countApproximateGap(metrics: unknown): number | null {
+  const validation = pickRecord(pickRecord(metrics)?.astra_cv_validation);
+  if (validation?.count_verification_status !== "APPROXIMATE") return null;
+  let gap = 0;
+  for (const key of ["total_actual_facings", "total_actual_visible_units"]) {
+    const check = pickRecord(validation[key]);
+    if (check?.status === "APPROXIMATE") gap = Math.max(gap, num(check.gap));
+  }
+  return gap > 0 ? gap : null;
+}
+
 /** Extract Astra analysis from a vision API payload or stored metrics. */
 export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysis {
   const root = pickRecord(payload);

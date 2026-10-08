@@ -1,4 +1,8 @@
-import { AiAstraOutputSections, AiImageQualityBanner } from "@/components/ai-audit/results/AiAstraExtrasSections";
+import {
+  AiAstraOutputSections,
+  AiCountApproximateNote,
+  AiImageQualityBanner,
+} from "@/components/ai-audit/results/AiAstraExtrasSections";
 import {
   AiGroupedComparisonBars,
   AiShareComparisonBars,
@@ -410,7 +414,9 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
             remain available below.
           </p>
         </div>
-      ) : null}
+      ) : (
+        <AiCountApproximateNote metrics={data.metrics} />
+      )}
 
       {analysis.reference_match ? (
         <ReferenceMatchSection
