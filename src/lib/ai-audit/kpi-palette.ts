@@ -11,7 +11,7 @@ export const AISLIX_PALETTE = {
   cyan: "#8EC9E8",
   pink: "#FFEAF1",
   grey: "#EEF1F4",
-  navy: "#102A43",
+  navy: "#04203F",
   secondary: "#667085",
   border: "#D9E2E8",
   card: "#FFFFFF",

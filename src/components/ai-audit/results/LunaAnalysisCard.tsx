@@ -46,7 +46,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
         <div className="flex items-start gap-2">
           <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: AISLIX_PALETTE.purple }} />
           <div>
-            <h3 className="text-sm font-semibold text-[#102A43]">AI analysis</h3>
+            <h3 className="text-sm font-semibold text-[#04203F]">AI analysis</h3>
             <p className="mt-0.5 text-xs text-[#667085]">
               Your request, answered from the AI shelf counts and Aislix&apos;s document match. Nothing is
               recounted here.
@@ -54,7 +54,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
           </div>
         </div>
         <span
-          className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#102A43]"
+          className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#04203F]"
           style={{ background: ACCENT_TINT.purple, borderColor: AISLIX_PALETTE.purple }}
         >
           AI analysis
@@ -63,11 +63,11 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
 
       {askedChecks.length || analysis.question ? (
         <div className="rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-4 py-3 text-xs text-[#667085]">
-          <p className="font-semibold text-[#102A43]">You asked AI to analyse</p>
+          <p className="font-semibold text-[#04203F]">You asked AI to analyse</p>
           {askedChecks.length ? (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {askedChecks.map((c) => (
-                <span key={c.value} className="rounded-md border border-[#D9E2E8] bg-white px-2 py-0.5 text-[11px] text-[#102A43]">
+                <span key={c.value} className="rounded-md border border-[#D9E2E8] bg-white px-2 py-0.5 text-[11px] text-[#04203F]">
                   {c.label}
                 </span>
               ))}
@@ -79,7 +79,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
 
       {analysis.status === "failed" ? (
         <p
-          className="rounded-xl border px-4 py-3 text-sm text-[#102A43]"
+          className="rounded-xl border px-4 py-3 text-sm text-[#04203F]"
           style={{ background: AISLIX_PALETTE.grey, borderColor: AISLIX_PALETTE.border }}
         >
           AI analysis unavailable — {analysis.error ?? "it could not be completed."} The shelf counts and
@@ -88,7 +88,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
       ) : (
         <>
           {analysis.answer ? (
-            <p className="text-sm leading-relaxed text-[#102A43]">{analysis.answer}</p>
+            <p className="text-sm leading-relaxed text-[#04203F]">{analysis.answer}</p>
           ) : null}
 
           {analysis.findings.length ? (
@@ -106,13 +106,13 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
                         {checkLabel(finding.check)}
                       </span>
                       <span
-                        className="rounded-full border px-2 py-0.5 text-[10px] font-semibold text-[#102A43]"
+                        className="rounded-full border px-2 py-0.5 text-[10px] font-semibold text-[#04203F]"
                         style={{ background: style.bg, borderColor: style.border }}
                       >
                         {style.label}
                       </span>
                     </div>
-                    {finding.title ? <p className="text-[13px] font-semibold text-[#102A43]">{finding.title}</p> : null}
+                    {finding.title ? <p className="text-[13px] font-semibold text-[#04203F]">{finding.title}</p> : null}
                     {finding.note ? <p className="text-xs leading-relaxed text-[#667085]">{finding.note}</p> : null}
                     {finding.rows.length ? (
                       <p className="text-[11px] text-[#667085]">
@@ -127,7 +127,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
 
           {analysis.needs_review.length ? (
             <div className="rounded-xl border px-4 py-3" style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.border }}>
-              <p className="text-xs font-semibold text-[#102A43]">Verification required</p>
+              <p className="text-xs font-semibold text-[#04203F]">Verification required</p>
               <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-[#667085]">
                 {analysis.needs_review.map((item) => (
                   <li key={item}>{item}</li>

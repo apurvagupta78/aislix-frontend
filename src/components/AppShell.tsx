@@ -7,7 +7,6 @@ import {
   Plus,
   History,
   FileBarChart,
-  CreditCard,
   User,
   Settings,
   Store,
@@ -29,7 +28,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { SiteFooter } from "@/components/Footer";
+import { AppFooter } from "@/components/Footer";
 import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -181,7 +180,7 @@ function SidebarNav({
           "flex min-h-11 items-center gap-2 rounded-xl py-2 pr-3 text-sm transition-colors lg:min-h-9",
           depth === 1 ? "pl-6" : "pl-10",
           active
-            ? "bg-local-bg font-semibold text-navy"
+            ? "bg-muted font-semibold text-navy"
             : "text-mp-muted hover:bg-canvas hover:text-navy",
         )}
       >
@@ -244,7 +243,7 @@ function SidebarNav({
                   className={cn(
                     "relative flex size-10 items-center justify-center rounded-xl transition-colors",
                     active
-                      ? "bg-local-bg text-navy"
+                      ? "bg-muted font-semibold text-navy"
                       : "text-mp-muted hover:bg-canvas hover:text-navy",
                   )}
                 >
@@ -263,7 +262,7 @@ function SidebarNav({
                   className={cn(
                     "relative flex size-10 items-center justify-center rounded-xl transition-colors",
                     activeSectionId === section.id
-                      ? "bg-local-bg text-navy"
+                      ? "bg-muted font-semibold text-navy"
                       : "text-mp-muted hover:bg-canvas hover:text-navy",
                   )}
                 >
@@ -276,7 +275,7 @@ function SidebarNav({
                 </button>
               </PopoverTrigger>
               <PopoverContent side="right" align="start" className="w-52 p-1.5">
-                <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
                   {section.label}
                 </p>
                 <div className="flex flex-col gap-0.5">
@@ -289,7 +288,7 @@ function SidebarNav({
                       className={cn(
                         "flex min-h-10 items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors",
                         leafActive(child)
-                          ? "bg-local-bg font-semibold text-navy"
+                          ? "bg-muted font-semibold text-navy"
                           : "text-mp-muted hover:bg-canvas hover:text-navy",
                       )}
                     >
@@ -321,7 +320,7 @@ function SidebarNav({
               className={cn(
                 "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors lg:min-h-10",
                 active
-                  ? "bg-local-bg text-navy"
+                  ? "bg-muted font-semibold text-navy"
                   : "text-mp-muted hover:bg-canvas hover:text-navy",
               )}
             >
@@ -342,7 +341,7 @@ function SidebarNav({
               className={cn(
                 "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors lg:min-h-10",
                 activeSectionId === section.id
-                  ? "bg-local-bg text-navy"
+                  ? "bg-muted font-semibold text-navy"
                   : "text-mp-muted hover:bg-canvas hover:text-navy",
               )}
             >
@@ -572,32 +571,6 @@ export function AppShell({
                 rail={sidebarCollapsed}
               />
             </div>
-            <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-2" : "pt-2 pb-2")}>
-              <div className="pt-4">
-                {sidebarCollapsed ? (
-                  <RailTooltip label="Manage plan">
-                    <Link
-                      to="/billing"
-                      aria-label="Manage plan"
-                      className="flex size-10 items-center justify-center rounded-xl bg-local-bg text-navy"
-                    >
-                      <CreditCard className="size-4" />
-                    </Link>
-                  </RailTooltip>
-                ) : (
-                  <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-sm font-bold text-foreground">Need more audits?</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Review your plan, quota and invoices in billing.
-                    </p>
-                    <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-xl">
-                      <Link to="/billing">Manage plan</Link>
-                    </Button>
-                  </div>
-
-                )}
-              </div>
-            </div>
           </aside>
 
           <div className={sidebarCollapsed ? "lg:pl-[68px]" : "lg:pl-[248px]"}>
@@ -631,13 +604,6 @@ export function AppShell({
                         onNavigate={() => setMenuOpen(false)}
                       />
                     </div>
-                    <div className="shrink-0 border-t border-border px-4 py-4">
-                      <Button asChild size="sm" variant="brand" className="w-full rounded-lg">
-                        <Link to="/billing" onClick={() => setMenuOpen(false)}>
-                          Manage plan
-                        </Link>
-                      </Button>
-                    </div>
                   </SheetContent>
                 </Sheet>
                 <div className="lg:hidden">
@@ -660,7 +626,7 @@ export function AppShell({
                     name="q"
                     aria-label="Search audits, stores and SKUs"
                     placeholder="Search audit ID, store, SKU, employee…"
-                    className="h-10 rounded-lg border-line bg-canvas pl-9"
+                    className="h-10 rounded-full border-line bg-white pl-9"
                   />
                 </form>
                 <div className="ml-auto flex items-center gap-2">
@@ -766,7 +732,7 @@ export function AppShell({
                           {!isGuest && profile?.avatar_url ? (
                             <AvatarImage src={profile.avatar_url} alt={displayName} />
                           ) : null}
-                          <AvatarFallback className="bg-local-bg text-xs font-medium uppercase text-navy">
+                          <AvatarFallback className="bg-muted text-xs font-medium uppercase text-navy">
                             {initials.toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -865,7 +831,7 @@ export function AppShell({
                 </div>
               </div>
             </main>
-            <SiteFooter />
+            <AppFooter />
           </div>
         </div>
         {isGuest ? null : <InstallAppBanner />}

@@ -28,17 +28,28 @@ Modern, premium, enterprise, intelligent, calm, data-rich not crowded. Pass the 
 | Light Cyan | `#8EC9E8` | units, inventory, value/volume |
 | Soft Pink | `#FFEAF1` | critical, exception, risk |
 | Soft Grey | `#EEF1F4` | N/A, unavailable, pending, inactive |
-| Navy | `#102A43` | primary text |
-| Secondary | `#667085` | secondary text |
+| Navy (logo) | `#04203F` | buttons, active states, headings, KPI numbers |
+| Secondary | `#667085` | body / secondary text |
 | Border | `#D9E2E8` | borders |
 | Card | `#FFFFFF` | card bg |
-| Page | `#F4F7F9` | page bg |
+| Page | `#FFFFFF` | page bg (`#F4F7F9` only for subtle hover/inset fills) |
 
 No arbitrary chart colors. No neon. No traffic-light red/orange overload.
 
+## Minimalist rules (quiet palette)
+
+- Font: **Inter** everywhere (never Google Sans / Product Sans).
+- Accent colours are for **status and charts only**. KPI cards are plain white; status = small coloured dot next to the value.
+- No shadows on cards (overlays/menus/dialogs only). No hover lift/scale — hover changes border or background colour only.
+- Corners 8px (`rounded-lg`/`rounded-xl`). Motion: quick fades 150–200ms.
+- Sentence case labels — no UPPERCASE eyebrows or tracking-wide labels.
+- No eyebrow / next-step pills in page headers. No "View more" links — make the whole card clickable.
+- Dashboards: Ask Aislix + top ≤8 KPIs; the rest behind "Show all metrics (n)".
+- Filters: list pages only, collapsed behind a "Filters" button.
+
 ## Hard rule: no adjacent same accent
 
-Never put the same accent on two adjacent analytical/KPI cards (2-col grid or KPI row).
+Applies to chart / status accents. Never put the same accent on two adjacent analytical cards (2-col grid or KPI row).
 Cycle: **PURPLE → BLUE → PINK → GREEN → CYAN** (repeat). Same color may appear elsewhere, never adjacent.
 Use `src/lib/ai-audit/kpi-palette.ts` / design tokens — do not invent fills.
 
@@ -70,8 +81,8 @@ Do not: donuts for rankings, pie everywhere, line for rankings, duplicate chart+
 
 ## KPI cards
 
-White card + thin border `#D9E2E8` + subtle left/top accent tint (not full-color fill) + generous whitespace.
-Include: name, value, small info icon, short context, optional delta. No large decorative icons.
+White card + thin border `#D9E2E8` + small status dot in the semantic colour (no accent bar, no tinted fill) + generous whitespace.
+Include: name, value, small info icon, short context, optional delta. No decorative icons.
 
 Core KPI accents: Completion PURPLE · Evidence BLUE · Pass GREEN · Open Findings CYAN · Critical PINK · Overdue GREY · SLA BLUE/CYAN by adjacency · Inventory variance CYAN.
 
@@ -89,7 +100,7 @@ Visually distinguish: AI detected · Calculated by Aislix · Expected from plano
 ## Layout / style
 
 Desktop 2-col analytical grid · mobile 1-col. Hierarchy: Ask Aislix → 8 KPIs → trends → findings/actions → planogram → product/brand → financial → tables.
-Rounded white cards, thin borders, subtle shadow, navy text, light grids. Animation 150–300ms once (bar/line/KPI), not looping.
+Rounded white cards, thin borders, no shadow, navy text, light grids. Animation 150–300ms once (bar/line/KPI), not looping.
 Tooltips: exact value, unit, context, expected vs actual when relevant. Legends only for multi-series.
 
 ## Implementation checklist (every UI change)

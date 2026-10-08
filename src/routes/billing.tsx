@@ -608,7 +608,7 @@ function Billing() {
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {addOns.map((a) => (
-            <div key={a.id} className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow hover:shadow-card">
+            <div key={a.id} className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-sm font-semibold">{a.name}</h3>
                 <Badge variant="secondary" className="rounded-full text-[0.65rem]">

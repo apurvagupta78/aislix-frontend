@@ -41,7 +41,7 @@ export function DashboardLayoutToolbar({
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#D9E2E8] bg-white px-3 py-2">
       <p className="mr-auto text-xs text-[#667085]">
         Drag metric cards to reorder. Layout saves to your profile.
-        {dirty ? <span className="ml-1 font-medium text-[#102A43]">Unsaved changes</span> : null}
+        {dirty ? <span className="ml-1 font-medium text-[#04203F]">Unsaved changes</span> : null}
       </p>
       <Button
         type="button"
@@ -70,7 +70,7 @@ export function DashboardLayoutToolbar({
               <button
                 key={s.id}
                 type="button"
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[#102A43] hover:bg-[#F4F7F9]"
+                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[#04203F] hover:bg-[#F4F7F9]"
                 onClick={() => {
                   onChange({
                     order: layout.order.includes(s.id) ? layout.order : [...layout.order, s.id],
@@ -147,7 +147,7 @@ export function SortableMetricCard({
           {onHide ? (
             <button
               type="button"
-              className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#ECBDCC] bg-[#FFEAF1] px-2 py-0.5 text-[10px] text-[#102A43]"
+              className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#ECBDCC] bg-[#FFEAF1] px-2 py-0.5 text-[10px] text-[#04203F]"
               onClick={onHide}
             >
               <X className="size-3" /> Hide

@@ -131,14 +131,14 @@ export const template = {
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
 const container = { padding: '32px 28px', maxWidth: '600px' }
-const heading = { fontSize: '24px', lineHeight: '32px', color: '#102A43', margin: '0 0 4px' }
+const heading = { fontSize: '24px', lineHeight: '32px', color: '#04203F', margin: '0 0 4px' }
 const text = { fontSize: '15px', lineHeight: '24px', color: '#1f2937', margin: '12px 0 8px' }
 const quote = {
   fontSize: '14px',
   lineHeight: '22px',
   color: '#1f2937',
   backgroundColor: '#F4F7F9',
-  borderLeft: '3px solid #102A43',
+  borderLeft: '3px solid #04203F',
   borderRadius: '8px',
   padding: '12px 14px',
   margin: '16px 0 0',
@@ -146,7 +146,7 @@ const quote = {
 const headlineStyle = {
   fontSize: '14px',
   lineHeight: '22px',
-  color: '#102A43',
+  color: '#04203F',
   backgroundColor: '#F4F7F9',
   border: '1px solid #D9E2E8',
   borderRadius: '10px',
@@ -156,10 +156,10 @@ const headlineStyle = {
 const card = { marginTop: '16px', border: '1px solid #D9E2E8', borderRadius: '12px', padding: '4px 12px' }
 const kpiRow = { padding: '8px 0', borderBottom: '1px solid #EEF1F4' }
 const cellLabel = { fontSize: '11px', color: '#667085', margin: '0 0 2px', textTransform: 'uppercase' as const }
-const cellValue = { fontSize: '18px', color: '#102A43', margin: 0, fontWeight: 600 as const }
+const cellValue = { fontSize: '18px', color: '#04203F', margin: 0, fontWeight: 600 as const }
 const cellContext = { fontSize: '12px', color: '#557187', margin: '2px 0 0' }
 const button = {
-  backgroundColor: '#102A43',
+  backgroundColor: '#04203F',
   color: '#ffffff',
   borderRadius: '10px',
   padding: '12px 20px',
@@ -168,5 +168,5 @@ const button = {
   textDecoration: 'none',
 }
 const muted = { fontSize: '12px', lineHeight: '18px', color: '#667085', margin: '8px 0 0' }
-const link = { color: '#102A43', textDecoration: 'underline' }
+const link = { color: '#04203F', textDecoration: 'underline' }
 const hr = { borderColor: '#D9E2E8', margin: '24px 0 12px' }

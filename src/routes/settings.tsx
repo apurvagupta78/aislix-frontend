@@ -172,7 +172,7 @@ function SupportPanel() {
           {supportLinks.map((link) => (
             <div
               key={link.title}
-              className="flex flex-col rounded-2xl border border-border bg-surface p-4 transition-all hover:border-brand/30 hover:shadow-card"
+              className="flex flex-col rounded-2xl border border-border bg-surface p-4 transition-all hover:border-brand/30"
             >
               <span className="grid size-9 place-items-center rounded-xl bg-brand-soft text-brand">
                 <link.icon className="size-4" />

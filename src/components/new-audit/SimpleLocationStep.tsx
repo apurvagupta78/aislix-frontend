@@ -124,7 +124,7 @@ export function SimpleLocationStep({ operatingModel, value, onChange, error }: P
           "flex w-full flex-col rounded-2xl border p-4 text-left transition-all",
           selected
             ? "border-brand bg-brand-soft/30 ring-2 ring-brand/20"
-            : "border-border bg-card hover:border-brand/30 hover:shadow-sm",
+            : "border-border bg-card hover:border-brand/30",
           compact && "p-3",
         )}
       >

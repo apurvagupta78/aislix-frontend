@@ -34,11 +34,11 @@ function RankBarList({
       {top.map((row, i) => (
         <li key={`${row.label}-${i}`}>
           <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate font-medium text-[#102A43]" title={row.label}>
+            <span className="min-w-0 truncate font-medium text-[#04203F]" title={row.label}>
               <span className="mr-2 text-xs text-[#667085]">#{i + 1}</span>
               {row.label}
             </span>
-            <span className="shrink-0 tabular-nums font-semibold text-[#102A43]">
+            <span className="shrink-0 tabular-nums font-semibold text-[#04203F]">
               {round1(row.value)}
               {unit}
             </span>

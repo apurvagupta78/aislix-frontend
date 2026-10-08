@@ -100,7 +100,7 @@ export function ReportCenter({
               className={cn(
                 "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-150",
                 id === tab
-                  ? "border-[#102A43] bg-[#102A43] text-white"
+                  ? "border-[#04203F] bg-[#04203F] text-white"
                   : "border-[#D9E2E8] bg-white text-[#667085] hover:bg-[#F4F7F9]",
               )}
             >
@@ -229,7 +229,7 @@ function ReportView({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 id="report-title" className="text-base font-semibold text-[#102A43]">
+            <h2 id="report-title" className="text-base font-semibold text-[#04203F]">
               {info.label}
             </h2>
             {doc?.labeledDemo ? (
@@ -277,7 +277,7 @@ function ReportView({
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 text-xs text-[#667085]">
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#C1E4F8] bg-[#EEF6FA] px-2 py-0.5 text-[#102A43]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-[#C1E4F8] bg-[#EEF6FA] px-2 py-0.5 text-[#04203F]">
             <Sparkles className="size-3" aria-hidden />
             AI detected · Calculated by Aislix
           </span>
@@ -359,7 +359,7 @@ function ReportBody({ doc }: { doc: ReportDocument }) {
   return (
     <div className="mt-4 space-y-4">
       {doc.headline ? (
-        <p className="rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-3 py-2 text-sm text-[#102A43]">
+        <p className="rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-3 py-2 text-sm text-[#04203F]">
           {doc.headline}
         </p>
       ) : null}
@@ -381,7 +381,7 @@ function ReportTableCard({ table }: { table: ReportTable }) {
   return (
     <div className="overflow-hidden rounded-xl border border-[#D9E2E8]">
       <div className="flex items-center justify-between gap-2 border-b border-[#D9E2E8] bg-[#F4F7F9] px-4 py-2.5">
-        <h3 className="text-sm font-semibold text-[#102A43]">{table.title}</h3>
+        <h3 className="text-sm font-semibold text-[#04203F]">{table.title}</h3>
         <span className="text-xs text-[#667085]">
           {table.rows.length > rows.length
             ? `First ${rows.length} of ${table.rows.length} · all rows in Excel`
@@ -408,10 +408,10 @@ function ReportTableCard({ table }: { table: ReportTable }) {
                       key={ci}
                       className={cn(
                         "px-3 py-2",
-                        ci === 0 ? "pl-4 font-medium text-[#102A43]" : "text-right tabular-nums",
+                        ci === 0 ? "pl-4 font-medium text-[#04203F]" : "text-right tabular-nums",
                         ci > 0 && (cell === "N/A" || cell === "No GPS" || cell === "No photo")
                           ? "text-[#667085]"
-                          : "text-[#102A43]",
+                          : "text-[#04203F]",
                       )}
                     >
                       {cell}
@@ -435,7 +435,7 @@ function PhotoGrid({ doc }: { doc: ReportDocument }) {
   return (
     <div className="rounded-xl border border-[#D9E2E8] p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[#102A43]">Shelf photos</h3>
+        <h3 className="text-sm font-semibold text-[#04203F]">Shelf photos</h3>
         <span className="text-[10px] font-medium uppercase tracking-wide text-[#667085]">Read from image</span>
       </div>
       {withUrl.length ? (
@@ -451,11 +451,11 @@ function PhotoGrid({ doc }: { doc: ReportDocument }) {
                 />
               </Link>
               <figcaption className="space-y-0.5 px-2.5 py-2 text-xs">
-                <p className="truncate font-medium text-[#102A43]">{p.storeName}</p>
+                <p className="truncate font-medium text-[#04203F]">{p.storeName}</p>
                 <p className="text-[#667085]">
                   {p.takenAt} · {p.capturedBy}
                 </p>
-                <p className={p.location === "No GPS" ? "text-[#667085]" : "text-[#102A43]"}>{p.location}</p>
+                <p className={p.location === "No GPS" ? "text-[#667085]" : "text-[#04203F]"}>{p.location}</p>
               </figcaption>
             </figure>
           ))}
@@ -542,13 +542,13 @@ function EmailReportDialog({
 function Notice({ title, body, cta }: { title: string; body: string; cta?: boolean }) {
   return (
     <div className="mt-4 rounded-xl border border-[#D9E2E8] bg-[#EEF1F4]/80 px-4 py-4">
-      <p className="text-sm font-semibold text-[#102A43]">{title}</p>
+      <p className="text-sm font-semibold text-[#04203F]">{title}</p>
       <p className="mt-1 text-sm text-[#667085]">{body}</p>
       {cta ? (
         <Link
           to="/new-audit"
           search={{ templateId: undefined, systemKey: undefined, assign: false }}
-          className="mt-3 inline-flex rounded-lg bg-[#102A43] px-3 py-2 text-xs font-medium text-white"
+          className="mt-3 inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white"
         >
           Start Audit
         </Link>

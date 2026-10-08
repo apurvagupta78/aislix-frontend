@@ -127,7 +127,7 @@ function RoleToggle({
             title={ROLE_STYLE[r].label}
             className={cn(
               "min-w-0 truncate rounded px-1.5 py-1 text-[11px] font-medium transition-colors",
-              active ? "text-[#102A43]" : "text-[#667085] hover:text-[#102A43]",
+              active ? "text-[#04203F]" : "text-[#667085] hover:text-[#04203F]",
             )}
             style={active ? { boxShadow: `inset 0 0 0 1px ${ROLE_STYLE[r].border}`, background: ROLE_STYLE[r].tint } : undefined}
           >
@@ -166,7 +166,7 @@ function ColumnHeader({
       <div className="flex min-w-0 items-center gap-1">
         {locked ? (
           <>
-            <p className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-[#102A43]" title={column.name}>
+            <p className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-[#04203F]" title={column.name}>
               {column.name}
             </p>
             <Lock className="size-3 shrink-0 text-[#98A2B3]" aria-label="From the template" />
@@ -176,7 +176,7 @@ function ColumnHeader({
             <input
               aria-label={`Column name ${column.name}`}
               title="Rename column"
-              className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-[#102A43] outline-none hover:border-[#D9E2E8] focus:border-[#7DB7D6] focus:bg-white"
+              className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-[#04203F] outline-none hover:border-[#D9E2E8] focus:border-[#7DB7D6] focus:bg-white"
               value={column.name}
               onChange={(event) => onRename(event.target.value)}
             />
@@ -189,7 +189,7 @@ function ColumnHeader({
               type="button"
               aria-label={`Remove column ${column.name}`}
               title="Remove column"
-              className="shrink-0 rounded p-0.5 text-[#667085] hover:bg-white hover:text-[#102A43]"
+              className="shrink-0 rounded p-0.5 text-[#667085] hover:bg-white hover:text-[#04203F]"
               onClick={onRemove}
             >
               <X className="size-3.5" />
@@ -201,7 +201,7 @@ function ColumnHeader({
       {role === "auditor_input" && providedColumns.length ? (
         <select
           aria-label={`Compare ${column.name} with`}
-          className="w-full rounded-md border border-[#D9E2E8] bg-white px-1.5 py-1 text-[11px] text-[#102A43]"
+          className="w-full rounded-md border border-[#D9E2E8] bg-white px-1.5 py-1 text-[11px] text-[#04203F]"
           value={mapping?.compareWithColumnId ?? ""}
           onChange={(event) => onCompare(event.target.value)}
         >
@@ -428,7 +428,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName, 
     <div className="min-w-0 space-y-4 rounded-2xl border border-[#D9E2E8] bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h4 className="text-sm font-semibold text-[#102A43]">
+          <h4 className="text-sm font-semibold text-[#04203F]">
             {isTemplate ? "Template fields and lines" : scratch ? "Create your audit" : "Your audit data"}
           </h4>
           <p className="mt-0.5 max-w-2xl text-xs text-[#667085]">
@@ -474,7 +474,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName, 
 
       {scratch ? (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-[#102A43]">Quick add a column</p>
+          <p className="text-xs font-semibold text-[#04203F]">Quick add a column</p>
           <div className="flex flex-wrap gap-2">
             {QUICK_COLUMNS.map((q) => (
               <button
@@ -482,7 +482,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName, 
                 type="button"
                 onClick={() => addColumn(q.label, q.role)}
                 title={`${q.label} — ${ROLE_STYLE[q.role].label}`}
-                className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium text-[#102A43] hover:brightness-95"
+                className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium text-[#04203F] hover:brightness-95"
                 style={{ background: ROLE_STYLE[q.role].tint, borderColor: ROLE_STYLE[q.role].border }}
               >
                 <Plus className="size-3" /> {q.label}
@@ -505,7 +505,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName, 
       {hasData ? (
         <>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-4 py-2.5 text-xs text-[#667085]">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-[#102A43]">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-[#04203F]">
               {isTemplate ? (
                 <LayoutTemplate className="size-4" />
               ) : scratch ? (
@@ -527,13 +527,13 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName, 
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-[#102A43]">Set all columns:</span>
+              <span className="text-xs font-semibold text-[#04203F]">Set all columns:</span>
               {ROLES.map((r) => (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setAllRoles(r)}
-                  className="rounded-md border px-2.5 py-1 text-xs font-medium text-[#102A43] hover:brightness-95"
+                  className="rounded-md border px-2.5 py-1 text-xs font-medium text-[#04203F] hover:brightness-95"
                   style={{ background: ROLE_STYLE[r].tint, borderColor: ROLE_STYLE[r].border }}
                 >
                   {ROLE_STYLE[r].label}
@@ -555,7 +555,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName, 
 
           <section className="min-w-0 rounded-xl border border-[#D9E2E8]">
             <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D9E2E8] px-3 py-2">
-              <p className="text-xs font-semibold text-[#102A43]">
+              <p className="text-xs font-semibold text-[#04203F]">
                 {isTemplate ? "Lines to check" : "Rows"}
                 <span className="ml-1.5 font-normal text-[#667085]">({rows.length.toLocaleString()})</span>
               </p>
@@ -567,7 +567,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName, 
                       type="search"
                       aria-label={`Search ${noun}s`}
                       placeholder={`Search ${noun}s`}
-                      className="h-7 w-48 rounded-md border border-[#D9E2E8] bg-white pl-7 pr-2 text-xs text-[#102A43] outline-none focus:border-[#7DB7D6]"
+                      className="h-7 w-48 rounded-md border border-[#D9E2E8] bg-white pl-7 pr-2 text-xs text-[#04203F] outline-none focus:border-[#7DB7D6]"
                       value={query}
                       onChange={(event) => {
                         setQuery(event.target.value);
@@ -671,12 +671,12 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName, 
               <TablePager pager={pager} noun={`${noun}s`} className="border-t border-[#D9E2E8]" />
             ) : !columns.length ? (
               <div className="border-t border-[#D9E2E8] px-4 py-6 text-center text-xs text-[#667085]">
-                <p className="text-sm font-medium text-[#102A43]">No columns yet</p>
+                <p className="text-sm font-medium text-[#04203F]">No columns yet</p>
                 <p className="mx-auto mt-1 max-w-md">Tap a quick-add field above, or use Add column.</p>
               </div>
             ) : (
               <div className="border-t border-[#D9E2E8] px-4 py-6 text-center text-xs text-[#667085]">
-                <p className="text-sm font-medium text-[#102A43]">No {noun}s yet</p>
+                <p className="text-sm font-medium text-[#04203F]">No {noun}s yet</p>
                 <p className="mx-auto mt-1 max-w-md">
                   {isTemplate
                     ? "Add the products or items to check, fill them from a file, or leave this empty and the auditee adds lines during the audit."
@@ -711,7 +711,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName, 
           className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-[#D9E2E8] bg-[#F4F7F9] px-4 py-8 text-center text-xs text-[#667085] hover:border-[#7DB7D6]"
         >
           <Upload className="size-5 text-[#7DB7D6]" />
-          <span className="text-sm font-medium text-[#102A43]">Choose a photo, PDF, CSV or Excel file</span>
+          <span className="text-sm font-medium text-[#04203F]">Choose a photo, PDF, CSV or Excel file</span>
           <span>
             Any columns work — every column and row is kept. Then mark each column as already provided or for
             the auditee to fill.

@@ -185,7 +185,7 @@ function ProfilePage() {
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   aria-label="Upload profile photo"
-                  className="absolute -bottom-1 -right-1 grid size-9 place-items-center rounded-full bg-brand text-brand-foreground shadow-card transition-transform hover:scale-105"
+                  className="absolute -bottom-1 -right-1 grid size-9 place-items-center rounded-full bg-brand text-brand-foreground shadow-card transition-transform"
                 >
                   {avatar.isPending ? (
                     <Loader2 className="size-4 animate-spin" />

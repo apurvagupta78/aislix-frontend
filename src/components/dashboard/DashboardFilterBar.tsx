@@ -766,10 +766,6 @@ export function DashboardFilterBar({
 
   return (
     <section className="space-y-1.5" aria-label="Dashboard filters">
-      <p className="text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        Filter view
-      </p>
-
       <div className="hidden md:block">
         <DesktopToolbar filters={filters} onChange={onChange} options={options} />
       </div>

@@ -156,7 +156,7 @@ export function KpiResultCard({
   const className = cn(
     "rounded-lg border border-border/80 border-l-[3px] bg-card px-3.5 py-3 shadow-sm transition-shadow",
     kpi.accent_border,
-    onClick && "cursor-pointer hover:border-brand/30 hover:shadow-md",
+    onClick && "cursor-pointer hover:border-brand/30",
   );
 
   if (onClick) {

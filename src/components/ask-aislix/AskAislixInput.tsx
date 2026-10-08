@@ -183,7 +183,7 @@ export function AskAislixInput({
               }
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-lg border border-[#dde5ec] bg-white text-[#557187] transition-colors",
-                "hover:border-[#C1E4F8] hover:bg-[#EAF6FD] hover:text-[#102A43]",
+                "hover:border-[#C1E4F8] hover:bg-[#EAF6FD] hover:text-[#04203F]",
                 "disabled:cursor-not-allowed disabled:opacity-40",
               )}
               onClick={() => fileInputRef.current?.click()}

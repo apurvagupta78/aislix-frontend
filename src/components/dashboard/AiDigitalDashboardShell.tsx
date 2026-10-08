@@ -185,7 +185,7 @@ function digitalRowToAnalysisReport(row: DigitalLastTenRow): LastAuditReport {
 function EmptyScopeBanner({ kind }: { kind: "ai" | "digital" }) {
   return (
     <div className="rounded-xl border border-[#D9E2E8] bg-[#EEF1F4]/80 px-4 py-4">
-      <p className="text-sm font-semibold text-[#102A43]">
+      <p className="text-sm font-semibold text-[#04203F]">
         No {kind === "ai" ? "AI" : "digital"} audits in your scope yet
       </p>
       <p className="mt-1 text-sm text-[#667085]">
@@ -193,7 +193,7 @@ function EmptyScopeBanner({ kind }: { kind: "ai" | "digital" }) {
       </p>
       <Link
         to="/new-audit"
-        className="mt-3 inline-flex rounded-lg bg-[#102A43] px-3 py-2 text-xs font-medium text-white"
+        className="mt-3 inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white"
       >
         Start Audit
       </Link>
@@ -211,9 +211,9 @@ function withTab(
 
 function StagePill({ stage }: { stage: LastTenAuditRow["completionStage"] }) {
   const map = {
-    completed: { label: "Completed", className: "bg-[#EAF1DF] text-[#102A43] border-[#C5D0B2]" },
-    in_progress: { label: "In Progress", className: "bg-[#EAF6FD] text-[#102A43] border-[#C1E4F8]" },
-    not_started: { label: "Not Started", className: "bg-[#FFEAF1] text-[#102A43] border-[#ECBDCC]" },
+    completed: { label: "Completed", className: "bg-[#EAF1DF] text-[#04203F] border-[#C5D0B2]" },
+    in_progress: { label: "In Progress", className: "bg-[#EAF6FD] text-[#04203F] border-[#C1E4F8]" },
+    not_started: { label: "Not Started", className: "bg-[#FFEAF1] text-[#04203F] border-[#ECBDCC]" },
   } as const;
   const m = map[stage];
   return (
@@ -259,7 +259,7 @@ function KpiCard({
             <span
               className={cn(
                 "inline-flex items-center text-xs font-semibold",
-                delta >= 0 ? "text-[#3d7a55]" : "text-[#102A43]",
+                delta >= 0 ? "text-[#3d7a55]" : "text-[#04203F]",
               )}
             >
               {delta >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
@@ -268,7 +268,7 @@ function KpiCard({
           ) : null}
         </div>
       </div>
-      <p className="mt-2 text-2xl font-semibold text-[#102A43]">{value}</p>
+      <p className="mt-2 text-2xl font-semibold text-[#04203F]">{value}</p>
       {context ? <p className="mt-1 text-xs text-[#557187]">{context}</p> : null}
       {moreTo ? (
         <Link to={moreTo} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
@@ -302,7 +302,7 @@ function ChartCard({
   return (
     <div className={cn("h-full rounded-xl border border-[#D9E2E8] bg-white p-4", className)}>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[#102A43]">{title}</h3>
+        <h3 className="text-sm font-semibold text-[#04203F]">{title}</h3>
         {moreTo ? <ViewMore to={moreTo} /> : null}
       </div>
       {children}
@@ -325,12 +325,12 @@ function AiAnalysisModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-[#102A43]">AI Analysis</DialogTitle>
+          <DialogTitle className="text-[#04203F]">AI Analysis</DialogTitle>
         </DialogHeader>
         {incomplete ? (
           <p className="text-sm text-[#667085]">Complete the audit first to generate an AI Analysis report.</p>
         ) : report ? (
-          <div className="space-y-3 text-sm text-[#102A43]">
+          <div className="space-y-3 text-sm text-[#04203F]">
             <p className="font-medium">
               {report.auditName} · {report.storeName} · {fmtDate(report.date)}
             </p>
@@ -347,19 +347,19 @@ function AiAnalysisModal({
             </div>
             <ul className="list-disc space-y-1 pl-5 text-[#557187]">
               <li>
-                <span className="font-medium text-[#102A43]">Good:</span> {report.good}
+                <span className="font-medium text-[#04203F]">Good:</span> {report.good}
               </li>
               <li>
-                <span className="font-medium text-[#102A43]">Attention:</span> {report.attention}
+                <span className="font-medium text-[#04203F]">Attention:</span> {report.attention}
               </li>
               <li>
-                <span className="font-medium text-[#102A43]">Next action:</span> {report.nextAction}
+                <span className="font-medium text-[#04203F]">Next action:</span> {report.nextAction}
               </li>
             </ul>
             {report.scanId ? (
               <a
                 href={`/results?scan=${encodeURIComponent(report.scanId)}`}
-                className="inline-flex rounded-lg bg-[#102A43] px-3 py-2 text-xs font-medium text-white"
+                className="inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white"
               >
                 View full report
               </a>
@@ -399,20 +399,20 @@ function CompletionChips({
           className={cn(
             "rounded-full border px-3 py-1 text-xs font-medium",
             completion === id
-              ? "border-[#102A43] bg-[#102A43] text-white"
+              ? "border-[#04203F] bg-[#04203F] text-white"
               : id === "completed"
-                ? "border-[#C5D0B2] bg-[#EAF1DF] text-[#102A43]"
+                ? "border-[#C5D0B2] bg-[#EAF1DF] text-[#04203F]"
                 : id === "in_progress"
-                  ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#102A43]"
+                  ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#04203F]"
                   : id === "not_started"
-                    ? "border-[#ECBDCC] bg-[#FFEAF1] text-[#102A43]"
+                    ? "border-[#ECBDCC] bg-[#FFEAF1] text-[#04203F]"
                     : "border-[#D9E2E8] bg-white text-[#667085]",
           )}
         >
           {label}
         </button>
       ))}
-      <span className="rounded-full border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1 text-xs text-[#102A43]">
+      <span className="rounded-full border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1 text-xs text-[#04203F]">
         {scopeLabel ?? "Showing your stores"}
       </span>
     </>
@@ -852,7 +852,7 @@ export function AiDigitalDashboardShell() {
             <button
               type="button"
               onClick={() => void deleteCustomMetric(metric)}
-              className="mt-2 inline-flex items-center gap-1 text-xs text-[#102A43] hover:underline"
+              className="mt-2 inline-flex items-center gap-1 text-xs text-[#04203F] hover:underline"
             >
               <Trash2 className="size-3" /> Delete metric
             </button>
@@ -868,7 +868,7 @@ export function AiDigitalDashboardShell() {
         return (
           <div className="rounded-xl border border-[#C1E4F8] bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-[#102A43]">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[#04203F]">
                 Last completed audit — AI Analysis Report
               </h3>
               {data?.lastReport ? (
@@ -881,7 +881,7 @@ export function AiDigitalDashboardShell() {
                   </Link>
                   <button
                     type="button"
-                    className="rounded-lg bg-[#FFEAF1] px-3 py-1.5 text-xs font-medium text-[#102A43]"
+                    className="rounded-lg bg-[#FFEAF1] px-3 py-1.5 text-xs font-medium text-[#04203F]"
                     onClick={() => {
                       if (data.lastReport) {
                         setModalIncomplete(false);
@@ -902,26 +902,26 @@ export function AiDigitalDashboardShell() {
                   {fmtDate(data.lastReport.date)}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="rounded-lg bg-[#EAF1DF] px-3 py-1 text-xs font-medium text-[#102A43]">
+                  <span className="rounded-lg bg-[#EAF1DF] px-3 py-1 text-xs font-medium text-[#04203F]">
                     Compliance: {fmt(data.lastReport.compliancePct, "%")}
                   </span>
-                  <span className="rounded-lg bg-[#F0E9FF] px-3 py-1 text-xs font-medium text-[#102A43]">
+                  <span className="rounded-lg bg-[#F0E9FF] px-3 py-1 text-xs font-medium text-[#04203F]">
                     Findings: {data.lastReport.findingsCount}
                   </span>
-                  <span className="rounded-lg bg-[#EAF6FD] px-3 py-1 text-xs font-medium text-[#102A43]">
+                  <span className="rounded-lg bg-[#EAF6FD] px-3 py-1 text-xs font-medium text-[#04203F]">
                     Confidence: {fmt(data.lastReport.confidencePct, "%")}
                   </span>
                 </div>
                 <ul className="space-y-2 text-sm text-[#557187]">
                   <li>
-                    <span className="font-semibold text-[#102A43]">Good:</span> {data.lastReport.good}
+                    <span className="font-semibold text-[#04203F]">Good:</span> {data.lastReport.good}
                   </li>
                   <li>
-                    <span className="font-semibold text-[#102A43]">Attention:</span>{" "}
+                    <span className="font-semibold text-[#04203F]">Attention:</span>{" "}
                     {data.lastReport.attention}
                   </li>
                   <li>
-                    <span className="font-semibold text-[#102A43]">Next action:</span>{" "}
+                    <span className="font-semibold text-[#04203F]">Next action:</span>{" "}
                     {data.lastReport.nextAction}
                   </li>
                 </ul>
@@ -1193,7 +1193,7 @@ export function AiDigitalDashboardShell() {
       return (
         <div className="rounded-xl border border-[#C1E4F8] bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-[#102A43]">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[#04203F]">
               Last completed digital audit — summary
             </h3>
             {row ? (
@@ -1218,7 +1218,7 @@ export function AiDigitalDashboardShell() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="border-[#C1E4F8] text-[#102A43]"
+                  className="border-[#C1E4F8] text-[#04203F]"
                   onClick={() => void openDigitalAnalysis(row)}
                 >
                   AI Analysis
@@ -1233,29 +1233,29 @@ export function AiDigitalDashboardShell() {
                 {row.store} | Date: {fmtDate(row.date)}
               </p>
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-lg bg-[#EAF1DF] px-3 py-1 text-xs font-medium text-[#102A43]">
+                <span className="rounded-lg bg-[#EAF1DF] px-3 py-1 text-xs font-medium text-[#04203F]">
                   Expected: {fmt(row.expected)}
                 </span>
-                <span className="rounded-lg bg-[#F0E9FF] px-3 py-1 text-xs font-medium text-[#102A43]">
+                <span className="rounded-lg bg-[#F0E9FF] px-3 py-1 text-xs font-medium text-[#04203F]">
                   Actual: {fmt(row.actual)}
                 </span>
-                <span className="rounded-lg bg-[#EAF6FD] px-3 py-1 text-xs font-medium text-[#102A43]">
+                <span className="rounded-lg bg-[#EAF6FD] px-3 py-1 text-xs font-medium text-[#04203F]">
                   Variance: {fmt(row.variance)}
                 </span>
-                <span className="rounded-lg bg-[#FFEAF1] px-3 py-1 text-xs font-medium text-[#102A43]">
+                <span className="rounded-lg bg-[#FFEAF1] px-3 py-1 text-xs font-medium text-[#04203F]">
                   Status: {assignmentStatusLabel(row.status)}
                 </span>
               </div>
               <ul className="space-y-1 text-sm text-[#557187]">
                 <li>
-                  <span className="font-semibold text-[#102A43]">Findings:</span> {fmt(row.findingsCount)}
+                  <span className="font-semibold text-[#04203F]">Findings:</span> {fmt(row.findingsCount)}
                 </li>
                 <li>
-                  <span className="font-semibold text-[#102A43]">Corrective actions:</span>{" "}
+                  <span className="font-semibold text-[#04203F]">Corrective actions:</span>{" "}
                   {fmt(row.caCount)}
                 </li>
                 <li>
-                  <span className="font-semibold text-[#102A43]">Re-audit:</span> {row.reauditStatus}
+                  <span className="font-semibold text-[#04203F]">Re-audit:</span> {row.reauditStatus}
                 </li>
               </ul>
             </div>
@@ -1269,7 +1269,7 @@ export function AiDigitalDashboardShell() {
               {emptyRealDigital ? (
                 <Link
                   to="/new-audit"
-                  className="inline-flex rounded-lg bg-[#102A43] px-3 py-2 text-xs font-medium text-white"
+                  className="inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white"
                 >
                   Start Audit
                 </Link>
@@ -1333,7 +1333,7 @@ export function AiDigitalDashboardShell() {
             ].map(([label, val], i) => (
               <div key={String(label)} className="rounded-lg border border-[#D9E2E8] bg-[#F4F7F9] px-2 py-2">
                 <p className="text-[10px] uppercase text-[#667085]">{label}</p>
-                <p className="text-sm font-semibold text-[#102A43]">
+                <p className="text-sm font-semibold text-[#04203F]">
                   {i === 5 ? fmt(val as number | null, "%") : fmt(val as number | null)}
                 </p>
               </div>
@@ -1463,7 +1463,7 @@ export function AiDigitalDashboardShell() {
             </p>
           ) : (
             <>
-              <div className="mb-3 flex flex-wrap gap-2 text-xs text-[#102A43]">
+              <div className="mb-3 flex flex-wrap gap-2 text-xs text-[#04203F]">
                 <span className="rounded-lg bg-[#EAF6FD] px-2 py-1">
                   A net {fmt(a?.variance)} · B net {fmt(b?.variance)}
                 </span>
@@ -1567,7 +1567,7 @@ export function AiDigitalDashboardShell() {
               onClick={() => setTab(id)}
               className={cn(
                 "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-                tab === id ? "bg-[#102A43] text-white" : "text-[#667085] hover:bg-[#F4F7F9]",
+                tab === id ? "bg-[#04203F] text-white" : "text-[#667085] hover:bg-[#F4F7F9]",
               )}
             >
               {label}
@@ -1581,7 +1581,7 @@ export function AiDigitalDashboardShell() {
             className={cn(
               "rounded-lg border px-3 py-2 text-xs font-medium",
               editLayout
-                ? "border-[#102A43] bg-[#102A43] text-white"
+                ? "border-[#04203F] bg-[#04203F] text-white"
                 : "border-[#D9E2E8] bg-white text-[#667085]",
             )}
           >
@@ -1655,7 +1655,7 @@ export function AiDigitalDashboardShell() {
           ) : (
             <>
               {emptyRealAi ? <EmptyScopeBanner kind="ai" /> : null}
-              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#102A43]">
+              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#04203F]">
                 {emptyRealAi
                   ? "N/A audits · N/A complete · N/A open critical"
                   : `${data?.executive.audits ?? 0} audits · ${fmt(data?.executive.completionPct, "%")} complete · ${data?.executive.openCritical ?? 0} open critical`}
@@ -1701,8 +1701,8 @@ export function AiDigitalDashboardShell() {
                     className="rounded-xl border p-3"
                     style={{ background: card.bg, borderColor: card.border }}
                   >
-                    <card.Icon className="size-4 text-[#102A43]" />
-                    <p className="mt-2 text-sm font-semibold text-[#102A43]">{card.title}</p>
+                    <card.Icon className="size-4 text-[#04203F]" />
+                    <p className="mt-2 text-sm font-semibold text-[#04203F]">{card.title}</p>
                     <p className="mt-1 text-xs text-[#557187]">{card.body}</p>
                     <Link to={card.to} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
                       View more
@@ -1726,7 +1726,7 @@ export function AiDigitalDashboardShell() {
                 />
                 <div className="border-t border-[#D9E2E8] p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-[#102A43]">Last 10 Audits</h3>
+                  <h3 className="text-sm font-semibold text-[#04203F]">Last 10 Audits</h3>
                   <ViewMore to="/history" />
                 </div>
                 <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -1745,7 +1745,7 @@ export function AiDigitalDashboardShell() {
                         className={cn(
                           "rounded-md px-2.5 py-1 text-xs font-medium",
                           tableRelation === id
-                            ? "bg-[#102A43] text-white"
+                            ? "bg-[#04203F] text-white"
                             : "text-[#667085] hover:bg-[#F4F7F9]",
                         )}
                       >
@@ -1819,7 +1819,7 @@ export function AiDigitalDashboardShell() {
                     <tbody>
                       {filteredLastTen.map((row) => (
                         <tr key={row.id} className="border-b border-[#EEF1F4]">
-                          <td className="py-2 pr-3 font-medium text-[#102A43]">{row.auditName}</td>
+                          <td className="py-2 pr-3 font-medium text-[#04203F]">{row.auditName}</td>
                           <td className="py-2 pr-3 text-[#557187]">{row.templateName || "—"}</td>
                           <td className="py-2 pr-3">{row.storeName}</td>
                           <td className="py-2 pr-3">{row.assigneeName}</td>
@@ -1834,7 +1834,7 @@ export function AiDigitalDashboardShell() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="border-[#C1E4F8] text-[#102A43]"
+                              className="border-[#C1E4F8] text-[#04203F]"
                               onClick={() => void openAiAnalysis(row)}
                             >
                               AI Analysis
@@ -1872,7 +1872,7 @@ export function AiDigitalDashboardShell() {
           ) : (
             <>
               {emptyRealDigital ? <EmptyScopeBanner kind="digital" /> : null}
-              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#102A43]">
+              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#04203F]">
                 {emptyRealDigital
                   ? "N/A digital audits · N/A complete · N/A overdue"
                   : `${dig?.totalAudits ?? 0} digital audits · ${fmt(dig?.completionPct, "%")} complete · ${dig?.overdue ?? 0} overdue`}
@@ -1922,8 +1922,8 @@ export function AiDigitalDashboardShell() {
                     className="rounded-xl border p-3"
                     style={{ background: card.bg, borderColor: card.border }}
                   >
-                    <card.Icon className="size-4 text-[#102A43]" />
-                    <p className="mt-2 text-sm font-semibold text-[#102A43]">{card.title}</p>
+                    <card.Icon className="size-4 text-[#04203F]" />
+                    <p className="mt-2 text-sm font-semibold text-[#04203F]">{card.title}</p>
                     <p className="mt-1 text-xs text-[#557187]">{card.body}</p>
                     <Link to={card.to} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
                       View more
@@ -1947,7 +1947,7 @@ export function AiDigitalDashboardShell() {
                 />
                 <div className="border-t border-[#D9E2E8] p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-[#102A43]">Last 10 Digital Audits</h3>
+                    <h3 className="text-sm font-semibold text-[#04203F]">Last 10 Digital Audits</h3>
                     <ViewMore to="/history" />
                   </div>
                   <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -1966,7 +1966,7 @@ export function AiDigitalDashboardShell() {
                           className={cn(
                             "rounded-md px-2.5 py-1 text-xs font-medium",
                             digRelation === id
-                              ? "bg-[#102A43] text-white"
+                              ? "bg-[#04203F] text-white"
                               : "text-[#667085] hover:bg-[#F4F7F9]",
                           )}
                         >
@@ -1997,7 +1997,7 @@ export function AiDigitalDashboardShell() {
                       <tbody>
                         {filteredDigLastTen.map((row: DigitalLastTenRow) => (
                           <tr key={row.id} className="border-b border-[#EEF1F4]">
-                            <td className="py-2 pr-3 font-medium text-[#102A43]">{row.auditName}</td>
+                            <td className="py-2 pr-3 font-medium text-[#04203F]">{row.auditName}</td>
                             <td className="py-2 pr-3 text-[#557187]">
                               {row.templateName || row.auditName}
                             </td>
@@ -2016,7 +2016,7 @@ export function AiDigitalDashboardShell() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="border-[#C1E4F8] text-[#102A43]"
+                                className="border-[#C1E4F8] text-[#04203F]"
                                 onClick={() => void openDigitalAnalysis(row)}
                               >
                                 AI Analysis

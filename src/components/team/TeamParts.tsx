@@ -1082,7 +1082,7 @@ export function BulkUserImportDialog({
             <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/40 px-6 py-10 text-center transition-colors hover:border-primary/60">
               <Upload className="size-8 text-[#7DB7D6]" />
               <div>
-                <p className="text-sm font-medium text-[#102A43]">
+                <p className="text-sm font-medium text-[#04203F]">
                   {busy ? "Reading file…" : "Drop a file or click to upload"}
                 </p>
                 <p className="mt-1 text-xs text-[#667085]">.csv or .xlsx</p>
@@ -1134,12 +1134,12 @@ export function BulkUserImportDialog({
                   {validation.previewRows.slice(0, 50).map((row) => (
                     <tr key={row.rowNumber} className="border-t border-[#D9E2E8]">
                       <td className="px-3 py-2 text-[#667085]">{row.rowNumber}</td>
-                      <td className="px-3 py-2 text-[#102A43]">{row.name || "—"}</td>
+                      <td className="px-3 py-2 text-[#04203F]">{row.name || "—"}</td>
                       <td className="px-3 py-2 text-[#667085]">{row.email || "—"}</td>
                       <td className="px-3 py-2 text-[#667085]">{row.roleNormalized ?? row.role}</td>
                       <td className="px-3 py-2">
                         {row.valid ? (
-                          <span className="text-[#102A43]">
+                          <span className="text-[#04203F]">
                             {row.existingMemberId ? "Update" : "Invite"}
                           </span>
                         ) : (
@@ -1188,7 +1188,7 @@ export function BulkUserImportDialog({
         {step === "done" && importResult && (
           <div className="space-y-4">
             <div className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
-              <p className="text-sm font-medium text-[#102A43]">Import complete</p>
+              <p className="text-sm font-medium text-[#04203F]">Import complete</p>
               <p className="mt-2 text-sm text-[#667085]">
                 {importResult.invited} invited · {importResult.updated} updated ·{" "}
                 {importResult.failed} failed
@@ -1230,7 +1230,7 @@ export function MyTeamSection({
     <section className="space-y-4">
       <div className="flex items-center gap-2">
         <Users className="size-4 text-[#9B86D9]" />
-        <h2 className="text-base font-semibold text-[#102A43]">My team</h2>
+        <h2 className="text-base font-semibold text-[#04203F]">My team</h2>
       </div>
       <p className="max-w-2xl text-sm text-[#667085]">
         People who report directly to you. Their store access contributes to your inherited scope.
@@ -1268,7 +1268,7 @@ export function MyTeamSection({
                     <AvatarFallback className="text-xs">{userInitials(member)}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[#102A43]">
+                    <p className="truncate text-sm font-medium text-[#04203F]">
                       {member.name ?? "Invited user"}
                     </p>
                     <p className="truncate text-xs text-[#667085]">{member.email}</p>

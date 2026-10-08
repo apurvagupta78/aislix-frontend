@@ -57,7 +57,7 @@ function StatusPill({ requirement }: { requirement: GridRequirement }) {
     : { background: AISLIX_PALETTE.pink, border: `1px dashed ${AISLIX_PALETTE.secondary}` };
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]"
+      className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#04203F]"
       style={notNeeded ? { background: AISLIX_PALETTE.grey, border: `1px solid ${AISLIX_PALETTE.border}` } : style}
     >
       {notNeeded ? "Not needed yet" : requirement.ok ? "Done" : `${requirement.done} of ${requirement.total}`}
@@ -130,10 +130,10 @@ function Block({ requirement, children }: { requirement: GridRequirement; childr
     <div className="rounded-xl border border-[#D9E2E8] p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-[#102A43]">{requirement.label}</p>
+          <p className="text-sm font-medium text-[#04203F]">{requirement.label}</p>
           <p className="text-xs text-[#667085]">{requirement.hint}</p>
           {!requirement.ok && requirement.missing.length ? (
-            <p className="mt-0.5 text-xs text-[#102A43]">
+            <p className="mt-0.5 text-xs text-[#04203F]">
               Missing: {requirement.missing.slice(0, 6).join(", ")}
               {requirement.missing.length > 6 ? ` +${requirement.missing.length - 6} more` : ""}
             </p>
@@ -183,7 +183,7 @@ export function SessionVideoProof({ meta }: { meta: SessionVideoMeta | undefined
   if (!meta?.live) {
     return (
       <span
-        className="inline-block rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]"
+        className="inline-block rounded-md px-2 py-0.5 text-[11px] font-medium text-[#04203F]"
         style={{ background: AISLIX_PALETTE.grey, border: `1px solid ${AISLIX_PALETTE.border}` }}
       >
         {meta ? "Uploaded — not recorded live" : "Recorded before live stamping"}
@@ -195,7 +195,7 @@ export function SessionVideoProof({ meta }: { meta: SessionVideoMeta | undefined
   const where = meta.gpsStart ?? meta.gpsEnd;
   const check = meta.storeCheck ? STORE_CHECK_STYLE[meta.storeCheck] : null;
   return (
-    <span className="block max-w-[260px] space-y-1 text-[11px] text-[#102A43]">
+    <span className="block max-w-[260px] space-y-1 text-[11px] text-[#04203F]">
       <span
         className="inline-block rounded-md px-2 py-0.5 font-medium"
         style={{ background: ACCENT_TINT.green, border: `1px solid ${AISLIX_PALETTE.green}` }}
@@ -253,7 +253,7 @@ export function GpsSummary({ gps }: { gps: GpsFix }) {
       {gps.address ? <span className="block text-[#667085]">{gps.address}</span> : null}
       {check ? (
         <span
-          className="inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]"
+          className="inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#04203F]"
           style={{ background: check.background, border: check.border }}
         >
           {check.label(gps)}
@@ -308,7 +308,7 @@ export function AuditEvidencePanel({
           const values = shelfEvidenceValues(responses, slot);
           return (
             <div key={slot.index} className="flex flex-wrap items-center gap-3 rounded-lg bg-[#F4F7F9] px-2.5 py-1.5">
-              <span className="min-w-[8rem] text-xs font-medium text-[#102A43]">{slot.label}</span>
+              <span className="min-w-[8rem] text-xs font-medium text-[#04203F]">{slot.label}</span>
               {shelfKeys.map((key) => {
                 const target: EvidenceTarget = { section: SHELF_EVIDENCE_SECTION, recordIndex: slot.index, key, shelfName: slot.name };
                 const refs = listValue(values[key]);
@@ -341,10 +341,10 @@ export function AuditEvidencePanel({
     <section className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-[#102A43]">Evidence checklist</h3>
+          <h3 className="text-sm font-semibold text-[#04203F]">Evidence checklist</h3>
           <p className="text-xs text-[#667085]">Everything below is required by your manager before you can submit.</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#102A43]">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#04203F]">
           <CheckCircle2 className="size-4" style={{ color: met === requirements.length ? AISLIX_PALETTE.green : AISLIX_PALETTE.secondary }} />
           {met} of {requirements.length} done
         </span>
@@ -409,7 +409,7 @@ export function AuditEvidencePanel({
             case "gps":
               return (
                 <Block key={requirement.id} requirement={requirement}>
-                  <div className="flex flex-wrap items-start gap-2 text-xs text-[#102A43]">
+                  <div className="flex flex-wrap items-start gap-2 text-xs text-[#04203F]">
                     <MapPin className="mt-0.5 size-3.5 shrink-0 text-[#667085]" />
                     {gps ? (
                       <GpsSummary gps={gps} />

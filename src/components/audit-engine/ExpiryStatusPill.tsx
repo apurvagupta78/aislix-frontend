@@ -11,7 +11,7 @@ export function ExpiryStatusPill({ status, date, today }: { status: ExpiryStatus
   return (
     <span
       title={describeExpiry(date, today)}
-      className="inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]"
+      className="inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#04203F]"
       style={STYLE[status]}
     >
       {status === "expired" ? <strong>EXPIRED</strong> : EXPIRY_STATUS_LABEL[status]}

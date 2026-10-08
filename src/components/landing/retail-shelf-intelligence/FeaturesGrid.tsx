@@ -39,7 +39,7 @@ export function FeaturesGrid() {
           {FEATURES.map(({ Icon, title, body }) => (
             <div
               key={title}
-              className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-card"
+              className="rounded-xl border border-border bg-card p-5 transition-shadow"
             >
               <Icon className="size-5 text-primary" strokeWidth={1.7} />
               <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>

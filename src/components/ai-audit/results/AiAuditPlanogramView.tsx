@@ -258,13 +258,13 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
         return (
           <div className="max-w-[300px]">
             <p className="text-[11px] font-medium uppercase tracking-wide text-[#667085]">Expected</p>
-            <p className="font-medium leading-snug text-[#102A43]">{productLabel(r)}</p>
+            <p className="font-medium leading-snug text-[#04203F]">{productLabel(r)}</p>
             {aiLabel ? (
               <>
                 <p className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[#667085]">
                   Actual by AI
                 </p>
-                <p className="leading-snug text-[#102A43]">{aiLabel}</p>
+                <p className="leading-snug text-[#04203F]">{aiLabel}</p>
               </>
             ) : (
               <p className="mt-1 text-[11px] text-[#667085]">Actual by AI: —</p>
@@ -317,7 +317,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               <div className="space-y-1">
                 {r.expected_location ? (
                   <p className="text-[11px] text-[#667085]">
-                    Expected <span className="font-mono text-[#102A43]">{r.expected_location}</span>
+                    Expected <span className="font-mono text-[#04203F]">{r.expected_location}</span>
                   </p>
                 ) : null}
                 {r.actual_facings != null ? (
@@ -387,7 +387,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
       {countPending ? (
         <div
-          className="rounded-2xl border border-[#D9E2E8] bg-[#FFEAF1] px-4 py-3 text-sm text-[#102A43]"
+          className="rounded-2xl border border-[#D9E2E8] bg-[#FFEAF1] px-4 py-3 text-sm text-[#04203F]"
           role="status"
         >
           <p className="font-semibold tracking-wide">COUNT VERIFICATION PENDING</p>
@@ -425,7 +425,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
         >
           {countPending || compliance == null ? (
             <div className="flex min-h-[140px] flex-col items-center justify-center gap-2 px-4 text-center">
-              <p className="text-sm font-semibold text-[#102A43]">COUNT VERIFICATION PENDING</p>
+              <p className="text-sm font-semibold text-[#04203F]">COUNT VERIFICATION PENDING</p>
               <p className="text-xs text-[#667085]">
                 {analysis.products.length} products · aggregate compliance unavailable
               </p>

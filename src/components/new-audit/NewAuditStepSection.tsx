@@ -56,7 +56,7 @@ export function NewAuditStepSection({
           <CircleDashed className="size-4 shrink-0 text-[var(--aislix-secondary)]" aria-hidden />
         ) : null}
       </header>
-      {error ? <p className="mb-4 text-sm font-medium text-[#102A43]">{error}</p> : null}
+      {error ? <p className="mb-4 text-sm font-medium text-[#04203F]">{error}</p> : null}
       {children}
     </section>
   );

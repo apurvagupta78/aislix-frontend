@@ -194,7 +194,7 @@ export function CaBoard({ rows }: { rows: LifecycleAction[] }) {
                     key={row.id}
                     to="/corrective-actions/$actionId"
                     params={{ actionId: row.id }}
-                    className="block rounded-lg border bg-white p-3 shadow-card transition-shadow hover:shadow-md"
+                    className="block rounded-lg border bg-white p-3 shadow-card transition-shadow"
                     style={{
                       borderColor: AISLIX_PALETTE.border,
                       boxShadow: isActionLate(row) ? `inset 3px 0 0 ${CA_PINK_BAR}` : undefined,

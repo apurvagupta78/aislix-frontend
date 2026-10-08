@@ -123,7 +123,7 @@ export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"
               stroke="#9B86D9"
               strokeWidth={2}
               dot={data.length <= 12 ? { r: 4, fill: "#9B86D9", strokeWidth: 0 } : false}
-              label={data.length <= 8 ? { position: "top", fontSize: 11, fill: "#102A43" } : false}
+              label={data.length <= 8 ? { position: "top", fontSize: 11, fill: "#04203F" } : false}
               animationDuration={300}
             />
           </LineChart>

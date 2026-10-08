@@ -92,7 +92,7 @@ export function SegmentHomePanel({ filters, previewDemo, userEmail }: Props) {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 id="segment-home-title" className="text-base font-semibold text-[#102A43]">
+            <h2 id="segment-home-title" className="text-base font-semibold text-[#04203F]">
               {config.question}
             </h2>
             {result?.labeledDemo ? (
@@ -107,7 +107,7 @@ export function SegmentHomePanel({ filters, previewDemo, userEmail }: Props) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#667085]">
-        <span className="inline-flex items-center gap-1 rounded-full border border-[#C1E4F8] bg-[#EEF6FA] px-2 py-0.5 text-[#102A43]">
+        <span className="inline-flex items-center gap-1 rounded-full border border-[#C1E4F8] bg-[#EEF6FA] px-2 py-0.5 text-[#04203F]">
           <Sparkles className="size-3" aria-hidden />
           AI detected · completed AI audits only
         </span>
@@ -135,7 +135,7 @@ export function SegmentHomePanel({ filters, previewDemo, userEmail }: Props) {
       ) : (
         <>
           {headline ? (
-            <p className="mt-4 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-3 py-2 text-sm text-[#102A43]">
+            <p className="mt-4 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-3 py-2 text-sm text-[#04203F]">
               {headline}
             </p>
           ) : null}
@@ -181,7 +181,7 @@ function SegmentSwitcher({
             className={cn(
               "rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150",
               active
-                ? "border-[#102A43] bg-[#102A43] text-white"
+                ? "border-[#04203F] bg-[#04203F] text-white"
                 : "border-[#D9E2E8] bg-white text-[#667085] hover:bg-[#F4F7F9]",
             )}
           >
@@ -213,7 +213,7 @@ export function SegmentKpiCard({ kpi }: { kpi: SegmentKpiView }) {
             <span
               className={cn(
                 "inline-flex items-center text-xs font-semibold",
-                good ? "text-[#3d7a55]" : "text-[#102A43]",
+                good ? "text-[#3d7a55]" : "text-[#04203F]",
               )}
               title="Change vs the previous period of the same length"
             >
@@ -231,7 +231,7 @@ export function SegmentKpiCard({ kpi }: { kpi: SegmentKpiView }) {
       <p
         className={cn(
           "mt-2 text-2xl font-semibold",
-          kpi.unavailable ? "text-[#667085]" : "text-[#102A43]",
+          kpi.unavailable ? "text-[#667085]" : "text-[#04203F]",
         )}
       >
         {kpi.value}
@@ -370,7 +370,7 @@ function FixesCard({ data }: { data: SegmentDashboard | null }) {
         <ul className="divide-y divide-[#EEF1F4]">
           {rows.map((r) => (
             <li key={r.label} className="flex items-center justify-between py-2.5 text-sm">
-              <span className="flex items-center gap-2 text-[#102A43]">
+              <span className="flex items-center gap-2 text-[#04203F]">
                 <span
                   className="size-2.5 rounded-full border border-[#D9E2E8]"
                   style={{ backgroundColor: r.tone }}
@@ -378,7 +378,7 @@ function FixesCard({ data }: { data: SegmentDashboard | null }) {
                 />
                 {r.label}
               </span>
-              <span className="font-semibold text-[#102A43]">
+              <span className="font-semibold text-[#04203F]">
                 {r.value == null ? "N/A" : r.value.toLocaleString("en-IN")}
               </span>
             </li>
@@ -426,7 +426,7 @@ function StoresTable({ config, stores }: { config: SegmentConfig; stores: Segmen
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-[#D9E2E8]">
       <div className="flex items-center justify-between gap-2 border-b border-[#D9E2E8] bg-[#F4F7F9] px-4 py-2.5">
-        <h3 className="text-sm font-semibold text-[#102A43]">{config.storesTitle}</h3>
+        <h3 className="text-sm font-semibold text-[#04203F]">{config.storesTitle}</h3>
         <span className="text-xs text-[#667085]">
           {stores.length > rows.length ? `Top ${rows.length} of ${stores.length}` : `${stores.length} total`}
         </span>
@@ -446,7 +446,7 @@ function StoresTable({ config, stores }: { config: SegmentConfig; stores: Segmen
           <tbody>
             {rows.map((s) => (
               <tr key={s.store_id ?? s.store_name} className="border-t border-[#EEF1F4]">
-                <td className="px-4 py-2 text-[#102A43]">
+                <td className="px-4 py-2 text-[#04203F]">
                   <span className="font-medium">{s.store_name}</span>
                   {s.city ? <span className="ml-1 text-xs text-[#667085]">· {s.city}</span> : null}
                 </td>
@@ -455,7 +455,7 @@ function StoresTable({ config, stores }: { config: SegmentConfig; stores: Segmen
                     key={c}
                     className={cn(
                       "px-3 py-2 text-right tabular-nums",
-                      storeCell(c, s) === "N/A" ? "text-[#667085]" : "text-[#102A43]",
+                      storeCell(c, s) === "N/A" ? "text-[#667085]" : "text-[#04203F]",
                     )}
                   >
                     {storeCell(c, s)}
@@ -482,7 +482,7 @@ function ChartShell({
   return (
     <div className="h-full rounded-xl border border-[#D9E2E8] bg-white p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[#102A43]">{title}</h3>
+        <h3 className="text-sm font-semibold text-[#04203F]">{title}</h3>
         <span className="text-[10px] font-medium uppercase tracking-wide text-[#667085]">{provenance}</span>
       </div>
       {children}
@@ -501,13 +501,13 @@ function Unavailable({ text }: { text: string }) {
 function EmptyCard({ title, body, cta }: { title: string; body: string; cta?: boolean }) {
   return (
     <div className="mt-4 rounded-xl border border-[#D9E2E8] bg-[#EEF1F4]/80 px-4 py-4">
-      <p className="text-sm font-semibold text-[#102A43]">{title}</p>
+      <p className="text-sm font-semibold text-[#04203F]">{title}</p>
       <p className="mt-1 text-sm text-[#667085]">{body}</p>
       {cta ? (
         <Link
           to="/new-audit"
           search={{ templateId: undefined, systemKey: undefined, assign: false }}
-          className="mt-3 inline-flex rounded-lg bg-[#102A43] px-3 py-2 text-xs font-medium text-white"
+          className="mt-3 inline-flex rounded-lg bg-[#04203F] px-3 py-2 text-xs font-medium text-white"
         >
           Start Audit
         </Link>

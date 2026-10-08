@@ -124,7 +124,7 @@ export function AiResultsHero({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#D9E2E8] bg-white px-3 py-2.5">
-      <Badge className="gap-1 rounded-full bg-[#F3EFFB] text-[#102A43]">
+      <Badge className="gap-1 rounded-full bg-[#F3EFFB] text-[#04203F]">
         <Sparkles className="size-3" /> AI Audit
       </Badge>
       <Badge variant="outline">{modeLabel}</Badge>
@@ -251,7 +251,7 @@ export function AiExecutiveSummary({
             return (
               <h4
                 key={i}
-                className="rounded-md bg-[#EEF6FA] px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-[#102A43]"
+                className="rounded-md bg-[#EEF6FA] px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-[#04203F]"
               >
                 {block.text}
               </h4>

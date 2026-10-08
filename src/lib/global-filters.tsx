@@ -120,5 +120,7 @@ export function pathUsesGlobalFilters(pathname: string): boolean {
 export function pathShowsGlobalFilterBarInShell(pathname: string): boolean {
   if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return false;
   if (pathname === "/" || pathname === "") return false;
-  return pathUsesGlobalFilters(pathname);
+  const path = pathname.replace(/\/+$/, "");
+  // List pages only; detail pages (e.g. /findings/$id) stay uncluttered.
+  return (GLOBAL_FILTER_PATHS as readonly string[]).includes(path);
 }

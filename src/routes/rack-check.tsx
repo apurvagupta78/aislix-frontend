@@ -58,9 +58,9 @@ type CheckRow = {
 };
 
 const STATUS_STYLE: Record<RackCheckStatus, string> = {
-  good: "border-[#79E2A8] bg-[#79E2A8]/15 text-[#102A43]",
-  attention: "border-[#8EC9E8] bg-[#8EC9E8]/15 text-[#102A43]",
-  needs_refill: "border-[#F6CFDC] bg-[#FFEAF1] text-[#102A43]",
+  good: "border-[#79E2A8] bg-[#79E2A8]/15 text-[#04203F]",
+  attention: "border-[#8EC9E8] bg-[#8EC9E8]/15 text-[#04203F]",
+  needs_refill: "border-[#F6CFDC] bg-[#FFEAF1] text-[#04203F]",
   none_found: "border-[#D9E2E8] bg-[#EEF1F4] text-[#667085]",
   unclear: "border-[#D9E2E8] bg-[#EEF1F4] text-[#667085]",
 };
@@ -169,7 +169,7 @@ function RackCheckPage() {
           aria-labelledby="new-check"
           className="h-fit rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm sm:p-5"
         >
-          <h2 id="new-check" className="text-base font-semibold text-[#102A43]">
+          <h2 id="new-check" className="text-base font-semibold text-[#04203F]">
             New rack check
           </h2>
           <p className="mt-1 text-sm text-[#667085]">Which bins are empty, running low or messy right now?</p>
@@ -201,7 +201,7 @@ function RackCheckPage() {
             <label
               className={cn(
                 "flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-3 py-3 text-sm transition-colors duration-150",
-                file ? "border-[#7DB7D6] bg-[#EEF6FA] text-[#102A43]" : "border-[#D9E2E8] text-[#667085] hover:bg-[#F4F7F9]",
+                file ? "border-[#7DB7D6] bg-[#EEF6FA] text-[#04203F]" : "border-[#D9E2E8] text-[#667085] hover:bg-[#F4F7F9]",
               )}
             >
               <Camera className="size-4 shrink-0" aria-hidden />
@@ -252,7 +252,7 @@ function RackCheckPage() {
 
           {rows.length > 1 ? (
             <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-[#102A43]">Recent checks</h3>
+              <h3 className="text-sm font-semibold text-[#04203F]">Recent checks</h3>
               <ul className="mt-2 divide-y divide-[#EEF1F4]">
                 {rows.map((r) => (
                   <li key={r.id}>
@@ -270,7 +270,7 @@ function RackCheckPage() {
                         <span className="size-10 shrink-0 rounded-md bg-[#EEF1F4]" />
                       )}
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-[#102A43]">
+                        <span className="block truncate text-sm font-medium text-[#04203F]">
                           {r.stores?.name ?? "Store"}
                           {rackLabel(r) ? ` · Rack ${rackLabel(r)}` : ""}
                         </span>
@@ -309,7 +309,7 @@ function CountTile({ label, value, accent, hint }: { label: string; value: numbe
   return (
     <div className="rounded-xl border border-[#D9E2E8] border-l-4 bg-white px-3 py-2" style={{ borderLeftColor: accent }}>
       <p className="text-xs text-[#667085]">{label}</p>
-      <p className="text-xl font-semibold tabular-nums text-[#102A43]">{value}</p>
+      <p className="text-xl font-semibold tabular-nums text-[#04203F]">{value}</p>
       {hint ? <p className="text-[11px] text-[#667085]">{hint}</p> : null}
     </div>
   );
@@ -322,7 +322,7 @@ function CheckResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
     <div id="check-result" className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold text-[#102A43]">
+          <h2 className="text-base font-semibold text-[#04203F]">
             {row.stores?.name ?? "Store"}
             {rack ? ` · Rack ${rack}` : ""}
           </h2>
@@ -365,7 +365,7 @@ function CheckResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
         )}
         <div className="min-w-0 space-y-3">
           {row.summary ? (
-            <p className="flex gap-2 text-sm text-[#102A43]">
+            <p className="flex gap-2 text-sm text-[#04203F]">
               <Sparkles className="mt-0.5 size-4 shrink-0 text-[#9B86D9]" aria-hidden />
               <span>{row.summary}</span>
             </p>
@@ -405,7 +405,7 @@ function BinGrid({ shelves }: { shelves: RackShelf[] }) {
                   title={[bin.code ?? `Bin ${bi + 1}`, BIN_STATUS_LABEL[bin.status], bin.note].filter(Boolean).join(" · ")}
                   className={cn("min-w-0 rounded-lg border px-2 py-1.5", BIN_STYLE[bin.status])}
                 >
-                  <span className="block truncate text-[11px] font-medium text-[#102A43]">{bin.code ?? `Bin ${bi + 1}`}</span>
+                  <span className="block truncate text-[11px] font-medium text-[#04203F]">{bin.code ?? `Bin ${bi + 1}`}</span>
                   <span className="block truncate text-[11px] text-[#667085]">{BIN_STATUS_LABEL[bin.status]}</span>
                 </div>
               ))}
@@ -428,7 +428,7 @@ function BinGrid({ shelves }: { shelves: RackShelf[] }) {
 function Notice({ title, body }: { title: string; body: string }) {
   return (
     <div className="rounded-2xl border border-[#D9E2E8] bg-[#EEF1F4]/80 px-4 py-6">
-      <p className="text-sm font-semibold text-[#102A43]">{title}</p>
+      <p className="text-sm font-semibold text-[#04203F]">{title}</p>
       <p className="mt-1 text-sm text-[#667085]">{body}</p>
     </div>
   );

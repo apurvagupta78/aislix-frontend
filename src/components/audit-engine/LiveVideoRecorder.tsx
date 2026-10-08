@@ -282,7 +282,7 @@ export function LiveVideoRecorder({ open, onOpenChange, storeName, storeLocation
 
         {cameraError ? (
           <p
-            className="rounded-xl border px-4 py-3 text-sm text-[#102A43]"
+            className="rounded-xl border px-4 py-3 text-sm text-[#04203F]"
             style={{ background: AISLIX_PALETTE.pink, borderColor: AISLIX_PALETTE.border }}
           >
             {cameraError}
@@ -298,7 +298,7 @@ export function LiveVideoRecorder({ open, onOpenChange, storeName, storeLocation
               </div>
             ) : null}
             {recording ? (
-              <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-[#102A43]/85 px-2 py-0.5 text-xs font-medium text-white">
+              <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-[#04203F]/85 px-2 py-0.5 text-xs font-medium text-white">
                 <Circle className="size-2 animate-pulse fill-[#F9A8C9] text-[#F9A8C9]" /> REC {formatVideoDuration(elapsed)}
               </div>
             ) : null}
@@ -306,7 +306,7 @@ export function LiveVideoRecorder({ open, onOpenChange, storeName, storeLocation
         )}
 
         <div
-          className="flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-xs text-[#102A43]"
+          className="flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-xs text-[#04203F]"
           style={{
             background: gps ? ACCENT_TINT.green : ACCENT_TINT.blue,
             borderColor: gps ? AISLIX_PALETTE.green : AISLIX_PALETTE.border,

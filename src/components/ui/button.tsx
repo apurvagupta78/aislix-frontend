@@ -17,7 +17,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         brand: "bg-brand text-brand-foreground shadow-soft hover:bg-brand/92",
-        hero: "bg-brand text-brand-foreground shadow-card hover:-translate-y-0.5 hover:shadow-lift",
+        hero: "bg-brand text-brand-foreground shadow-card",
         soft: "border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-local-bg)]",
         subtle:
           "border border-border bg-card text-foreground shadow-soft hover:border-brand/40 hover:text-brand transition-all",

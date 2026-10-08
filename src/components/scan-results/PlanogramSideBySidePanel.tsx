@@ -202,7 +202,7 @@ function ExpectedPositionCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full rounded-lg border border-l-[3px] bg-card px-3 py-2.5 text-left text-xs shadow-sm transition-shadow hover:shadow-md",
+        "w-full rounded-lg border border-l-[3px] bg-card px-3 py-2.5 text-left text-xs shadow-sm transition-shadow",
         STATUS_ACCENT[position.status],
         selected && "ring-2 ring-brand/25",
       )}

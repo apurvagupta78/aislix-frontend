@@ -328,7 +328,7 @@ function AuditReviewPage() {
         <aside className="space-y-4 rounded-xl border border-border bg-card p-4 lg:sticky lg:top-4 lg:self-start">
           <h3 className="font-semibold">Review actions</h3>
           {lockedToReviewer ? (
-            <p className="rounded-lg border border-[#D9E2E8] bg-[#EEF1F4] p-3 text-xs text-[#102A43]">
+            <p className="rounded-lg border border-[#D9E2E8] bg-[#EEF1F4] p-3 text-xs text-[#04203F]">
               This audit needs an independent reviewer. Only{" "}
               <strong>{reviewerQuery.data?.name}</strong> can approve, flag or reject it.
             </p>

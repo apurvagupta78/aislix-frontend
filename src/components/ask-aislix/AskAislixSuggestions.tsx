@@ -74,7 +74,7 @@ export function AskAislixSuggestions({
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1E4F8]",
                   "disabled:pointer-events-none disabled:opacity-50",
                   !isActive &&
-                    "border-[#D9E2E8] bg-white text-[#667085] hover:text-[#102A43]",
+                    "border-[#D9E2E8] bg-white text-[#667085] hover:text-[#04203F]",
                 )}
                 style={
                   isActive
@@ -105,7 +105,7 @@ export function AskAislixSuggestions({
                 className={cn(
                   "group flex w-full flex-col gap-3 rounded-2xl border p-4 text-left",
                   "transition-[border-color,transform,box-shadow] duration-150",
-                  "hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(15,42,68,0.08)]",
+                  "",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1E4F8]",
                   "disabled:pointer-events-none disabled:opacity-50",
                 )}

@@ -52,7 +52,7 @@ export function LocationLabelCell({ label, status }: { label: string | null; sta
   const partial = status === "PARTIAL" || label.includes("?");
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="font-mono text-[11px] text-[#102A43]">{label}</span>
+      <span className="font-mono text-[11px] text-[#04203F]">{label}</span>
       {partial ? <AiPill tone="grey">PARTIAL</AiPill> : null}
     </span>
   );
@@ -183,7 +183,7 @@ export function AiLocationCards({
         {empty.length ? (
           <ul className="space-y-3">
             {empty.map((row) => (
-              <li key={row.label} className="flex flex-wrap items-center gap-3 text-sm text-[#102A43]">
+              <li key={row.label} className="flex flex-wrap items-center gap-3 text-sm text-[#04203F]">
                 <AiPill tone="pink" mono className="px-3 py-1 text-xs">
                   {row.label}
                 </AiPill>

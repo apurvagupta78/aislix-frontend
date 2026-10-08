@@ -60,7 +60,7 @@ export function KpiCard({
       className={cn(
         "rounded-lg border p-4 text-left shadow-card",
         t.surface,
-        onClick && "transition-colors hover:shadow-card",
+        onClick && "transition-colors",
         className,
       )}
     >

@@ -1010,10 +1010,10 @@ function ScanPage() {
                   type="button"
                   onClick={openSweep}
                   disabled={busy || items.length >= MAX_SCAN_IMAGES}
-                  className="group flex flex-col items-start gap-3 rounded-2xl border border-brand/40 bg-brand-soft/40 p-5 text-left transition-all hover:border-brand/60 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:col-span-2"
+                  className="group flex flex-col items-start gap-3 rounded-2xl border border-brand/40 bg-brand-soft/40 p-5 text-left transition-all hover:border-brand/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:col-span-2"
                 >
                   <span className="flex w-full items-center justify-between gap-2">
-                    <span className="grid size-11 place-items-center rounded-xl bg-gradient-brand text-brand-foreground transition-transform group-hover:scale-105">
+                    <span className="grid size-11 place-items-center rounded-xl bg-gradient-brand text-brand-foreground transition-transform">
                       <ScanLine className="size-5" />
                     </span>
                     <Badge variant="secondary" className="rounded-full">
@@ -1033,9 +1033,9 @@ function ScanPage() {
                   type="button"
                   onClick={openCamera}
                   disabled={busy}
-                  className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                  className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
                 >
-                  <span className="grid size-11 place-items-center rounded-xl bg-gradient-brand text-brand-foreground transition-transform group-hover:scale-105">
+                  <span className="grid size-11 place-items-center rounded-xl bg-gradient-brand text-brand-foreground transition-transform">
                     <Camera className="size-5" />
                   </span>
                   <span>
@@ -1050,9 +1050,9 @@ function ScanPage() {
                   type="button"
                   onClick={openFiles}
                   disabled={busy}
-                  className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                  className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
                 >
-                  <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand transition-transform group-hover:scale-105">
+                  <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand transition-transform">
                     <UploadCloud className="size-5" />
                   </span>
                   <span>

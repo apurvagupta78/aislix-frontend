@@ -151,14 +151,14 @@ export function NewAuditStep2StartMethod({
       {startChoice && evidenceSettings ? (
         <div id="step-3-evidence" className="mt-6 space-y-4 rounded-2xl border border-[#D9E2E8] bg-white p-4">
           <div>
-            <h4 className="text-sm font-semibold text-[#102A43]">Evidence required</h4>
+            <h4 className="text-sm font-semibold text-[#04203F]">Evidence required</h4>
             <p className="mt-0.5 text-xs text-[#667085]">
               What the auditee must capture before they can submit. Every option you tick is checked on submit.
             </p>
           </div>
           {evidenceSettings}
           {evidenceError ? (
-            <p className="rounded-lg border border-[#D9E2E8] px-3 py-2 text-xs font-medium text-[#102A43]" style={{ background: "#FFEAF1" }}>
+            <p className="rounded-lg border border-[#D9E2E8] px-3 py-2 text-xs font-medium text-[#04203F]" style={{ background: "#FFEAF1" }}>
               {evidenceError}
             </p>
           ) : null}

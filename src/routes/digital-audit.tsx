@@ -630,7 +630,7 @@ function DigitalAuditPage() {
 
         {!validation.ok ? (
           <div className="rounded-xl border border-[#D9E2E8] bg-white p-4 text-sm">
-            <p className="font-semibold text-[#102A43]">Before you can submit:</p>
+            <p className="font-semibold text-[#04203F]">Before you can submit:</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-[#667085] marker:text-[#9B86D9]">
               {validation.missingSkus.length > 0 && (
                 <li>Missing counts: {validation.missingSkus.length} SKU(s)</li>
@@ -717,7 +717,7 @@ function RequiredEvidencePanel({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ShieldCheck className="size-4 text-[#7DB7D6]" />
-          <h3 className="text-sm font-semibold text-[#102A43]">Required evidence</h3>
+          <h3 className="text-sm font-semibold text-[#04203F]">Required evidence</h3>
           {policyLevel ? (
             <Badge variant="outline" className="capitalize">
               {policyLevel} assurance
@@ -749,7 +749,7 @@ function RequiredEvidencePanel({
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium text-[#102A43]">{req.label}</p>
+                  <p className="font-medium text-[#04203F]">{req.label}</p>
                   {req.total > 1 || req.id === "variance_photo" || req.id === "barcode" ? (
                     <span className="tabular-nums text-[#667085]">
                       {req.done}/{req.total}

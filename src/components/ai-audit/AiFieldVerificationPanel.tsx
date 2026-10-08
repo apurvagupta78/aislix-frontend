@@ -68,7 +68,7 @@ export function AiFieldVerificationPanel({ scanId, products, canEdit = true }: P
   return (
     <div className="mt-6 rounded-xl border border-[#D9E2E8] bg-white p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[#102A43]">Human verification</h3>
+        <h3 className="text-sm font-semibold text-[#04203F]">Human verification</h3>
         <span className="text-xs tabular-nums text-[#667085]">
           {products.length} product{products.length === 1 ? "" : "s"} · {verifiedCount} field
           {verifiedCount === 1 ? "" : "s"} human confirmed
@@ -115,7 +115,7 @@ export function AiFieldVerificationPanel({ scanId, products, canEdit = true }: P
 
               return (
                 <tr key={rowKey} className="border-b border-[#EEF1F4]">
-                  <td className="py-2 pr-3 font-medium text-[#102A43]">
+                  <td className="py-2 pr-3 font-medium text-[#04203F]">
                     {label}
                     {canEdit && !persistedId ? (
                       <span className="block text-xs font-normal text-[#667085]">
@@ -141,7 +141,7 @@ export function AiFieldVerificationPanel({ scanId, products, canEdit = true }: P
                       onSave={save("visible_units", aiUnits)}
                     />
                   </td>
-                  <td className="py-2 text-[#102A43]">
+                  <td className="py-2 text-[#04203F]">
                     F {opsFacings ?? "N/A"} · U {opsUnits ?? "N/A"}
                   </td>
                 </tr>
@@ -182,7 +182,7 @@ function VerifyCell({
   }, [value]);
   if (!canEdit) {
     return (
-      <span className="inline-flex items-center gap-1 text-[#102A43]">
+      <span className="inline-flex items-center gap-1 text-[#04203F]">
         {value != null ? <CheckCircle2 className="size-3.5 text-[#79E2A8]" /> : null}
         {value ?? "—"}
       </span>

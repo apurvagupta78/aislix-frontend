@@ -22,7 +22,7 @@ export function TemplateChecklistPreview({ definition, templateName }: { definit
   return (
     <div className="space-y-4 rounded-2xl border border-[#D9E2E8] bg-white p-4">
       <div>
-        <h4 className="text-sm font-semibold text-[#102A43]">Template fields</h4>
+        <h4 className="text-sm font-semibold text-[#04203F]">Template fields</h4>
         <p className="mt-0.5 text-xs text-[#667085]">
           “{templateName}” is a checklist — the auditee answers each field once per audit. No lines to set up.
         </p>
@@ -41,12 +41,12 @@ export function TemplateChecklistPreview({ definition, templateName }: { definit
                     key={f.id}
                     className="flex items-center justify-between gap-2 rounded-lg border border-[#D9E2E8] px-3 py-2"
                   >
-                    <span className="min-w-0 truncate text-sm text-[#102A43]">
+                    <span className="min-w-0 truncate text-sm text-[#04203F]">
                       {f.label}
                       {f.required ? <span className="ml-1 text-xs text-[#667085]">· required</span> : null}
                     </span>
                     <span
-                      className="shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium text-[#102A43]"
+                      className="shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium text-[#04203F]"
                       style={{ background: style.tint, borderColor: style.border }}
                     >
                       {style.label}

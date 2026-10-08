@@ -873,7 +873,7 @@ export function HelpMeAskAislixDialog({
                   type="button"
                   disabled={!canContinue()}
                   onClick={handlePrimaryAction}
-                  className="border-[#7DB7D6] bg-[#7DB7D6] text-[#102A43] hover:bg-[#6aa9c9]"
+                  className="border-[#7DB7D6] bg-[#7DB7D6] text-[#04203F] hover:bg-[#6aa9c9]"
                 >
                   {isLastStep ? "Generate Prompt" : "Continue"}
                 </Button>

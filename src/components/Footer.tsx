@@ -9,7 +9,7 @@ const itemClass =
 
 function ColumnTitle({ children }: { children: ReactNode }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+    <p className="text-sm font-semibold text-foreground">
       {children}
     </p>
   );
@@ -19,7 +19,7 @@ function Soon({ label }: { label: string }) {
   return (
     <span className="inline-flex items-center gap-2 text-sm text-muted-foreground/70">
       {label}
-      <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-brand">
+      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
         Soon
       </span>
     </span>
@@ -31,7 +31,7 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-border/80 bg-surface">
+    <footer className="border-t border-border/80 bg-white">
       <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-12">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.35fr_repeat(4,minmax(0,1fr))] lg:gap-10">
           <div className="sm:col-span-2 lg:col-span-1">
@@ -202,3 +202,30 @@ export function SiteFooter() {
 
 /** Alias for explicit global footer imports. */
 export const Footer = SiteFooter;
+
+const appFooterLink =
+  "transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25 rounded-sm";
+
+/** One-line footer for signed-in pages. */
+export function AppFooter() {
+  const year = new Date().getFullYear();
+  return (
+    <footer className="border-t border-line">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-5 py-5 text-xs text-muted-foreground sm:px-8">
+        <span>© {year} Aislix Technologies</span>
+        <Link to="/privacy" className={appFooterLink}>
+          Privacy
+        </Link>
+        <Link to="/terms" className={appFooterLink}>
+          Terms
+        </Link>
+        <Link to="/contact" search={{ subject: "Help & support" }} className={appFooterLink}>
+          Support
+        </Link>
+        <a href={`mailto:${ENQUIRY_INBOX}`} className={appFooterLink}>
+          {ENQUIRY_INBOX}
+        </a>
+      </div>
+    </footer>
+  );
+}

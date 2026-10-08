@@ -42,7 +42,7 @@ export function TemplateLibraryCard({
   const purpose = purposeLabel ?? t.audit_purpose ?? typeLabel;
 
   return (
-    <div className="play-card flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--aislix-border)] bg-white p-4 transition-shadow hover:shadow-md">
+    <div className="play-card flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--aislix-border)] bg-white p-4 transition-shadow">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="mb-1.5 flex flex-wrap gap-1">

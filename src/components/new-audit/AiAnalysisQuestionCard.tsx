@@ -50,7 +50,7 @@ export function AiAnalysisQuestionCard({
       <div className="flex items-start gap-2">
         <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: AISLIX_PALETTE.purple }} />
         <div>
-          <h4 className="text-sm font-semibold text-[#102A43]">What should AI analyse?</h4>
+          <h4 className="text-sm font-semibold text-[#04203F]">What should AI analyse?</h4>
           <p className="mt-0.5 text-xs text-[#667085]">
             {rows
               ? "AI identifies and counts the products in your shelf photos. Aislix matches them to your document. AI then answers what you tick and ask here."
@@ -83,7 +83,7 @@ export function AiAnalysisQuestionCard({
                 onChange={(event) => toggle(option.value, event.target.checked)}
               />
               <span className="min-w-0">
-                <span className="block text-[13px] font-medium text-[#102A43]">{option.label}</span>
+                <span className="block text-[13px] font-medium text-[#04203F]">{option.label}</span>
                 <span className="block text-[11px] text-[#667085]">
                   {!available.has(option.value) && option.needs ? NEEDS_LABEL[option.needs] : option.hint}
                 </span>
@@ -94,7 +94,7 @@ export function AiAnalysisQuestionCard({
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="ai-audit-question" className="text-xs font-semibold text-[#102A43]">
+        <label htmlFor="ai-audit-question" className="text-xs font-semibold text-[#04203F]">
           Anything else you want to know? <span className="font-normal text-[#667085]">(optional)</span>
         </label>
         <Textarea

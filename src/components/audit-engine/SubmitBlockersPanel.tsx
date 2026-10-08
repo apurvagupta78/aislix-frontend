@@ -43,7 +43,7 @@ export const SubmitBlockersPanel = forwardRef<HTMLElement, Props>(function Submi
       >
         <CheckCircle2 className="size-5 shrink-0" style={{ color: AISLIX_PALETTE.green }} />
         <div>
-          <p className="text-sm font-semibold text-[#102A43]">Everything required is done</p>
+          <p className="text-sm font-semibold text-[#04203F]">Everything required is done</p>
           <p className="text-xs text-[#667085]">You can submit the audit now.</p>
         </div>
       </section>
@@ -64,9 +64,9 @@ export const SubmitBlockersPanel = forwardRef<HTMLElement, Props>(function Submi
       style={{ borderColor: AISLIX_PALETTE.border }}
     >
       <div className="flex items-start gap-3 px-5 py-4" style={{ background: AISLIX_PALETTE.pink }}>
-        <AlertCircle className="mt-0.5 size-5 shrink-0 text-[#102A43]" />
+        <AlertCircle className="mt-0.5 size-5 shrink-0 text-[#04203F]" />
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-semibold text-[#102A43]">{title}</h3>
+          <h3 className="text-base font-semibold text-[#04203F]">{title}</h3>
           <p className="mt-0.5 text-sm text-[#667085]">
             {blocked
               ? "Your work is saved. Complete the items below, then press Submit audit again."
@@ -77,7 +77,7 @@ export const SubmitBlockersPanel = forwardRef<HTMLElement, Props>(function Submi
           <button
             type="button"
             aria-label="Dismiss"
-            className="rounded p-1 text-[#667085] hover:bg-white/60 hover:text-[#102A43]"
+            className="rounded p-1 text-[#667085] hover:bg-white/60 hover:text-[#04203F]"
             onClick={onDismissProblem}
           >
             <X className="size-4" />
@@ -90,13 +90,13 @@ export const SubmitBlockersPanel = forwardRef<HTMLElement, Props>(function Submi
           ? blockers.map((b, i) => (
               <li key={b.id} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
                 <span
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-[#102A43]"
+                  className="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-[#04203F]"
                   style={{ background: ACCENT_TINT.grey, border: `1px solid ${AISLIX_PALETTE.border}` }}
                 >
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[#102A43]">{b.title}</p>
+                  <p className="text-sm font-medium text-[#04203F]">{b.title}</p>
                   <p className="text-sm text-[#667085]">{b.detail}</p>
                 </div>
                 {onGoTo && (b.rowIndexes.length || b.kind === "header" || b.kind === "evidence") ? (
@@ -109,12 +109,12 @@ export const SubmitBlockersPanel = forwardRef<HTMLElement, Props>(function Submi
           : problem!.items.map((item, i) => (
               <li key={`${i}-${item}`} className="flex items-start gap-3 px-5 py-3">
                 <span
-                  className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-[#102A43]"
+                  className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-[#04203F]"
                   style={{ background: ACCENT_TINT.grey, border: `1px solid ${AISLIX_PALETTE.border}` }}
                 >
                   {i + 1}
                 </span>
-                <p className="text-sm text-[#102A43]">{item}</p>
+                <p className="text-sm text-[#04203F]">{item}</p>
               </li>
             ))}
       </ol>

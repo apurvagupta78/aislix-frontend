@@ -126,7 +126,7 @@ function GuidePage() {
     <MarketingPage>
       <section className="mx-auto max-w-5xl px-5 py-12 sm:px-8 sm:py-16">
         <p className="text-sm font-medium text-[#667085]">Pilot guide</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#102A43] sm:text-4xl">Getting started with Aislix</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#04203F] sm:text-4xl">Getting started with Aislix</h1>
         <p className="mt-3 max-w-2xl text-base text-[#667085]">
           Six steps to your first audit, then a simple daily routine for your type of business.
         </p>
@@ -135,39 +135,39 @@ function GuidePage() {
           {SETUP.map((step, i) => (
             <li key={step.title} className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#EEF1F4] text-sm font-semibold text-[#102A43]">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#EEF1F4] text-sm font-semibold text-[#04203F]">
                   {i + 1}
                 </span>
                 <step.icon className="size-4 text-[#7DB7D6]" aria-hidden />
-                <h2 className="text-base font-semibold text-[#102A43]">{step.title}</h2>
+                <h2 className="text-base font-semibold text-[#04203F]">{step.title}</h2>
               </div>
               <p className="mt-2 text-sm text-[#667085]">{step.body}</p>
-              <Link to={step.link.to} className="mt-3 inline-block text-sm font-medium text-[#102A43] underline">
+              <Link to={step.link.to} className="mt-3 inline-block text-sm font-medium text-[#04203F] underline">
                 {step.link.label}
               </Link>
             </li>
           ))}
         </ol>
 
-        <h2 className="mt-12 text-2xl font-semibold text-[#102A43]">Your daily routine</h2>
+        <h2 className="mt-12 text-2xl font-semibold text-[#04203F]">Your daily routine</h2>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {ROUTINES.map((r) => (
             <article key={r.segment} className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-[#102A43]">{r.segment}</h3>
+              <h3 className="text-base font-semibold text-[#04203F]">{r.segment}</h3>
               <p className="text-xs text-[#667085]">{r.who}</p>
-              <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-[#102A43]">
+              <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-[#04203F]">
                 {r.steps.map((s) => (
                   <li key={s}>{s}</li>
                 ))}
               </ol>
               <div className="mt-3 flex flex-wrap gap-3 text-sm">
                 {r.page ? (
-                  <Link to={r.page.to} className="font-medium text-[#102A43] underline">
+                  <Link to={r.page.to} className="font-medium text-[#04203F] underline">
                     {r.page.label}
                   </Link>
                 ) : null}
                 {r.report ? (
-                  <a href={`/report?type=${r.report}`} className="font-medium text-[#102A43] underline">
+                  <a href={`/report?type=${r.report}`} className="font-medium text-[#04203F] underline">
                     Open the report
                   </a>
                 ) : null}
@@ -176,15 +176,15 @@ function GuidePage() {
           ))}
         </div>
 
-        <h2 className="mt-12 text-2xl font-semibold text-[#102A43]">Photo tips</h2>
-        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-[#102A43]">
+        <h2 className="mt-12 text-2xl font-semibold text-[#04203F]">Photo tips</h2>
+        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-[#04203F]">
           {PHOTO_TIPS.map((t) => (
             <li key={t}>{t}</li>
           ))}
         </ul>
 
         <div className="mt-12 rounded-2xl border border-[#D9E2E8] bg-[#F4F7F9] p-5">
-          <p className="text-sm font-semibold text-[#102A43]">Need help during the pilot?</p>
+          <p className="text-sm font-semibold text-[#04203F]">Need help during the pilot?</p>
           <p className="mt-1 text-sm text-[#667085]">Write to hello@aislix.com and we will reply the same working day.</p>
           <Button asChild variant="brand" className="mt-3 rounded-xl">
             <Link to="/contact">Contact us</Link>

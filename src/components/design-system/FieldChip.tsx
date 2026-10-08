@@ -28,7 +28,7 @@ export function FieldChip({ label, role = "auditor_input", onClick, selected, cl
         p.border,
         p.text,
         selected && "ring-2 ring-brand/30",
-        onClick && "cursor-pointer hover:shadow-sm",
+        onClick && "cursor-pointer",
         className,
       )}
     >

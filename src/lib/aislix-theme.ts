@@ -5,7 +5,7 @@ import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
  */
 export const AISLIX = {
   bg: "#F2F6F9",
-  primary: "#102A43",
+  primary: "#04203F",
   secondary: "#557187",
   border: "#E7EDF0",
   surface: "#EFF4F7",
@@ -35,7 +35,7 @@ export const ASK_AISLIX_SECTION = {
   /** Header band — same as Demo Data toggle chip */
   background: "#EAF6FD",
   bandBorder: "#C1E4F8",
-  heading: "#102A43",
+  heading: "#04203F",
   subtitle: "#557187",
   muted: "#667085",
   inputBackground: "#FFFFFF",
@@ -55,12 +55,12 @@ export const ASK_AISLIX_SECTION = {
   enhanceText: "#4d6b22",
   chipBackground: "#EAF6FD",
   chipBorder: "#C1E4F8",
-  chipText: "#102A43",
+  chipText: "#04203F",
   /** Scope chips — same Demo Data blue */
   scopeBg: "#EAF6FD",
   scopeBorder: "#C1E4F8",
-  scopeText: "#102A43",
-  blueInk: "#102A43",
+  scopeText: "#04203F",
+  blueInk: "#04203F",
   sparkle: "#1f7ac2",
 } as const;
 
@@ -75,9 +75,9 @@ export const AISLIX_STATUS_MIX: Record<string, string> = {
   Overdue: AISLIX_PALETTE.pink,
 };
 
-/** Soft navy primary CTA — New Audit (matches homepage navy #102A43). */
+/** Soft navy primary CTA — New Audit (matches homepage navy #04203F). */
 export const NEW_AUDIT_BUTTON_CLASS =
-  "rounded-xl border border-[#102A43] bg-[#102A43] text-white shadow-soft hover:bg-[#102A43]/90";
+  "rounded-lg border border-[#04203F] bg-[#04203F] text-white hover:bg-[#04203F]/90";
 
 export const AISLIX_MODEL_SURFACE: Record<string, { bg: string; border: string }> = {
   all: { bg: AISLIX.customBg, border: AISLIX.customBorder },

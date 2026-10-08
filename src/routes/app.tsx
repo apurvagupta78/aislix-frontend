@@ -35,21 +35,21 @@ function AppDownloadPage() {
         <div className="flex items-center gap-3">
           <img src="/icon-192.png" alt="" className="size-14 rounded-2xl border border-[#D9E2E8]" />
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-[#102A43]">Get the Aislix app</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-[#04203F]">Get the Aislix app</h1>
             <p className="text-sm text-[#667085]">Sign in with your Aislix account. Updates arrive automatically.</p>
           </div>
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           <article className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-[#102A43]">Android</h2>
+            <h2 className="text-lg font-semibold text-[#04203F]">Android</h2>
             <p className="mt-1 text-sm text-[#667085]">Version {APP_VERSION} · pilot release, not yet on the Play Store.</p>
             <Button asChild variant="brand" className="mt-4 w-full rounded-xl">
               <a href={APK_URL} download="Aislix.apk">
                 <Download className="size-4" /> Download for Android
               </a>
             </Button>
-            <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-[#102A43]">
+            <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-[#04203F]">
               <li>Tap Download for Android and open the downloaded file.</li>
               <li>
                 If Android asks, allow <span className="font-medium">Install unknown apps</span> for your browser, then go back.
@@ -63,9 +63,9 @@ function AppDownloadPage() {
           </article>
 
           <article className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-[#102A43]">iPhone</h2>
+            <h2 className="text-lg font-semibold text-[#04203F]">iPhone</h2>
             <p className="mt-1 text-sm text-[#667085]">Works from Safari, no download needed.</p>
-            <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-[#102A43]">
+            <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-[#04203F]">
               <li>Open aislix.com in Safari.</li>
               <li>Tap the Share button.</li>
               <li>Tap Add to Home Screen, then Add.</li>
@@ -79,7 +79,7 @@ function AppDownloadPage() {
         </div>
 
         <div className="mt-6 rounded-2xl border border-[#D9E2E8] bg-[#F4F7F9] p-5 text-sm text-[#667085]">
-          <p className="font-medium text-[#102A43]">New to Aislix?</p>
+          <p className="font-medium text-[#04203F]">New to Aislix?</p>
           <p className="mt-1">
             Read the{" "}
             <Link to="/guide" className="underline">

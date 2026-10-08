@@ -26,7 +26,7 @@ export function ProgressRing({
         : "var(--local-line)";
   return (
     <div
-      className="grid shrink-0 place-items-center rounded-full transition-transform duration-300 group-hover:scale-[1.03]"
+      className="grid shrink-0 place-items-center rounded-full transition-transform duration-300"
       style={{
         width: size,
         height: size,
@@ -64,7 +64,7 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow hover:shadow-card group", className)}>
+    <div className={cn("overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow group", className)}>
       <div className="flex items-center justify-between gap-3">
         {icon && (
           <span
@@ -100,7 +100,7 @@ export function RingCard({
   footer?: string | undefined;
 }) {
   return (
-    <div className="group flex items-center gap-4 overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow hover:shadow-card">
+    <div className="group flex items-center gap-4 overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow">
       <ProgressRing value={ringValue} label={ringLabel} sublabel={ringSublabel} tone={tone} />
       <div className="min-w-0">
         <p className="text-sm font-medium text-navy">{label}</p>

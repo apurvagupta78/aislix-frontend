@@ -94,7 +94,7 @@ function RetailKpiCard({
   scanId?: string | null;
 }) {
   const body = (
-    <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4 shadow-sm transition-shadow">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           {title}
@@ -271,7 +271,7 @@ export function WhatNeedsAttentionSection({
                   : "text-muted-foreground";
 
             const body = (
-              <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4 shadow-sm transition-shadow">
                 <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   {card.area_label}
                 </p>

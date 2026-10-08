@@ -35,7 +35,7 @@ const MAX_IMAGE_EDGE = 2400;
 const MIN_IMAGE_EDGE = 1600;
 
 export const CELL_INPUT =
-  "w-full rounded-md border px-1.5 py-1 text-xs text-[#102A43] outline-none transition-shadow focus:bg-white focus:shadow-[0_0_0_2px_#7DB7D6]";
+  "w-full rounded-md border px-1.5 py-1 text-xs text-[#04203F] outline-none transition-shadow focus:bg-white focus:shadow-[0_0_0_2px_#7DB7D6]";
 
 export function isSpreadsheet(file: File): boolean {
   const name = file.name.toLowerCase();
@@ -233,7 +233,7 @@ export async function uploadAndReadDocument(
 export function DocumentBusyBanner({ stage, detail }: { stage: "upload" | "read" | "csv"; detail?: string | null }) {
   return (
     <div
-      className="flex items-center gap-3 rounded-xl border px-4 py-3 text-sm text-[#102A43]"
+      className="flex items-center gap-3 rounded-xl border px-4 py-3 text-sm text-[#04203F]"
       style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.blue }}
       role="status"
     >
@@ -250,7 +250,7 @@ export function DocumentBusyBanner({ stage, detail }: { stage: "upload" | "read"
 export function DocumentErrorBanner({ message }: { message: string }) {
   return (
     <p
-      className="rounded-xl border px-4 py-3 text-sm text-[#102A43]"
+      className="rounded-xl border px-4 py-3 text-sm text-[#04203F]"
       style={{ background: AISLIX_PALETTE.pink, borderColor: "#F6CFDC" }}
       role="alert"
     >
@@ -279,7 +279,7 @@ export function DocumentSaveBar({
           : { background: "#F4F7F9", borderColor: AISLIX_PALETTE.border }
       }
     >
-      <p className="text-xs text-[#102A43]">{unsaved ? unsavedText : savedText}</p>
+      <p className="text-xs text-[#04203F]">{unsaved ? unsavedText : savedText}</p>
       <Button type="button" variant={unsaved ? "brand" : "outline"} size="sm" disabled={!unsaved} onClick={onSave}>
         {unsaved ? <Save className="size-3.5" /> : <Check className="size-3.5" />}
         {unsaved ? "Save changes" : "Saved"}

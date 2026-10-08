@@ -90,7 +90,7 @@ export function TeamAssignmentPanel({
               <span className="flex items-center gap-2 text-sm font-medium">
                 {member.name}
                 {memberNote?.(member) ? (
-                  <span className="rounded-full border border-[#D9E2E8] bg-[#EEF6FA] px-1.5 py-px text-[10px] font-semibold text-[#102A43]">
+                  <span className="rounded-full border border-[#D9E2E8] bg-[#EEF6FA] px-1.5 py-px text-[10px] font-semibold text-[#04203F]">
                     {memberNote(member)}
                   </span>
                 ) : null}

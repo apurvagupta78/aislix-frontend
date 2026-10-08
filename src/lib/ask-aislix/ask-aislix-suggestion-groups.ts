@@ -158,8 +158,8 @@ export const ASK_SUGGESTION_UI_TINTS: Record<AskSuggestionUiGroupId, AskSuggesti
     cardBorder: "#C1E4F8",
     tabBg: "#EAF6FD",
     tabBorder: "#C1E4F8",
-    tabText: "#102A43",
-    ink: "#102A43",
+    tabText: "#04203F",
+    ink: "#04203F",
   },
   Compliance: {
     cardBg: "#e9efdc",
@@ -174,8 +174,8 @@ export const ASK_SUGGESTION_UI_TINTS: Record<AskSuggestionUiGroupId, AskSuggesti
     cardBorder: "#C1E4F8",
     tabBg: "#EAF6FD",
     tabBorder: "#C1E4F8",
-    tabText: "#102A43",
-    ink: "#102A43",
+    tabText: "#04203F",
+    ink: "#04203F",
   },
   Team: {
     cardBg: "#fde8ef",

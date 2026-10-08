@@ -2,7 +2,10 @@ import type { LucideIcon } from "lucide-react";
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { toneClasses, type SemanticTone } from "@/lib/design-system";
+import type { SemanticTone } from "@/lib/design-system";
+
+const optionSurface = (selected: boolean) =>
+  selected ? "border-2 border-navy bg-white" : "border border-line bg-white";
 
 type Props = {
   title: string;
@@ -27,7 +30,6 @@ export function OptionCard({
   description,
   icon: Icon,
   selected = false,
-  tone = "info",
   actionLabel,
   onClick,
   className,
@@ -42,8 +44,8 @@ export function OptionCard({
         onClick={onClick}
         aria-pressed={selected}
         className={cn(
-          "play-card relative flex flex-col rounded-xl px-3 py-2.5 text-left transition-all",
-          toneClasses(tone, selected),
+          "play-card relative flex flex-col rounded-xl px-3 py-2.5 text-left transition-colors",
+          optionSurface(selected),
           disabled && "cursor-not-allowed opacity-60",
           className,
         )}
@@ -70,8 +72,8 @@ export function OptionCard({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "play-card relative flex flex-col rounded-2xl p-4 text-left transition-all",
-        toneClasses(tone, selected),
+        "play-card relative flex flex-col rounded-xl p-4 text-left transition-colors",
+        optionSurface(selected),
         disabled && "cursor-not-allowed opacity-60",
         className,
       )}

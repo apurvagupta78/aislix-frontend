@@ -16,7 +16,7 @@ export function InstallAppBanner() {
     >
       <img src="/icon-192.png" alt="" className="size-10 shrink-0 rounded-xl" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-[#102A43]">Install Aislix</p>
+        <p className="text-sm font-semibold text-[#04203F]">Install Aislix</p>
         <p className="text-xs text-[#667085]">Open audits from your home screen with full-screen camera.</p>
       </div>
       <Button

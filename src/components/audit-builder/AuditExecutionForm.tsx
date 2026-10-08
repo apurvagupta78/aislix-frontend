@@ -210,7 +210,7 @@ export function AuditExecutionForm({
     const roleBadge = roleChip ? (
       <Badge
         variant="outline"
-        className="ml-2 text-[9px] text-[#102A43]"
+        className="ml-2 text-[9px] text-[#04203F]"
         style={{ background: roleChip.tint, borderColor: roleChip.border }}
       >
         {roleChip.label}

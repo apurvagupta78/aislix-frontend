@@ -193,7 +193,7 @@ export function ReferenceSourcePanel({
     <div className="space-y-4 rounded-2xl border border-[#D9E2E8] bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h4 className="text-sm font-semibold text-[#102A43]">{manual ? "Your product list" : "Your document"}</h4>
+          <h4 className="text-sm font-semibold text-[#04203F]">{manual ? "Your product list" : "Your document"}</h4>
           <p className="mt-0.5 text-xs text-[#667085]">
             {manual
               ? "Type the products that should be on the shelf. Only Product or Brand is needed — fill Qty, Price, Location or Promo to have AI check those too."
@@ -237,7 +237,7 @@ export function ReferenceSourcePanel({
 
       {meta && rows.length && !manual ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-4 py-3 text-xs text-[#667085]">
-          <span className="inline-flex items-center gap-1.5 font-semibold text-[#102A43]">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-[#04203F]">
             {meta.source === "csv" ? <FileSpreadsheet className="size-4" /> : <FileText className="size-4" />}
             {meta.source === "csv" ? "CSV / Excel" : documentTypeLabel(meta.document_type)}
           </span>
@@ -395,7 +395,7 @@ export function ReferenceSourcePanel({
           className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-[#D9E2E8] bg-[#F4F7F9] px-4 py-8 text-center text-xs text-[#667085] hover:border-[#7DB7D6]"
         >
           <Upload className="size-5 text-[#7DB7D6]" />
-          <span className="text-sm font-medium text-[#102A43]">
+          <span className="text-sm font-medium text-[#04203F]">
             {spreadsheetOnly ? "Choose a CSV or Excel file" : "Choose a photo, PDF or CSV"}
           </span>
           <span>Any columns work — every column and row is kept. Product, Qty, Price and Location are matched automatically.</span>

@@ -156,7 +156,7 @@ function Chip({ role }: { role: keyof typeof ROLE_CHIP }) {
   const chip = ROLE_CHIP[role];
   return (
     <span
-      className="mt-1 inline-block whitespace-nowrap rounded px-1.5 py-px text-[9px] font-semibold tracking-wide text-[#102A43]"
+      className="mt-1 inline-block whitespace-nowrap rounded px-1.5 py-px text-[9px] font-semibold tracking-wide text-[#04203F]"
       style={{ background: chip.tint, boxShadow: `inset 0 0 0 1px ${chip.border}` }}
     >
       {chip.label}
@@ -168,7 +168,7 @@ function Pill({ label, background, border, dashed, title }: { label: string; bac
   return (
     <span
       title={title}
-      className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]"
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#04203F]"
       style={{ background, border: `1px ${dashed ? "dashed" : "solid"} ${border}` }}
     >
       {label}
@@ -181,13 +181,13 @@ function DetailItem({ label, children }: { label: string; children: ReactNode })
   return (
     <div className="min-w-0">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-[#667085]">{label}</p>
-      <div className="mt-0.5 truncate text-sm text-[#102A43]">{children}</div>
+      <div className="mt-0.5 truncate text-sm text-[#04203F]">{children}</div>
     </div>
   );
 }
 
 const CELL_CLASS =
-  "h-8 w-full min-w-[7rem] rounded-md border bg-white px-2 text-xs text-[#102A43] outline-none transition-colors focus:border-[#9B86D9] disabled:cursor-not-allowed disabled:opacity-70";
+  "h-8 w-full min-w-[7rem] rounded-md border bg-white px-2 text-xs text-[#04203F] outline-none transition-colors focus:border-[#9B86D9] disabled:cursor-not-allowed disabled:opacity-70";
 
 function CellEditor({
   column,
@@ -822,7 +822,7 @@ export function AuditExecutionTable({
   return (
     <div className="space-y-4 pb-24">
       {testMode ? (
-        <div className="rounded-xl border border-[#D9E2E8] px-4 py-2 text-center text-sm font-medium text-[#102A43]" style={{ background: AISLIX_PALETTE.grey }}>
+        <div className="rounded-xl border border-[#D9E2E8] px-4 py-2 text-center text-sm font-medium text-[#04203F]" style={{ background: AISLIX_PALETTE.grey }}>
           TEST MODE — sample data only, not saved to production audits
         </div>
       ) : null}
@@ -830,12 +830,12 @@ export function AuditExecutionTable({
       <section className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-semibold text-[#102A43]">{auditName}</h2>
+            <h2 className="text-xl font-semibold text-[#04203F]">{auditName}</h2>
             {description ? (
               <p className={cn("mt-1 text-sm text-[#667085]", !showFullDescription && "line-clamp-2")}>
                 {description}{" "}
                 {description.length > 160 ? (
-                  <button type="button" className="font-medium text-[#102A43] underline-offset-2 hover:underline" onClick={() => setShowFullDescription((v) => !v)}>
+                  <button type="button" className="font-medium text-[#04203F] underline-offset-2 hover:underline" onClick={() => setShowFullDescription((v) => !v)}>
                     {showFullDescription ? "Less" : "More"}
                   </button>
                 ) : null}
@@ -843,7 +843,7 @@ export function AuditExecutionTable({
             ) : null}
             {instructions && instructions !== description ? (
               <p className="mt-1 text-sm text-[#667085]">
-                <span className="font-medium text-[#102A43]">Instructions:</span> {instructions}
+                <span className="font-medium text-[#04203F]">Instructions:</span> {instructions}
               </p>
             ) : null}
             <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4">
@@ -853,7 +853,7 @@ export function AuditExecutionTable({
                   <button
                     type="button"
                     aria-label="Copy audit ID"
-                    className="rounded p-0.5 text-[#667085] hover:bg-[#F4F7F9] hover:text-[#102A43]"
+                    className="rounded p-0.5 text-[#667085] hover:bg-[#F4F7F9] hover:text-[#04203F]"
                     onClick={() => {
                       void navigator.clipboard?.writeText(displayId);
                       toast.success("Audit ID copied.");
@@ -897,7 +897,7 @@ export function AuditExecutionTable({
                 <Info className="size-3" />
               </span>
             </p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums text-[#102A43]">{readiness.percent}%</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-[#04203F]">{readiness.percent}%</p>
             <div className="mt-2 h-2 overflow-hidden rounded-full" style={{ background: AISLIX_PALETTE.grey }}>
               <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${readiness.percent}%`, background: AISLIX_PALETTE.purple }} />
             </div>
@@ -910,7 +910,7 @@ export function AuditExecutionTable({
             {rowEvidence.mode !== "off" ? (
               <div className="mt-4">
                 <p className="text-xs font-medium text-[#667085]">Evidence summary</p>
-                <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#102A43]">
+                <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#04203F]">
                   <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: AISLIX_PALETTE.green }} />{evidenceCounts.verified} verified</span>
                   <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: AISLIX_PALETTE.pink, boxShadow: `inset 0 0 0 1px ${AISLIX_PALETTE.secondary}` }} />{evidenceCounts.needs_review} need review</span>
                   <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: AISLIX_PALETTE.border }} />{evidenceCounts.missing} missing</span>
@@ -933,12 +933,12 @@ export function AuditExecutionTable({
         );
         return (
           <section key={section.key} className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-[#102A43]">{section.title}</h3>
+            <h3 className="text-sm font-semibold text-[#04203F]">{section.title}</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {sectionColumns
                 .filter((c) => c.kind !== "image")
                 .map((c) => (
-                  <label key={c.key} className="block text-xs font-medium text-[#102A43]">
+                  <label key={c.key} className="block text-xs font-medium text-[#04203F]">
                     {c.label}
                     {c.required ? <span className="text-[#667085]"> *</span> : null}
                     <div className="mt-1">
@@ -971,7 +971,7 @@ export function AuditExecutionTable({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-xs text-[#667085]">
-          <span className="font-medium text-[#102A43]">
+          <span className="font-medium text-[#04203F]">
             {rows.length} row{rows.length === 1 ? "" : "s"} · {columns.length} column{columns.length === 1 ? "" : "s"}
           </span>
           <Chip role="provided" />
@@ -987,7 +987,7 @@ export function AuditExecutionTable({
                   type="search"
                   aria-label="Search rows"
                   placeholder="Search rows"
-                  className="h-8 w-44 rounded-md border border-[#D9E2E8] bg-white pl-7 pr-2 text-xs text-[#102A43] outline-none focus:border-[#7DB7D6]"
+                  className="h-8 w-44 rounded-md border border-[#D9E2E8] bg-white pl-7 pr-2 text-xs text-[#04203F] outline-none focus:border-[#7DB7D6]"
                   value={rowQuery}
                   onChange={(e) => {
                     setRowQuery(e.target.value);
@@ -995,10 +995,10 @@ export function AuditExecutionTable({
                   }}
                 />
               </label>
-              <label className="inline-flex items-center gap-1.5 text-xs text-[#102A43]">
+              <label className="inline-flex items-center gap-1.5 text-xs text-[#04203F]">
                 <input
                   type="checkbox"
-                  className="size-3.5 accent-[#102A43]"
+                  className="size-3.5 accent-[#04203F]"
                   checked={needsAttentionOnly}
                   onChange={(e) => {
                     setNeedsAttentionOnly(e.target.checked);
@@ -1042,7 +1042,7 @@ export function AuditExecutionTable({
 
       <div className="max-h-[70vh] overflow-auto rounded-2xl border border-[#D9E2E8] bg-white shadow-sm">
         <table className="w-full border-separate border-spacing-0 text-xs">
-          <thead className="sticky top-0 z-20 bg-[#F4F7F9] text-left text-[11px] text-[#102A43]">
+          <thead className="sticky top-0 z-20 bg-[#F4F7F9] text-left text-[11px] text-[#04203F]">
             <tr>
               <th className="sticky left-0 z-30 border-b border-[#D9E2E8] bg-[#F4F7F9] px-3 py-2 font-semibold">Row #</th>
               {columns.map((c, i) => (
@@ -1106,7 +1106,7 @@ export function AuditExecutionTable({
                       {canRemoveRow(row.index) ? (
                         <button
                           type="button"
-                          className="rounded p-0.5 text-[#667085] hover:bg-[#FFEAF1] hover:text-[#102A43] disabled:opacity-50"
+                          className="rounded p-0.5 text-[#667085] hover:bg-[#FFEAF1] hover:text-[#04203F] disabled:opacity-50"
                           aria-label={`Remove row ${row.position + 1}`}
                           title="Remove this row"
                           disabled={removingRow !== null}
@@ -1279,7 +1279,7 @@ export function AuditExecutionTable({
       <BarcodeScannerDialog open={scanRow !== null} onOpenChange={onScannerOpenChange} onScan={onBarcodeScanned} />
 
       <div className="sticky bottom-0 z-30 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#D9E2E8] bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(16,42,67,0.06)]">
-        <p className="text-sm text-[#102A43]">
+        <p className="text-sm text-[#04203F]">
           <span className="font-semibold">{readiness.rowsComplete}</span> of {readiness.rowsTotal} rows complete
           <span className="text-[#667085]"> · {leftSummary ?? "ready to submit"}</span>
         </p>
@@ -1429,7 +1429,7 @@ function RowCells({
   return (
     <>
       <td
-        className={cn(td, column.role === "provided" && "text-[#102A43]")}
+        className={cn(td, column.role === "provided" && "text-[#04203F]")}
         style={column.role === "provided" || column.role === "calculated" ? { background: column.role === "provided" ? ACCENT_TINT.blue : ACCENT_TINT.grey } : undefined}
       >
         {cell}
@@ -1440,7 +1440,7 @@ function RowCells({
             {pair.difference === null ? (
               <span className="text-[#667085]" title="Needs a number in both columns">N/A</span>
             ) : (
-              <span className="text-[#102A43]">{formatDiff(pair.difference)}</span>
+              <span className="text-[#04203F]">{formatDiff(pair.difference)}</span>
             )}
           </td>
           <td className={td}>
@@ -1621,15 +1621,15 @@ function ExpiryCell({
         <div className="flex flex-wrap items-center gap-1.5">
           {state.status && state.date ? <ExpiryStatusPill status={state.status} date={state.date} today={today} /> : null}
           {provenance ? <span className="text-[10px] text-[#667085]">{provenance}</span> : null}
-          {!state.photos.length && state.date ? <span className="text-[10px] text-[#102A43]">Photo of the date needed</span> : null}
+          {!state.photos.length && state.date ? <span className="text-[10px] text-[#04203F]">Photo of the date needed</span> : null}
         </div>
       )}
       {state.status === "expired" ? (
         <div className="flex flex-wrap items-center gap-1.5 rounded-md px-1.5 py-1" style={{ background: AISLIX_PALETTE.pink }}>
-          <label className="inline-flex items-center gap-1 text-[11px] font-medium text-[#102A43]">
+          <label className="inline-flex items-center gap-1 text-[11px] font-medium text-[#04203F]">
             <input
               type="checkbox"
-              className="size-3.5 accent-[#102A43]"
+              className="size-3.5 accent-[#04203F]"
               disabled={disabled}
               checked={state.removed}
               onChange={(e) => onRemoved(e.target.checked)}
@@ -1639,7 +1639,7 @@ function ExpiryCell({
           <ExpiryThumbs urls={state.removalPhotos} disabled={disabled} onRemove={(url) => onRemovePhoto("removal", url)} />
           {camera("removal", "Add a photo of the removed product")}
           {state.removalMissing ? (
-            <span className="text-[10px] text-[#102A43]">
+            <span className="text-[10px] text-[#04203F]">
               {!state.removed ? "Tick when removed" : "Add a removal photo"}
             </span>
           ) : null}
@@ -1688,14 +1688,14 @@ function UploadPreviewDialog({
     <Dialog open={Boolean(preview)} onOpenChange={(open) => (!open ? onCancel() : undefined)}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-[#102A43]">Review uploaded file</DialogTitle>
+          <DialogTitle className="text-[#04203F]">Review uploaded file</DialogTitle>
           <DialogDescription>{preview?.filename}</DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
           {stats.map((s) => (
             <div
               key={s.label}
-              className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-[#102A43]"
+              className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-[#04203F]"
               style={{ background: s.background, borderLeft: `3px solid ${s.border}` }}
             >
               <span>{s.label}</span>
@@ -1705,8 +1705,8 @@ function UploadPreviewDialog({
         </div>
         {result?.issues.length ? (
           <div>
-            <p className="text-xs font-semibold text-[#102A43]">Fix these on screen after applying</p>
-            <ul className="mt-1 max-h-40 space-y-1 overflow-auto rounded-lg border border-[#D9E2E8] p-2 text-xs text-[#102A43]">
+            <p className="text-xs font-semibold text-[#04203F]">Fix these on screen after applying</p>
+            <ul className="mt-1 max-h-40 space-y-1 overflow-auto rounded-lg border border-[#D9E2E8] p-2 text-xs text-[#04203F]">
               {result.issues.map((issue, i) => (
                 <li key={i}>
                   <span className="font-medium">Row {issue.row}</span> · {issue.column} · {issue.reason}

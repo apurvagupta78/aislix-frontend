@@ -109,7 +109,7 @@ ${t.note ? `<p class="note">${esc(t.note)}</p>` : ""}</section>`,
 <title>${esc(`Aislix · ${doc.title}`)}</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: Inter, Arial, sans-serif; color: #102A43; margin: 32px; }
+  body { font-family: Inter, Arial, sans-serif; color: #04203F; margin: 32px; }
   .brand { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #667085; }
   h1 { font-size: 22px; margin: 6px 0 4px; }
   .sub { color: #667085; font-size: 13px; margin: 0; }
@@ -133,7 +133,7 @@ ${t.note ? `<p class="note">${esc(t.note)}</p>` : ""}</section>`,
   .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   figure { margin: 0; border: 1px solid #D9E2E8; border-radius: 10px; overflow: hidden; break-inside: avoid; }
   figure img { width: 100%; height: 160px; object-fit: cover; display: block; background: #EEF1F4; }
-  figcaption { font-size: 10px; padding: 6px 8px; color: #102A43; }
+  figcaption { font-size: 10px; padding: 6px 8px; color: #04203F; }
   footer { margin-top: 24px; font-size: 10px; color: #667085; border-top: 1px solid #D9E2E8; padding-top: 8px; }
   @page { margin: 14mm; }
   @media print { body { margin: 0; } }

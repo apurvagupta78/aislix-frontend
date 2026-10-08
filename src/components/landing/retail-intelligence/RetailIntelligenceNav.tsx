@@ -1,4 +1,4 @@
-import logoAsset from "@/assets/aislix-logo.png.asset.json";
+import { LOGO_SRC } from "@/components/Logo";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 
 /** Minimal ad-landing header: logo (stays on the landing page) + Log in link. */
@@ -7,7 +7,7 @@ export function RetailIntelligenceNav() {
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center px-5 sm:px-8">
         <a href="/retail-intelligence" aria-label="Aislix" className="inline-flex items-center">
-          <img src={logoAsset.url} alt="Aislix" className="h-8 w-auto" />
+          <img src={LOGO_SRC} alt="Aislix" className="h-7 w-auto" />
         </a>
         <a
           href="/login"

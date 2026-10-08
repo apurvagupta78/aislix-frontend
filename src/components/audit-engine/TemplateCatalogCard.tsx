@@ -36,7 +36,7 @@ export function TemplateCatalogCard({
 
   return (
     <div
-      className={`play-card flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--aislix-border)] bg-white transition-shadow hover:shadow-md ${compact ? "p-3" : "p-4"}`}
+      className={`play-card flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--aislix-border)] bg-white transition-shadow ${compact ? "p-3" : "p-4"}`}
     >
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">

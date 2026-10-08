@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="22" fill="#04203F"/>
+  <g transform="translate(16.40 -0.47) scale(0.8247)">
+  <clipPath id="clipA0i"><rect x="-27.42" y="13.54" width="136.33" height="86.46"/></clipPath>
+  <g clip-path="url(#clipA0i)">
+    <polyline points="-7.39,127.42 40.74,34.79 88.88,127.42" fill="none" stroke="#FFFFFF" stroke-width="13.71" stroke-linejoin="round"/>
+    <line x1="8.64" y1="96.57" x2="48.04" y2="96.57" stroke="#FFFFFF" stroke-width="6.86" stroke-linecap="round"/>
+    <line x1="16.12" y1="82.18" x2="44.75" y2="82.18" stroke="#FFFFFF" stroke-width="6.86" stroke-linecap="round"/>
+    <line x1="23.60" y1="67.78" x2="41.46" y2="67.78" stroke="#FFFFFF" stroke-width="6.86" stroke-linecap="round"/>
+  </g></g>
+</svg>

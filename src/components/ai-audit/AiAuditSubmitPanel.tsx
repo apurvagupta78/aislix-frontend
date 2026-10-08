@@ -52,7 +52,7 @@ export function AiAuditSubmitPanel({
   if (alreadySubmitted || mutation.isSuccess) {
     return (
       <div className="mt-6 rounded-xl border border-[#D9E2E8] bg-white p-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-[#102A43]">
+        <div className="flex items-center gap-2 text-sm font-medium text-[#04203F]">
           <CheckCircle2 className="size-4 text-[#79E2A8]" />
           Audit submitted
         </div>
@@ -65,7 +65,7 @@ export function AiAuditSubmitPanel({
 
   return (
     <div className="mt-6 rounded-xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-[#102A43]">Submit audit</h3>
+      <h3 className="text-sm font-semibold text-[#04203F]">Submit audit</h3>
       <p className="mt-1 text-sm text-[#667085]">
         Analysis is complete. Add optional notes, then submit so the assignor is notified.
       </p>

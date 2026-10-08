@@ -74,7 +74,7 @@ function OverviewKpi({
           <Info className="size-3.5" aria-label="How this is calculated" />
         </span>
       </div>
-      <p className="mt-2 text-2xl font-semibold text-[#102A43]">{value}</p>
+      <p className="mt-2 text-2xl font-semibold text-[#04203F]">{value}</p>
       <p className="mt-1 text-xs text-[#667085]">{context}</p>
     </div>
   );
@@ -201,7 +201,7 @@ export function DashboardOverviewPanel({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-          <h3 className="text-sm font-semibold text-[#102A43]">Audit mix</h3>
+          <h3 className="text-sm font-semibold text-[#04203F]">Audit mix</h3>
           <p className="mb-3 text-xs text-[#667085]">How many AI and digital audits are in your scope.</p>
           {mix.length ? (
             <MpRankBars data={mix} />
@@ -225,10 +225,10 @@ export function DashboardOverviewPanel({
               className="flex flex-col justify-between rounded-xl border border-[#D9E2E8] bg-white p-4 text-left transition-colors hover:bg-[#F4F7F9]"
             >
               <span>
-                <span className="block text-sm font-semibold text-[#102A43]">{title}</span>
+                <span className="block text-sm font-semibold text-[#04203F]">{title}</span>
                 <span className="mt-1 block text-xs text-[#667085]">{body}</span>
               </span>
-              <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-[#102A43]">
+              <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-[#04203F]">
                 Open detailed dashboard <ArrowRight className="size-3.5" />
               </span>
             </button>
@@ -237,7 +237,7 @@ export function DashboardOverviewPanel({
       </div>
 
       <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-        <h3 className="text-sm font-semibold text-[#102A43]">Latest audits — AI and digital</h3>
+        <h3 className="text-sm font-semibold text-[#04203F]">Latest audits — AI and digital</h3>
         <p className="mb-3 text-xs text-[#667085]">The 10 most recent audits across both audit types.</p>
         {combined.length ? (
           <div className="overflow-x-auto">
@@ -258,7 +258,7 @@ export function DashboardOverviewPanel({
                   <tr key={row.key} className="border-b border-[#EEF1F4] last:border-0">
                     <td className="py-2 pr-3">
                       <span
-                        className="rounded-full border px-2 py-0.5 text-xs font-medium text-[#102A43]"
+                        className="rounded-full border px-2 py-0.5 text-xs font-medium text-[#04203F]"
                         style={{
                           borderColor: row.kind === "AI audit" ? AISLIX_PALETTE.purple : AISLIX_PALETTE.blue,
                         }}
@@ -266,17 +266,17 @@ export function DashboardOverviewPanel({
                         {row.kind}
                       </span>
                     </td>
-                    <td className="max-w-[200px] truncate py-2 pr-3 text-[#102A43]">{row.name}</td>
-                    <td className="max-w-[160px] truncate py-2 pr-3 text-[#102A43]">{row.store || "—"}</td>
+                    <td className="max-w-[200px] truncate py-2 pr-3 text-[#04203F]">{row.name}</td>
+                    <td className="max-w-[160px] truncate py-2 pr-3 text-[#04203F]">{row.store || "—"}</td>
                     <td className="py-2 pr-3 text-[#667085]">{fmtDate(row.date)}</td>
-                    <td className="py-2 pr-3 capitalize text-[#102A43]">{row.status.replace(/_/g, " ")}</td>
-                    <td className="py-2 pr-3 tabular-nums text-[#102A43]">{row.result}</td>
+                    <td className="py-2 pr-3 capitalize text-[#04203F]">{row.status.replace(/_/g, " ")}</td>
+                    <td className="py-2 pr-3 tabular-nums text-[#04203F]">{row.result}</td>
                     <td className="py-2 text-right">
                       {row.scanId ? (
                         <Link
                           to="/results"
                           search={{ scan: row.scanId } as never}
-                          className="text-xs font-medium text-[#102A43] hover:underline"
+                          className="text-xs font-medium text-[#04203F] hover:underline"
                         >
                           View report
                         </Link>

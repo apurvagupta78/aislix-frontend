@@ -19,10 +19,10 @@
  */
 
 @theme inline {
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Sora", "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-home-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-home-display: "Space Grotesk", "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-home-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-home-display: "Inter", ui-sans-serif, system-ui, sans-serif;
   --color-status-good: var(--status-good);
   --color-status-good-soft: var(--status-good-soft);
   --color-status-good-strong: var(--status-good-strong);
@@ -65,13 +65,17 @@
   --shadow-soft: var(--shadow-soft);
   --shadow-card: var(--shadow-card);
   --shadow-lift: var(--shadow-lift);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  /* Cards stay flat; only floating overlays (menus, dialogs) use shadow-md and above. */
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --radius-sm: 4px;
+  --radius-md: 6px;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-xl: var(--radius);
+  --radius-2xl: 10px;
+  --radius-3xl: 12px;
+  --radius-4xl: 14px;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -210,11 +214,11 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --aislix-bg: #F2F6F9;
-  --aislix-primary: #102A43;
-  --aislix-secondary: #557187;
-  --aislix-border: #E7EDF0;
+  --radius: 8px;
+  --aislix-bg: #F4F7F9;
+  --aislix-primary: #04203F;
+  --aislix-secondary: #667085;
+  --aislix-border: #D9E2E8;
   --aislix-surface: #EFF4F7;
   --aislix-local-bg: #EAF6FD;
   --aislix-local-border: #C1E4F8;
@@ -229,7 +233,7 @@
   --aislix-custom-bg: #EEF1F4;
   --aislix-custom-border: #DBE0E5;
 
-  --background: var(--aislix-bg);
+  --background: #FFFFFF;
   --foreground: var(--aislix-primary);
   --card: #FFFFFF;
   --card-foreground: var(--aislix-primary);
@@ -254,7 +258,7 @@
   --chart-4: #8EC9E8;
   --chart-5: #FFEAF1;
   --chart-6: #EEF1F4;
-  --chart-7: #102A43;
+  --chart-7: #04203F;
   --sidebar: #FFFFFF;
   --sidebar-foreground: var(--aislix-secondary);
   --sidebar-primary: var(--aislix-primary);
@@ -298,9 +302,9 @@
   --status-evidence-strong: var(--aislix-primary);
   --gradient-brand: none;
   --gradient-hero: none;
-  --shadow-soft: 0 2px 10px rgb(16 42 67 / 0.04);
-  --shadow-card: 0 2px 10px rgb(16 42 67 / 0.06);
-  --shadow-lift: 0 8px 24px rgb(16 42 67 / 0.09);
+  --shadow-soft: none;
+  --shadow-card: none;
+  --shadow-lift: 0 4px 16px rgb(4 32 63 / 0.1);
 
   --landing-navy: var(--aislix-primary);
   --landing-navy-soft: var(--aislix-secondary);
@@ -333,7 +337,7 @@
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    letter-spacing: 0;
+    letter-spacing: -0.01em;
   }
   :focus-visible {
     outline: 2px solid color-mix(in oklab, var(--color-brand) 65%, transparent);
@@ -356,16 +360,14 @@
   min-width: 2.75rem;
 }
 
-/** Colourful metric tile used across dashboards and intelligence modules */
+/** Plain metric tile used across dashboards and intelligence modules */
 @utility metric-tile {
   background-color: var(--color-card);
-  border: 1px solid color-mix(in oklab, var(--color-border) 85%, transparent);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-soft);
-  transition: box-shadow 200ms ease, transform 200ms ease;
+  border: 1px solid var(--aislix-border);
+  border-radius: var(--radius-xl);
+  transition: border-color 150ms ease;
   &:hover {
-    box-shadow: var(--shadow-card);
-    transform: translateY(-1px);
+    border-color: color-mix(in oklab, var(--aislix-primary) 25%, var(--aislix-border));
   }
 }
 
@@ -392,18 +394,16 @@
 }
 
 @utility card-hover {
-  transition: box-shadow 220ms ease, transform 220ms ease, border-color 220ms ease;
+  transition: border-color 150ms ease;
   &:hover {
-    box-shadow: var(--shadow-lift);
-    border-color: color-mix(in oklab, var(--color-brand) 22%, var(--color-border));
-    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--aislix-primary) 25%, var(--aislix-border));
   }
 }
 
 /** Selected homepage direction: precise enterprise retail with a darker AI frame. */
 @utility home-modern {
   font-family: var(--font-home-sans);
-  background-color: var(--aislix-bg);
+  background-color: #FFFFFF;
   & h1,
   & h2,
   & h3,
@@ -418,9 +418,8 @@
 }
 
 @utility home-product-frame {
-  border: 1px solid color-mix(in oklab, var(--aislix-local-border) 70%, var(--aislix-border));
+  border: 1px solid var(--aislix-border);
   background-color: #FFFFFF;
-  box-shadow: 0 26px 72px rgb(16 42 67 / 0.16);
 }
 
 @utility home-dark-band {
@@ -431,15 +430,13 @@
 @utility home-kicker {
   color: var(--aislix-secondary);
   font-family: var(--font-home-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
-/** Soft app canvas — authenticated pages */
+/** App canvas — authenticated pages */
 @utility play-canvas {
-  background-color: var(--color-surface);
+  background-color: var(--color-background);
   min-height: 100vh;
 }
 
@@ -453,12 +450,10 @@
 /** Interactive option / selection card */
 @utility play-card {
   background-color: var(--color-card);
-  border: 1px solid color-mix(in oklab, var(--color-border) 90%, transparent);
-  box-shadow: var(--shadow-soft);
-  transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
+  border: 1px solid var(--aislix-border);
+  transition: border-color 150ms ease;
   &:hover:not(:disabled) {
-    box-shadow: var(--shadow-card);
-    transform: translateY(-1px);
+    border-color: color-mix(in oklab, var(--aislix-primary) 25%, var(--aislix-border));
   }
 }
 
@@ -479,45 +474,38 @@
   border-radius: var(--radius-xl);
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-soft);
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  background-color: #FFFFFF;
+  transition: border-color 150ms ease;
   &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-card);
+    border-color: color-mix(in oklab, var(--aislix-primary) 25%, var(--aislix-border));
   }
 }
 
 @utility kpi-tile-warn {
-  background-color: var(--aislix-darkstore-bg);
-  border-color: var(--aislix-darkstore-border);
+  background-color: #FFFFFF;
 }
 
 @utility kpi-tile-brand {
-  background-color: var(--aislix-primary);
-  color: #FFFFFF;
-  border-color: var(--aislix-primary);
+  background-color: #FFFFFF;
 }
 
 @utility kpi-tile-bad {
-  background-color: var(--aislix-darkstore-bg);
-  border-color: var(--aislix-darkstore-border);
+  background-color: #FFFFFF;
 }
 
 @utility kpi-tile-good {
-  background-color: var(--aislix-supermarket-bg);
-  border-color: var(--aislix-supermarket-border);
+  background-color: #FFFFFF;
 }
 
 @utility kpi-tile-neutral {
-  background-color: var(--aislix-local-bg);
-  border-color: var(--aislix-local-border);
+  background-color: #FFFFFF;
 }
 
 
-/** Glass icon badge used inside saturated tiles */
+/** Icon badge used inside tiles */
 @utility glass-badge {
   background-color: rgb(255 255 255 / 0.72);
-  border: 1px solid rgb(16 42 67 / 0.08);
+  border: 1px solid rgb(4 32 63 / 0.08);
   border-radius: var(--radius-lg);
 }
 

@@ -73,7 +73,7 @@ function StatusPill({ label, background, border, dashed, title }: { label: strin
   return (
     <span
       title={title}
-      className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]"
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#04203F]"
       style={{ background, border: `1px ${dashed ? "dashed" : "solid"} ${border}` }}
     >
       {label}
@@ -96,7 +96,7 @@ function ExpiryResult({ expiry, today }: { expiry: RowExpiry | null; today: stri
         ))}
         {expiry.date ? (
           <>
-            <span className="tabular-nums text-[#102A43]">{formatIsoDate(expiry.date)}</span>
+            <span className="tabular-nums text-[#04203F]">{formatIsoDate(expiry.date)}</span>
             {expiry.status ? <ExpiryStatusPill status={expiry.status} date={expiry.date} today={today} /> : null}
           </>
         ) : (
@@ -152,13 +152,13 @@ function ResultKpi({
       className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm"
       style={{ borderLeft: `4px solid ${unavailable ? AISLIX_PALETTE.grey : AISLIX_PALETTE[accent]}` }}
     >
-      <p className="flex items-center gap-1.5 text-xs font-medium text-[#102A43]">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-[#04203F]">
         {label}
         <span title={info} aria-label={info}>
           <Info className="size-3.5 text-[#667085]" />
         </span>
       </p>
-      <p className={cn("mt-2 text-2xl font-semibold tabular-nums", unavailable ? "text-[#667085]" : "text-[#102A43]")}>
+      <p className={cn("mt-2 text-2xl font-semibold tabular-nums", unavailable ? "text-[#667085]" : "text-[#04203F]")}>
         {value}
       </p>
       <p className="mt-1 text-[11px] text-[#667085]">{context}</p>
@@ -287,7 +287,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
       <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-[#102A43]">Audit items</h3>
+            <h3 className="text-base font-semibold text-[#04203F]">Audit items</h3>
             <p className="mt-0.5 text-xs text-[#667085]">
               Every column{audit.filename ? ` from ${audit.filename}` : ""}, with who supplied each value.
             </p>
@@ -312,7 +312,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
 
         <div className="mt-3 max-h-[560px] overflow-auto rounded-xl border border-[#D9E2E8]">
           <table className="w-full min-w-[40rem] text-sm">
-            <thead className="sticky top-0 z-10 text-xs text-[#102A43]">
+            <thead className="sticky top-0 z-10 text-xs text-[#04203F]">
               <tr>
                 <th className="border-b border-[#D9E2E8] bg-white px-3 py-2" />
                 {provided.length ? (
@@ -381,7 +381,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                 <tr key={row.index} className="border-t border-[#D9E2E8]">
                   <td className="px-3 py-2 tabular-nums text-[#667085]">{row.index + 1}</td>
                   {provided.map((c) => (
-                    <td key={c.key} className="px-3 py-2 text-[#102A43]" style={{ background: "#F7FBFD" }}>
+                    <td key={c.key} className="px-3 py-2 text-[#04203F]" style={{ background: "#F7FBFD" }}>
                       {row.values[c.key] ?? <span className="text-[#667085]">—</span>}
                     </td>
                   ))}
@@ -390,7 +390,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                     return (
                       <td
                         key={c.key}
-                        className={cn("px-3 py-2 text-[#102A43]", i === 0 && "border-l border-[#D9E2E8]")}
+                        className={cn("px-3 py-2 text-[#04203F]", i === 0 && "border-l border-[#D9E2E8]")}
                         style={{ background: "#FAF8FE" }}
                       >
                         {value ?? (
@@ -408,7 +408,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                         {diff === null ? (
                           <span className="text-[#667085]" title="Needs a number in both columns">N/A</span>
                         ) : (
-                          <span className="text-[#102A43]">{formatDiff(diff)}</span>
+                          <span className="text-[#04203F]">{formatDiff(diff)}</span>
                         )}
                       </td>,
                       <td key={`${p.auditee.key}-status`} className="px-3 py-2">
@@ -442,7 +442,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                     <td className="border-l border-[#D9E2E8] px-3 py-2">
                       {row.barcodeScanned ? (
                         <span className="inline-flex items-center gap-1.5">
-                          <span className="font-mono text-xs text-[#102A43]">{row.barcodeScanned}</span>
+                          <span className="font-mono text-xs text-[#04203F]">{row.barcodeScanned}</span>
                           {row.barcodeExpected ? (
                             <StatusPill
                               {...(barcodeMatches(row.barcodeExpected, row.barcodeScanned) ? PAIR_PILL.match : PAIR_PILL.mismatch)}
@@ -456,7 +456,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                     </td>
                   ) : null}
                   {showReason ? (
-                    <td className={cn("px-3 py-2 text-xs text-[#102A43]", !showBarcode && "border-l border-[#D9E2E8]")}>
+                    <td className={cn("px-3 py-2 text-xs text-[#04203F]", !showBarcode && "border-l border-[#D9E2E8]")}>
                       {row.hasMismatch ? (
                         row.varianceReason ? (
                           <span>

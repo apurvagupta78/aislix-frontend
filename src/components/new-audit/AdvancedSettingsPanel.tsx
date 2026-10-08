@@ -341,7 +341,7 @@ export function AdvancedSettingsPanel({
 
       <div className="space-y-3 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] p-4">
         <div>
-          <p className="text-sm font-semibold text-[#102A43]">Photo rules</p>
+          <p className="text-sm font-semibold text-[#04203F]">Photo rules</p>
           <p className="text-xs text-[#667085]">
             Checked on the auditee&apos;s phone when each photo is added, then checked again on the
             Aislix server before the audit can be submitted.

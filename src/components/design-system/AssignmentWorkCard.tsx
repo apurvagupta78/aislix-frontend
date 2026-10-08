@@ -58,7 +58,7 @@ export function AssignmentWorkCard({
   return (
     <article
       className={cn(
-        "play-card flex flex-col gap-3 rounded-2xl p-4 transition-shadow hover:shadow-md",
+        "play-card flex flex-col gap-3 rounded-2xl p-4 transition-shadow",
         selected && "ring-2 ring-brand/30",
         className,
       )}

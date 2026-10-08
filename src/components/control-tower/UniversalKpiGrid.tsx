@@ -69,7 +69,7 @@ export function UniversalKpiGrid({
             disabled={unavailable}
             onClick={() => kpi.available && onDrill?.(kpi)}
             className={cn(
-              "kpi-tile rounded-xl p-4 text-left transition hover:-translate-y-px",
+              "kpi-tile rounded-xl p-4 text-left transition",
               unavailable && "cursor-default opacity-90",
             )}
             style={{

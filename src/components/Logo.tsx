@@ -1,7 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import logoAsset from "@/assets/aislix-logo.png.asset.json";
-import markAsset from "@/assets/aislix-mark.png.asset.json";
+
+export const LOGO_SRC = "/brand/aislix-logo.svg";
+export const LOGO_WHITE_SRC = "/brand/aislix-logo-white.svg";
+export const MARK_SRC = "/brand/aislix-mark.svg";
 
 export function Logo({
   className,
@@ -19,9 +21,9 @@ export function Logo({
       className={cn("group inline-flex items-center transition-opacity hover:opacity-80", className)}
     >
       <img
-        src={compact ? markAsset.url : logoAsset.url}
+        src={compact ? MARK_SRC : LOGO_SRC}
         alt="Aislix"
-        className={compact ? "h-8 w-auto" : "h-8 w-auto"}
+        className={compact ? "h-7 w-auto" : "h-7 w-auto"}
       />
     </Link>
   );

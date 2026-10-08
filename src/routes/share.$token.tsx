@@ -230,7 +230,7 @@ function SharedReport() {
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
         <section>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#102A43]">Shelf audit report</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#04203F]">Shelf audit report</h1>
           <p className="mt-1 text-sm text-[#667085]">{context || "AI shelf audit result"}</p>
           <p className="mt-1 text-xs text-[#667085]">
             Audited {formatSharedDate(report.scanned_at)} · link expires{" "}
@@ -240,7 +240,7 @@ function SharedReport() {
 
         {report.downloads.pdf_url || report.downloads.annotated_image_url ? (
           <section className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
-            <h2 className="text-base font-semibold text-[#102A43]">Downloads</h2>
+            <h2 className="text-base font-semibold text-[#04203F]">Downloads</h2>
             <div className="mt-3 flex flex-wrap gap-3">
               {report.downloads.pdf_url ? (
                 <Button asChild variant="subtle" className="rounded-xl">
@@ -262,7 +262,7 @@ function SharedReport() {
 
         {report.downloads.annotated_image_url ? (
           <section className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-[#102A43]">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-[#04203F]">
               <ImageIcon className="size-4" /> Annotated shelf image
             </h2>
             <img

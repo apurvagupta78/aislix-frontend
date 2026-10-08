@@ -124,14 +124,14 @@ export function AiDocumentAuditSetup({
             >
               {selected ? (
                 <span
-                  className="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full text-[#102A43]"
+                  className="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full text-[#04203F]"
                   style={{ background: card.accent }}
                 >
                   <Check className="size-3.5" />
                 </span>
               ) : null}
-              <Icon className="mb-3 size-6 text-[#102A43]" />
-              <p className="font-semibold text-[#102A43]">{card.title}</p>
+              <Icon className="mb-3 size-6 text-[#04203F]" />
+              <p className="font-semibold text-[#04203F]">{card.title}</p>
               <p className="mt-1 flex-1 text-xs leading-relaxed text-[#667085]">{card.description}</p>
             </button>
           );
@@ -159,19 +159,19 @@ export function AiDocumentAuditSetup({
             <span className="inline-flex items-center gap-1.5">
               <FileSpreadsheet className="size-4 text-[#7DB7D6]" />
               <span>
-                <strong className="font-semibold text-[#102A43]">
+                <strong className="font-semibold text-[#04203F]">
                   1. {mode === "scratch" ? "Your product list" : "Your document"}
                 </strong>{" "}
                 → editable lines
               </span>
             </span>
             <span>
-              <strong className="font-semibold text-[#102A43]">2. What AI should analyse</strong>
+              <strong className="font-semibold text-[#04203F]">2. What AI should analyse</strong>
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Camera className="size-4 text-[#9B86D9]" />
               <span>
-                <strong className="font-semibold text-[#102A43]">3. Shelf photos</strong> — AI counts and explains
+                <strong className="font-semibold text-[#04203F]">3. Shelf photos</strong> — AI counts and explains
               </span>
             </span>
           </div>

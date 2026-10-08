@@ -89,14 +89,14 @@ function InventoryVariancePage() {
                   <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">
                     {label}
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-[#102A43]">{value}</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#04203F]">{value}</p>
                 </div>
               );
             })}
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-              <h3 className="text-sm font-semibold text-[#102A43]">Variance by store</h3>
+              <h3 className="text-sm font-semibold text-[#04203F]">Variance by store</h3>
               {(m?.varianceByStore ?? []).length ? (
                 <ul className="mt-4 space-y-3">
                   {m!.varianceByStore.map((row) => {
@@ -104,7 +104,7 @@ function InventoryVariancePage() {
                     return (
                       <li key={row.label}>
                         <div className="mb-1 flex justify-between text-xs text-[#667085]">
-                          <span className="truncate pr-2 text-[#102A43]">{row.label}</span>
+                          <span className="truncate pr-2 text-[#04203F]">{row.label}</span>
                           <span>{row.value.toFixed(1)}</span>
                         </div>
                         <div className="h-2 rounded-full bg-[#EEF1F4]">
@@ -122,7 +122,7 @@ function InventoryVariancePage() {
               )}
             </div>
             <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-              <h3 className="text-sm font-semibold text-[#102A43]">Variance by category</h3>
+              <h3 className="text-sm font-semibold text-[#04203F]">Variance by category</h3>
               {(m?.varianceByCategory ?? []).length ? (
                 <ul className="mt-4 space-y-3">
                   {m!.varianceByCategory.map((row) => {
@@ -130,7 +130,7 @@ function InventoryVariancePage() {
                     return (
                       <li key={row.label}>
                         <div className="mb-1 flex justify-between text-xs text-[#667085]">
-                          <span className="truncate pr-2 text-[#102A43]">{row.label}</span>
+                          <span className="truncate pr-2 text-[#04203F]">{row.label}</span>
                           <span>{row.value.toFixed(1)}</span>
                         </div>
                         <div className="h-2 rounded-full bg-[#EEF1F4]">

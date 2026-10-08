@@ -47,8 +47,8 @@ export function NewAuditStepNav({
                 className={cn(
                   "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
                   complete
-                    ? "border-[#102A43] bg-[#102A43] text-white hover:bg-[#1B3B58]"
-                    : "border-[#102A43]/30 bg-white text-[#102A43] hover:border-[#102A43] hover:bg-[#F4F7F9]",
+                    ? "border-[#04203F] bg-[#04203F] text-white hover:bg-[#1B3B58]"
+                    : "border-[#04203F]/30 bg-white text-[#04203F] hover:border-[#04203F] hover:bg-[#F4F7F9]",
                 )}
               >
                 <span className="mr-1 opacity-70">{step.id}</span>

@@ -157,8 +157,8 @@ function Tile({
       className="rounded-xl border border-[#D9E2E8] px-3 py-3"
       style={{ background: tint, borderTopColor: accent, borderTopWidth: 3 }}
     >
-      <p className="font-display text-2xl font-semibold tabular-nums text-[#102A43]">{value}</p>
-      <p className="mt-0.5 text-[11px] font-medium text-[#102A43]">{label}</p>
+      <p className="font-display text-2xl font-semibold tabular-nums text-[#04203F]">{value}</p>
+      <p className="mt-0.5 text-[11px] font-medium text-[#04203F]">{label}</p>
       {sub ? <p className="mt-0.5 text-[10px] text-[#667085]">{sub}</p> : null}
     </div>
   );
@@ -278,7 +278,7 @@ export function ReferenceMatchSection({
             className="rounded-xl border border-[#D9E2E8] px-4 py-3"
             style={{ background: verdict.tint, borderLeftColor: verdict.accent, borderLeftWidth: 4 }}
           >
-            <p className="font-display text-xl font-semibold text-[#102A43]">{verdict.label}</p>
+            <p className="font-display text-xl font-semibold text-[#04203F]">{verdict.label}</p>
             <p className="mt-0.5 text-xs text-[#667085]">
               {doc.source === "csv"
                 ? "Lines from your file"
@@ -387,7 +387,7 @@ export function ReferenceMatchSection({
               href={documentUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-3 inline-block text-xs font-semibold text-[#102A43] underline"
+              className="mt-3 inline-block text-xs font-semibold text-[#04203F] underline"
             >
               Open PDF
             </a>
@@ -407,10 +407,10 @@ export function ReferenceMatchSection({
           ) : (
             <div className="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-lg border border-[#D9E2E8] bg-[#F4F7F9] p-4 text-center text-xs text-[#667085]">
               {doc.source === "csv" ? <FileSpreadsheet className="size-6" /> : <FileText className="size-6" />}
-              <span className="text-sm font-medium text-[#102A43]">{docLabel}</span>
+              <span className="text-sm font-medium text-[#04203F]">{docLabel}</span>
               <span>{m.lines_total} lines compared</span>
               {documentUrl && isPdf ? (
-                <a href={documentUrl} target="_blank" rel="noreferrer" className="font-semibold text-[#102A43] underline">
+                <a href={documentUrl} target="_blank" rel="noreferrer" className="font-semibold text-[#04203F] underline">
                   Open PDF
                 </a>
               ) : null}
@@ -449,7 +449,7 @@ export function ReferenceMatchSection({
               className: "min-w-[180px]",
               cell: (line) => (
                 <div className="max-w-[240px]">
-                  <p className="font-medium leading-snug text-[#102A43]">
+                  <p className="font-medium leading-snug text-[#04203F]">
                     {lineName([line.brand, line.product_name, line.variant])}
                   </p>
                   {line.raw_text ? (
@@ -527,7 +527,7 @@ export function ReferenceMatchSection({
           <div className="mt-4 rounded-xl border border-[#D9E2E8]">
             <button
               type="button"
-              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-[#102A43]"
+              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-[#04203F]"
               onClick={() => setShowExtra((v) => !v)}
               aria-expanded={showExtra}
             >
@@ -541,7 +541,7 @@ export function ReferenceMatchSection({
               <ul className="divide-y divide-[#D9E2E8] border-t border-[#D9E2E8] text-xs">
                 {match.not_on_document.map((row, i) => (
                   <li key={`${row.product_name}-${i}`} className="flex flex-wrap items-center gap-3 px-4 py-2">
-                    <span className="font-medium text-[#102A43]">
+                    <span className="font-medium text-[#04203F]">
                       {lineName([row.brand, row.product_name, row.variant])}
                     </span>
                     {row.shelf_location_label ? (

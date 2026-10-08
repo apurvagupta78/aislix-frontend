@@ -292,7 +292,7 @@ export function GuidedSweepCamera({ open, onOpenChange, role, maxPhotos, onCompl
     >
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#102A43]">
+          <DialogTitle className="flex items-center gap-2 text-[#04203F]">
             <ScanLine className="size-4" /> Guided sweep
           </DialogTitle>
           <DialogDescription>{script.title}</DialogDescription>
@@ -300,7 +300,7 @@ export function GuidedSweepCamera({ open, onOpenChange, role, maxPhotos, onCompl
 
         {cameraError ? (
           <p
-            className="rounded-xl border px-4 py-3 text-sm text-[#102A43]"
+            className="rounded-xl border px-4 py-3 text-sm text-[#04203F]"
             style={{ background: AISLIX_PALETTE.pink, borderColor: AISLIX_PALETTE.border }}
           >
             {cameraError}
@@ -319,12 +319,12 @@ export function GuidedSweepCamera({ open, onOpenChange, role, maxPhotos, onCompl
               </div>
             ) : null}
             {ready && phase !== "review" && hint ? (
-              <div className="absolute inset-x-2 top-2 flex items-center gap-2 rounded-lg bg-[#102A43]/85 px-3 py-1.5 text-xs font-medium text-white">
+              <div className="absolute inset-x-2 top-2 flex items-center gap-2 rounded-lg bg-[#04203F]/85 px-3 py-1.5 text-xs font-medium text-white">
                 <AlertTriangle className="size-3.5 text-[#FFEAF1]" /> {hint}
               </div>
             ) : null}
             {phase === "sweeping" ? (
-              <div className="absolute inset-x-2 bottom-2 space-y-1 rounded-lg bg-[#102A43]/85 px-3 py-2 text-xs text-white">
+              <div className="absolute inset-x-2 bottom-2 space-y-1 rounded-lg bg-[#04203F]/85 px-3 py-2 text-xs text-white">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1 font-medium">
                     <MoveRight className="size-3.5" /> Keep moving slowly
@@ -346,7 +346,7 @@ export function GuidedSweepCamera({ open, onOpenChange, role, maxPhotos, onCompl
                 {thumbs.map((url, i) => (
                   <figure key={url} className="relative overflow-hidden rounded-lg border border-[#D9E2E8]">
                     <img src={url} alt={`Sweep photo ${i + 1}`} className="h-24 w-full object-cover" />
-                    <figcaption className="absolute left-1 top-1 rounded bg-[#102A43]/80 px-1.5 text-[10px] font-semibold text-white">
+                    <figcaption className="absolute left-1 top-1 rounded bg-[#04203F]/80 px-1.5 text-[10px] font-semibold text-white">
                       {i + 1}
                     </figcaption>
                   </figure>
@@ -358,7 +358,7 @@ export function GuidedSweepCamera({ open, onOpenChange, role, maxPhotos, onCompl
 
         {phase === "aim" && !cameraError ? (
           <ol
-            className="space-y-1 rounded-xl border px-4 py-3 text-xs text-[#102A43]"
+            className="space-y-1 rounded-xl border px-4 py-3 text-xs text-[#04203F]"
             style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.border }}
           >
             {script.steps.map((step, i) => (
@@ -379,7 +379,7 @@ export function GuidedSweepCamera({ open, onOpenChange, role, maxPhotos, onCompl
 
         {phase === "review" ? (
           <div
-            className="space-y-1 rounded-xl border px-4 py-3 text-xs text-[#102A43]"
+            className="space-y-1 rounded-xl border px-4 py-3 text-xs text-[#04203F]"
             style={{
               background: warnings.length ? AISLIX_PALETTE.pink : ACCENT_TINT.green,
               borderColor: warnings.length ? AISLIX_PALETTE.border : AISLIX_PALETTE.green,

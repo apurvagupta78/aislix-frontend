@@ -92,5 +92,5 @@ export function toneClasses(tone: SemanticTone, selected = false) {
   const p = SEMANTIC_PALETTE[tone];
   return selected
     ? `${p.bg} ${p.border} border-2 ring-2 ${p.ring} shadow-sm`
-    : `${p.bg} ${p.border} border hover:shadow-md`;
+    : `${p.bg} ${p.border} border`;
 }

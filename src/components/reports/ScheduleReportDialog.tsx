@@ -144,7 +144,7 @@ export function ScheduleReportDialog({
                 className={cn(
                   "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-150",
                   frequency === f
-                    ? "border-[#102A43] bg-[#102A43] text-white"
+                    ? "border-[#04203F] bg-[#04203F] text-white"
                     : "border-[#D9E2E8] bg-white text-[#667085] hover:bg-[#F4F7F9]",
                 )}
               >
@@ -216,7 +216,7 @@ export function ScheduleReportDialog({
                 return (
                   <li key={s.id} className="flex items-start justify-between gap-3 rounded-xl border border-[#D9E2E8] p-3">
                     <div className="min-w-0 text-sm">
-                      <p className="flex items-center gap-1.5 font-medium text-[#102A43]">
+                      <p className="flex items-center gap-1.5 font-medium text-[#04203F]">
                         <CalendarClock className="size-3.5 shrink-0 text-[#667085]" aria-hidden />
                         {REPORT_KIND_INFO[s.kind]?.label ?? "Report"} · {where}
                         {s.preview_demo ? (

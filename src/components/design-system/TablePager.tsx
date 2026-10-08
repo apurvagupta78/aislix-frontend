@@ -38,7 +38,7 @@ export function usePager(total: number, initialSize: number = PAGE_SIZES[0]): Pa
 }
 
 const NAV_BUTTON =
-  "inline-flex size-7 items-center justify-center rounded-md border border-[#D9E2E8] bg-white text-[#102A43] transition-colors hover:bg-[#F4F7F9] disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex size-7 items-center justify-center rounded-md border border-[#D9E2E8] bg-white text-[#04203F] transition-colors hover:bg-[#F4F7F9] disabled:cursor-not-allowed disabled:opacity-40";
 
 export function TablePager({ pager, noun = "rows", className }: { pager: Pager; noun?: string; className?: string }) {
   const { page, pageSize, pageCount, total, start, end, setPage, setPageSize } = pager;
@@ -54,8 +54,8 @@ export function TablePager({ pager, noun = "rows", className }: { pager: Pager; 
       <span className="tabular-nums">
         {total ? (
           <>
-            Showing <span className="font-semibold text-[#102A43]">{fmt(start + 1)}–{fmt(end)}</span> of{" "}
-            <span className="font-semibold text-[#102A43]">{fmt(total)}</span> {noun}
+            Showing <span className="font-semibold text-[#04203F]">{fmt(start + 1)}–{fmt(end)}</span> of{" "}
+            <span className="font-semibold text-[#04203F]">{fmt(total)}</span> {noun}
           </>
         ) : (
           `No ${noun}`
@@ -65,7 +65,7 @@ export function TablePager({ pager, noun = "rows", className }: { pager: Pager; 
         <label className="inline-flex items-center gap-1.5">
           Rows per page
           <select
-            className="rounded-md border border-[#D9E2E8] bg-white px-1.5 py-1 text-xs text-[#102A43]"
+            className="rounded-md border border-[#D9E2E8] bg-white px-1.5 py-1 text-xs text-[#04203F]"
             value={pageSize}
             onChange={(event) => setPageSize(Number(event.target.value))}
           >
@@ -89,7 +89,7 @@ export function TablePager({ pager, noun = "rows", className }: { pager: Pager; 
               key={page}
               aria-label="Page number"
               inputMode="numeric"
-              className="w-12 rounded-md border border-[#D9E2E8] bg-white px-1 py-0.5 text-center text-xs text-[#102A43]"
+              className="w-12 rounded-md border border-[#D9E2E8] bg-white px-1 py-0.5 text-center text-xs text-[#04203F]"
               defaultValue={page + 1}
               onKeyDown={(event) => {
                 if (event.key === "Enter") jump(event.currentTarget.value);

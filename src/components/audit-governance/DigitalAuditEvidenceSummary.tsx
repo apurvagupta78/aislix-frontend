@@ -19,17 +19,17 @@ import type { DigitalAuditEvidence } from "@/lib/new-audit/digital-columns";
 function Status({ requirement }: { requirement: GridRequirement }) {
   if (requirement.total === 0) {
     return (
-      <span className="rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]" style={{ background: AISLIX_PALETTE.grey, border: `1px solid ${AISLIX_PALETTE.border}` }}>
+      <span className="rounded-md px-2 py-0.5 text-[11px] font-medium text-[#04203F]" style={{ background: AISLIX_PALETTE.grey, border: `1px solid ${AISLIX_PALETTE.border}` }}>
         Not needed
       </span>
     );
   }
   return requirement.ok ? (
-    <span className="rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]" style={{ background: ACCENT_TINT.green, border: `1px solid ${AISLIX_PALETTE.green}` }}>
+    <span className="rounded-md px-2 py-0.5 text-[11px] font-medium text-[#04203F]" style={{ background: ACCENT_TINT.green, border: `1px solid ${AISLIX_PALETTE.green}` }}>
       Complete{requirement.total > 1 ? ` · ${requirement.done}/${requirement.total}` : ""}
     </span>
   ) : (
-    <span className="rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]" style={{ background: AISLIX_PALETTE.pink, border: `1px dashed ${AISLIX_PALETTE.secondary}` }}>
+    <span className="rounded-md px-2 py-0.5 text-[11px] font-medium text-[#04203F]" style={{ background: AISLIX_PALETTE.pink, border: `1px dashed ${AISLIX_PALETTE.secondary}` }}>
       Missing · {requirement.done}/{requirement.total}
     </span>
   );
@@ -50,7 +50,7 @@ function Item({ requirement, children }: { requirement: GridRequirement; childre
   return (
     <div className="rounded-xl border border-[#D9E2E8] p-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-[#102A43]">{requirement.label}</p>
+        <p className="text-sm font-medium text-[#04203F]">{requirement.label}</p>
         <Status requirement={requirement} />
       </div>
       {!requirement.ok && requirement.missing.length ? (
@@ -86,12 +86,12 @@ export function DigitalAuditEvidenceSummary({
     <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-[#102A43]">Evidence captured</h3>
+          <h3 className="text-base font-semibold text-[#04203F]">Evidence captured</h3>
           <p className="mt-0.5 text-xs text-[#667085]">
             What the manager required and what the auditor captured. Status is calculated by Aislix.
           </p>
         </div>
-        <span className="text-xs font-medium text-[#102A43]">
+        <span className="text-xs font-medium text-[#04203F]">
           {complete} of {requirements.length} requirements complete
         </span>
       </div>
@@ -120,7 +120,7 @@ export function DigitalAuditEvidenceSummary({
                       const values = shelfEvidenceValues(evidence.responses, slot);
                       return (
                         <div key={slot.index} className="flex flex-wrap items-center gap-3 rounded-lg bg-[#F4F7F9] px-2.5 py-1.5">
-                          <span className="min-w-[7rem] text-xs font-medium text-[#102A43]">{slot.label}</span>
+                          <span className="min-w-[7rem] text-xs font-medium text-[#04203F]">{slot.label}</span>
                           <span className="inline-flex items-center gap-1.5">
                             {hasBeforeAfter ? <span className="text-[11px] text-[#667085]">Before</span> : null}
                             <Photos refs={listValue(values.shelf_photo)} />
@@ -162,7 +162,7 @@ export function DigitalAuditEvidenceSummary({
               return (
                 <Item key={r.id} requirement={r}>
                   {gps ? (
-                    <div className="flex items-start gap-1.5 text-xs text-[#102A43]">
+                    <div className="flex items-start gap-1.5 text-xs text-[#04203F]">
                       <MapPin className="mt-0.5 size-3.5 shrink-0 text-[#667085]" />
                       <div className="min-w-0">
                         <GpsSummary gps={gps} />
@@ -187,7 +187,7 @@ export function DigitalAuditEvidenceSummary({
             case "device_metadata":
               return (
                 <Item key={r.id} requirement={r}>
-                  <div className="space-y-0.5 text-xs text-[#102A43]">
+                  <div className="space-y-0.5 text-xs text-[#04203F]">
                     <p className="flex items-center gap-1.5">
                       <Smartphone className="size-3.5 text-[#667085]" />
                       {[text(device.platform), text(device.timezone), text(device.screen)].filter(Boolean).join(" · ") || "Device details recorded"}

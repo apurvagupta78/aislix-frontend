@@ -136,14 +136,14 @@ export function CreateCustomMetricDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-[#102A43]">Create custom metric</DialogTitle>
+          <DialogTitle className="text-[#04203F]">Create custom metric</DialogTitle>
           <DialogDescription>
             Pick audits, then choose a catalog metric or ask AI. Max 3 per tab.
           </DialogDescription>
         </DialogHeader>
 
         {!freeSlot ? (
-          <p className="text-sm text-[#102A43]">All 3 custom slots are used. Hide or delete one first.</p>
+          <p className="text-sm text-[#04203F]">All 3 custom slots are used. Hide or delete one first.</p>
         ) : (
           <div className="space-y-4">
             <div>
@@ -151,7 +151,7 @@ export function CreateCustomMetricDialog({
               <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-[#D9E2E8] p-2">
                 {audits.slice(0, 30).map((a) => (
                   <li key={a.id}>
-                    <label className="flex cursor-pointer items-start gap-2 text-sm text-[#102A43]">
+                    <label className="flex cursor-pointer items-start gap-2 text-sm text-[#04203F]">
                       <input
                         type="checkbox"
                         checked={selected.includes(a.id)}
@@ -192,7 +192,7 @@ export function CreateCustomMetricDialog({
                     className={cn(
                       "rounded-lg border px-3 py-1.5 text-xs font-medium",
                       mode === id
-                        ? "border-[#102A43] bg-[#102A43] text-white"
+                        ? "border-[#04203F] bg-[#04203F] text-white"
                         : "border-[#D9E2E8] bg-white text-[#667085]",
                     )}
                   >
@@ -231,15 +231,15 @@ export function CreateCustomMetricDialog({
             {preview ? (
               <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/50 p-3">
                 <p className="text-xs uppercase text-[#667085]">Preview</p>
-                <p className="mt-1 text-sm font-semibold text-[#102A43]">{preview.title}</p>
-                <p className="text-2xl font-semibold text-[#102A43]">{preview.value}</p>
+                <p className="mt-1 text-sm font-semibold text-[#04203F]">{preview.title}</p>
+                <p className="text-2xl font-semibold text-[#04203F]">{preview.value}</p>
                 {preview.context ? (
                   <p className="mt-1 text-xs text-[#557187]">{preview.context}</p>
                 ) : null}
               </div>
             ) : null}
 
-            {error ? <p className="text-sm text-[#102A43]">{error}</p> : null}
+            {error ? <p className="text-sm text-[#04203F]">{error}</p> : null}
           </div>
         )}
 
@@ -251,7 +251,7 @@ export function CreateCustomMetricDialog({
             <Button
               type="button"
               disabled={!freeSlot || busy}
-              className="bg-[#102A43] text-white hover:bg-[#102A43]/90"
+              className="bg-[#04203F] text-white hover:bg-[#04203F]/90"
               onClick={() => void runPreview()}
             >
               {busy ? "Generating…" : "Preview"}
@@ -259,7 +259,7 @@ export function CreateCustomMetricDialog({
           ) : (
             <Button
               type="button"
-              className="bg-[#102A43] text-white hover:bg-[#102A43]/90"
+              className="bg-[#04203F] text-white hover:bg-[#04203F]/90"
               onClick={confirm}
             >
               Add to dashboard
