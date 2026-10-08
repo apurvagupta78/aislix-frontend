@@ -373,7 +373,7 @@ export function PlanogramBuilder({
             <div className="space-y-3">
               <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <thead className="text-left text-xs text-muted-foreground">
                     <tr>
                       <th className="px-3 py-2">Row</th>
                       <th className="px-3 py-2">Location</th>
@@ -776,7 +776,7 @@ export function PlanogramBuilder({
         ) : (
           <div className="mt-4 overflow-x-auto rounded-xl border border-border">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <thead className="text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2">Location</th>
                   <th className="px-3 py-2">Category</th>

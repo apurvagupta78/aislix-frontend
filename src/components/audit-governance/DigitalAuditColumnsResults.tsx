@@ -149,7 +149,7 @@ function ResultKpi({
   const unavailable = value === "N/A";
   return (
     <div
-      className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm"
+      className="rounded-2xl border border-[#D9E2E8] bg-white p-4"
       style={{ borderLeft: `4px solid ${unavailable ? AISLIX_PALETTE.grey : AISLIX_PALETTE[accent]}` }}
     >
       <p className="flex items-center gap-1.5 text-xs font-medium text-[#04203F]">
@@ -284,7 +284,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
 
       {evidence ? <DigitalAuditEvidenceSummary evidence={evidence} requirements={requirements} /> : null}
 
-      <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold text-[#04203F]">Audit items</h3>
@@ -341,7 +341,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                   </th>
                 ) : null}
               </tr>
-              <tr className="bg-[#F4F7F9] text-left text-[10px] uppercase tracking-wide text-[#667085]">
+              <tr className="text-left text-xs text-[#667085]">
                 <th className="px-3 py-2 font-semibold">#</th>
                 {provided.map((c) => (
                   <th key={c.key} className="px-3 py-2 font-semibold">{c.label}</th>

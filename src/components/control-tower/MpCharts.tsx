@@ -68,7 +68,7 @@ export function MpRadialGauge({
             {value}%
           </p>
           <p
-            className="mt-1 line-clamp-2 font-bold uppercase tracking-[0.04em] text-mp-muted"
+            className="mt-1 line-clamp-2 font-medium text-mp-muted"
             style={{ fontSize: labelPx }}
             title={label}
           >
@@ -127,7 +127,7 @@ export function MpDonut({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-display text-2xl font-semibold text-navy">{total}</span>
-          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-mp-muted">{totalLabel}</span>
+          <span className="text-xs text-mp-muted">{totalLabel}</span>
         </div>
       </div>
       <ul className="min-w-0 flex-1 space-y-2">

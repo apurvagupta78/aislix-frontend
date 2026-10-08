@@ -281,7 +281,7 @@ export function PlanogramSetupSection({
       ) : null}
 
       {showDemoPlanogram ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background">
           <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
             <ClipboardList className="size-4 text-brand" />
             <div className="flex-1">
@@ -351,7 +351,7 @@ export function PlanogramSetupSection({
       ) : null}
 
       {effectivePlanogramMode === "none" && !hideNoPlanogramIntro ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand-soft/40 to-background p-5 shadow-soft sm:p-6">
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand-soft/40 to-background p-5 sm:p-6">
           <p className="text-base font-semibold text-foreground">
             {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.title}
           </p>
@@ -474,7 +474,7 @@ export function PlanogramSetupSection({
           />
           {showManualSetupOption ? (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/15 px-4 py-4 text-center">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Or</p>
+              <p className="text-xs font-medium text-muted-foreground">Or</p>
               <p className="text-sm text-muted-foreground">Prefer to set it up manually?</p>
               <Button
                 type="button"
@@ -513,7 +513,7 @@ export function PlanogramSetupSection({
       ) : null}
 
       {showWizard ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background">
           <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
             <ClipboardList className="size-4 shrink-0 text-brand" />
             <div className="flex-1">

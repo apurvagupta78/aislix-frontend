@@ -44,7 +44,7 @@ export function GuestDemoShell({
       <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-card py-5 lg:flex">
         <div className="px-4">
           <Logo to="/" />
-          <Badge variant="outline" className="mt-3 rounded-md text-[10px] uppercase tracking-wide">
+          <Badge variant="outline" className="mt-3 rounded-md text-xs">
             Guest demo
           </Badge>
         </div>

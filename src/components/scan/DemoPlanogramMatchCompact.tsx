@@ -38,7 +38,7 @@ export function DemoPlanogramMatchCompact({ data }: { data: ScanResult }) {
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2.5 sm:px-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Planogram
           </p>
           <p className="text-sm font-medium">Expected vs found on shelf</p>
@@ -51,7 +51,7 @@ export function DemoPlanogramMatchCompact({ data }: { data: ScanResult }) {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-left text-sm">
-          <thead className="bg-background text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="bg-background text-xs text-muted-foreground">
             <tr>
               <th className="px-3 py-2 font-medium sm:px-4">Product</th>
               <th className="px-3 py-2 font-medium sm:px-4">Expected</th>

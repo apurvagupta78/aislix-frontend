@@ -35,7 +35,7 @@ export function RolePlanogramHeader({
   return (
     <div className="space-y-4 rounded-xl border border-brand/20 bg-brand-soft/30 p-4">
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           Audit role
         </p>
         <RoleTabSwitcher value={role} onChange={onRoleChange} />
@@ -47,7 +47,7 @@ export function RolePlanogramHeader({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             KPI readiness ({readyCount}/{readiness.length})
           </p>
           <p className="text-[11px] text-muted-foreground">

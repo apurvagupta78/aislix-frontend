@@ -176,7 +176,7 @@ function HomepagePlanogramOption({
       className={cn(
         "rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
         selected
-          ? "border-brand bg-brand-soft/50 shadow-sm"
+          ? "border-brand bg-brand-soft/50"
           : "border-border bg-card hover:border-brand/30",
       )}
     >
@@ -406,7 +406,7 @@ export function DemoScanSetupPanel({
     <div className="py-4 sm:py-6">
       {homepageIntro ? (
         <div className="mx-auto mb-5 max-w-lg text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+          <p className="text-xs font-medium text-primary">
             SET UP YOUR FREE AI AUDIT
           </p>
           <h3 className="mt-3 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
@@ -588,7 +588,7 @@ export function DemoScanSetupPanel({
       ) : null}
 
       {showDemoPlanogram ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background">
           <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
             <ClipboardList className="size-4 text-brand" />
             <div className="flex-1">
@@ -640,7 +640,7 @@ export function DemoScanSetupPanel({
                     <div className="flex min-w-[7.5rem] flex-1 items-start gap-2 rounded-lg bg-card/80 px-2.5 py-2">
                       <LayoutGrid className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                        <p className="text-xs font-medium text-foreground">
                           {HOMEPAGE_DEMO_READY_CARD.expectedShelf.label}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
@@ -655,7 +655,7 @@ export function DemoScanSetupPanel({
                     <div className="flex min-w-[7.5rem] flex-1 items-start gap-2 rounded-lg bg-card/80 px-2.5 py-2">
                       <ImageIcon className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                        <p className="text-xs font-medium text-foreground">
                           {HOMEPAGE_DEMO_READY_CARD.actualShelf.label}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
@@ -703,7 +703,7 @@ export function DemoScanSetupPanel({
       {planogramMode === "none" ? <div className="mt-5">{aiAnalysisCard(null)}</div> : null}
 
       {homepageIntro && planogramMode === "none" ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand-soft/40 to-background p-5 shadow-soft sm:p-6">
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand-soft/40 to-background p-5 sm:p-6">
           <p className="text-base font-semibold text-foreground">
             {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.title}
           </p>
@@ -856,7 +856,7 @@ export function DemoScanSetupPanel({
           />
           {showManualSetupOption ? (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/15 px-4 py-4 text-center">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Or</p>
+              <p className="text-xs font-medium text-muted-foreground">Or</p>
               <p className="text-sm text-muted-foreground">Prefer to set it up manually?</p>
               <Button
                 type="button"
@@ -895,7 +895,7 @@ export function DemoScanSetupPanel({
       ) : null}
 
       {showWizard ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background">
           <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
             <ClipboardList className="size-4 shrink-0 text-brand" />
             <div className="flex-1">

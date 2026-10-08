@@ -12,7 +12,7 @@ type Props = {
 export function AssignmentPreviewPanel({ preview }: Props) {
   return (
     <div className="space-y-4 rounded-xl border bg-muted/10 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         Assignment preview
       </p>
 
@@ -34,7 +34,7 @@ export function AssignmentPreviewPanel({ preview }: Props) {
 
       {preview.distribution.length > 0 ? (
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
             Distribution
           </p>
           <div className="space-y-1">

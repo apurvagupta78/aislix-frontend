@@ -58,7 +58,7 @@ export function PlanogramModeOption({
       className={cn(
         "rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
         selected
-          ? "border-brand bg-brand-soft/50 shadow-sm"
+          ? "border-brand bg-brand-soft/50"
           : "border-border bg-card hover:border-brand/30",
       )}
     >

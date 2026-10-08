@@ -89,7 +89,7 @@ export function AssortmentManualForm({
         className={
           simplifiedCopy
             ? "text-sm font-medium text-foreground"
-            : "text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+            : "text-xs font-medium text-muted-foreground"
         }
       >
         {simplifiedCopy ? "Add a Required Product" : "Add manually"}
@@ -241,7 +241,7 @@ export function PriceManualForm({
         className={
           simplifiedCopy
             ? "text-sm font-medium text-foreground"
-            : "text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+            : "text-xs font-medium text-muted-foreground"
         }
       >
         {simplifiedCopy ? "Add a Shelf Price" : "Add manually"}
@@ -475,7 +475,7 @@ export function PromotionManualForm({
         className={
           simplifiedCopy
             ? "text-sm font-medium text-foreground"
-            : "text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+            : "text-xs font-medium text-muted-foreground"
         }
       >
         {simplifiedCopy ? "Add a Promotion" : "Add manually"}

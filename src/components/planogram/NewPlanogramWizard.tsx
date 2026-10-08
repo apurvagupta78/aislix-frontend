@@ -362,7 +362,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <Label className="text-xs font-medium text-muted-foreground">
                       Audit role *
                     </Label>
                     <RoleTabSwitcher value={role} onChange={setRole} />
@@ -1783,7 +1783,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 )}
 
                 <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {HOMEPAGE_READINESS_SUMMARY_LABEL}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-foreground">{summary.summaryText}</p>
@@ -1823,7 +1823,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                               </p>
                               <span
                                 className={cn(
-                                  "text-[11px] font-medium uppercase tracking-wide",
+                                  "text-xs font-medium",
                                   statusMeta?.className,
                                 )}
                               >

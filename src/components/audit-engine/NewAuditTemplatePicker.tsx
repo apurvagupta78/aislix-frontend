@@ -134,7 +134,7 @@ export function NewAuditTemplatePicker({
       </div>
 
       <div>
-        <p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="mb-2 flex items-center gap-1 text-xs font-medium text-muted-foreground">
           <Sparkles className="size-3" /> Recommended
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -164,7 +164,7 @@ export function NewAuditTemplatePicker({
 
       {publishedForScope.length > 0 ? (
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
             Seeded in your organization
           </p>
           <div className="grid gap-2 sm:grid-cols-2">

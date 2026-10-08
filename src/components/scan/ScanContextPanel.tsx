@@ -520,7 +520,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
         <div className="space-y-3">
 
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
 
             Filter calculations
 
@@ -608,7 +608,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
         <div className="space-y-3">
 
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
 
             Planogram data
 

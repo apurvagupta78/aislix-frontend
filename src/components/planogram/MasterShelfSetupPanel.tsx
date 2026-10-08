@@ -196,7 +196,7 @@ export function MasterShelfSetupPanel({
     const { counts, preview } = importResult.validation;
     const warnings = importResult.validation.issues.filter((i) => i.severity === "warning").length;
     return (
-      <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/50 to-background shadow-sm">
+      <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/50 to-background">
         <div className="border-b border-brand/20 bg-brand/5 px-4 py-4 sm:px-5">
           <div className="flex items-start gap-3">
             <span className="flex size-10 items-center justify-center rounded-xl bg-brand text-white">
@@ -252,7 +252,7 @@ export function MasterShelfSetupPanel({
     const { validation } = importResult;
 
     return (
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="border-b border-border px-4 py-4 sm:px-5">
           <p className="text-base font-semibold text-foreground">Planogram Needs Corrections</p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -294,10 +294,10 @@ export function MasterShelfSetupPanel({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border-2 border-brand/25 bg-gradient-to-br from-brand-soft/40 to-background shadow-sm">
+    <div className="overflow-hidden rounded-2xl border-2 border-brand/25 bg-gradient-to-br from-brand-soft/40 to-background">
       <div className="space-y-5 px-4 py-4 sm:px-5 sm:py-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+          <p className="text-xs font-medium text-brand">
             Upload your planogram
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

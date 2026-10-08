@@ -17,7 +17,7 @@ export function MpTableShell({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-hidden rounded-xl border border-line bg-white shadow-card", className)}>
+    <div className={cn("overflow-hidden rounded-xl border border-line bg-white", className)}>
       {title || description || action ? (
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
           <div className="min-w-0">
@@ -40,7 +40,7 @@ export function mpTableClassName() {
 }
 
 export function mpTableHeadClassName() {
-  return "bg-canvas text-left text-[11px] font-bold uppercase tracking-[0.08em] text-mp-muted";
+  return "text-left text-xs font-medium text-mp-muted";
 }
 
 export function mpTableRowClassName() {

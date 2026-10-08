@@ -49,17 +49,17 @@ export function TeamAssignmentPanel({
       </p>
 
       {!singleAssignee ? (
-        <div className="flex gap-2">
+        <div className="-mx-2 flex gap-1">
           <button
             type="button"
-            className="text-xs font-medium text-brand hover:underline"
+            className="min-h-[44px] px-2 text-sm font-medium text-brand hover:underline sm:min-h-0"
             onClick={selectAll}
           >
             Select all
           </button>
           <button
             type="button"
-            className="text-xs text-muted-foreground hover:underline"
+            className="min-h-[44px] px-2 text-sm text-muted-foreground hover:underline sm:min-h-0"
             onClick={() => onTeamChange({ ...teamScope, assigneeIds: [] })}
           >
             Clear

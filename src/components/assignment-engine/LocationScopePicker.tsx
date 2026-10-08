@@ -204,7 +204,7 @@ export function LocationScopePicker({ operatingModel, value, onChange, singleSto
 
       {nodesQuery.data?.length ? (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
             Hierarchy matches
           </p>
           <div className="flex flex-wrap gap-1">

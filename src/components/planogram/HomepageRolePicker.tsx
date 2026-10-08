@@ -35,11 +35,11 @@ export function HomepageRolePicker({
               className={cn(
                 "rounded-xl border p-3 text-left transition-colors",
                 selected
-                  ? "border-brand bg-brand-soft/50 shadow-sm"
+                  ? "border-brand bg-brand-soft/50"
                   : "border-border bg-card hover:border-brand/30",
               )}
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-foreground">
+              <p className="text-xs font-medium text-foreground">
                 {roleTabLabel(option.role).toUpperCase()}
               </p>
               <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
