@@ -121,13 +121,15 @@ const TOOL_SPECS: ToolSpec[] = [
   },
   {
     name: "get_my_audits",
-    description: "List authorized audits with participation filter (assigned_to_me, conducted_by_me, all).",
+    description:
+      "List authorized audits newest first, with audit name, type (AI or digital), created date, status and scan_id. Use audit_mode to find the latest AI or digital audit, then call get_audit_details (and get_scan_analysis) with its scan_id.",
     parameters: {
       type: "object",
       properties: {
         participation: { type: "string", enum: ["all", "assigned_to_me", "conducted_by_me"] },
         store_query: { type: "string" },
         store_id: { type: "string" },
+        audit_mode: { type: "string", enum: ["ai", "digital"] },
         include_completed_only: { type: "boolean" },
         limit: { type: "number" },
       },
@@ -135,7 +137,8 @@ const TOOL_SPECS: ToolSpec[] = [
   },
   {
     name: "get_audit_details",
-    description: "Detailed assignment + scan metadata for one authorized audit.",
+    description:
+      "One authorized audit: name, type, status, scan KPIs, expected-list comparison and that audit's open findings (missing, low, price, unexpected).",
     parameters: {
       type: "object",
       properties: { assignment_id: { type: "string" }, scan_id: { type: "string" } },

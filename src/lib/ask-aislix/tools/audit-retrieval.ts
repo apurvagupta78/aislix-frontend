@@ -17,6 +17,9 @@ export type AuthorizedAssignmentRow = {
   store_id: string;
   status: string;
   approval_status: string;
+  assignment_state?: string | null;
+  audit_mode?: string | null;
+  scope_values?: unknown;
   assignee_id: string;
   assigner_id: string;
   completed_at: string | null;
@@ -37,7 +40,24 @@ export type ResolveAssignmentsInput = {
   date_to?: string;
   limit?: number;
   include_completed_only?: boolean;
+  audit_mode?: "ai" | "digital";
 };
+
+/** Assignment's own name (set at creation) or its template name. */
+export function auditNameOf(row: AuthorizedAssignmentRow): string | null {
+  const scope = row.scope_values;
+  if (scope && typeof scope === "object" && !Array.isArray(scope)) {
+    const name = (scope as Record<string, unknown>).audit_name;
+    if (typeof name === "string" && name.trim()) return name.trim();
+  }
+  return row.audit_templates?.name ?? null;
+}
+
+export function auditModeLabel(mode: string | null | undefined): string {
+  const value = String(mode ?? "").toLowerCase();
+  if (value === "ai" || value === "ai_assisted") return "AI audit";
+  return "Digital audit";
+}
 
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
@@ -109,7 +129,7 @@ export async function resolveAuthorizedAssignments(
   let query = supabase
     .from("scan_assignments")
     .select(
-      "id, scan_id, store_id, status, approval_status, assignee_id, assigner_id, completed_at, due_at, created_at, template_id, audit_templates:template_id (name, audit_purpose, operating_model), stores:store_id (name, city, country)",
+      "id, scan_id, store_id, status, approval_status, assignment_state, audit_mode, scope_values, assignee_id, assigner_id, completed_at, due_at, created_at, template_id, audit_templates:template_id (name, audit_purpose, operating_model), stores:store_id (name, city, country)",
     )
     .eq("org_id", scope.orgId)
     .in("store_id", storeIds)
@@ -118,8 +138,10 @@ export async function resolveAuthorizedAssignments(
 
   if (input.assignment_id) query = query.eq("id", input.assignment_id);
   if (input.scan_id) query = query.eq("scan_id", input.scan_id);
+  if (input.audit_mode === "ai") query = query.in("audit_mode", ["ai", "ai_assisted"]);
+  if (input.audit_mode === "digital") query = query.eq("audit_mode", "digital");
   if (input.include_completed_only) {
-    query = query.in("status", ["Completed", "Approved", "Submitted"]);
+    query = query.or("status.eq.completed,assignment_state.eq.submitted,approval_status.eq.approved");
   }
   if (dateFrom) query = query.gte("created_at", dateFrom);
   if (dateTo) query = query.lte("created_at", `${dateTo}T23:59:59.999Z`);

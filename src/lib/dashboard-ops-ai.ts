@@ -128,6 +128,8 @@ export type LastTenAuditRow = {
   relation?: "assigned_to_me" | "assigned_by_me" | "other";
   type: string;
   completionStage: "completed" | "in_progress" | "not_started";
+  /** Review-aware label, e.g. "Needs correction" or "Pending review". */
+  statusLabel?: string;
   date: string;
   scorePct: number | null;
 };
@@ -223,6 +225,24 @@ function stageOf(row: {
     return "in_progress";
   }
   return "not_started";
+}
+
+function statusLabelOf(row: {
+  status?: string | null;
+  assignment_state?: string | null;
+  approval_status?: string | null;
+}): string {
+  const status = (row.status ?? "").toLowerCase();
+  const state = (row.assignment_state ?? "").toLowerCase();
+  const approval = (row.approval_status ?? "").toLowerCase();
+  if (status === "needs_correction" || state === "reaudit_required") return "Needs correction";
+  if (approval === "approved" || status === "approved") return "Approved";
+  if (approval === "rejected") return "Rejected";
+  if (approval === "pending_review" || state === "submitted" || status === "pending_review") {
+    return "Pending review";
+  }
+  const stage = stageOf(row);
+  return stage === "completed" ? "Completed" : stage === "in_progress" ? "In progress" : "Not started";
 }
 
 function metricNum(metrics: unknown, key: string): number | null {
@@ -652,6 +672,7 @@ export async function fetchOpsAiDashboard(
       relation,
       type: String(a.audit_mode ?? "digital").toLowerCase() === "ai" ? "AI" : "Digital",
       completionStage: stage,
+      statusLabel: statusLabelOf(a),
       date: (a.created_at as string) ?? "",
       scorePct:
         scan?.planogram_compliance_percent != null

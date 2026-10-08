@@ -112,7 +112,8 @@ export function DashboardOverviewPanel({
 }: Props) {
   const [showAll, setShowAll] = useState(false);
 
-  if (aiLoading && digitalLoading) {
+  // Mixed KPIs (total audits, overdue actions) would read "N/A" until both sources arrive.
+  if (aiLoading || digitalLoading) {
     return (
       <div className="flex flex-col gap-6">
         <KpiSkeleton count={4} />
@@ -188,28 +189,43 @@ export function DashboardOverviewPanel({
   const primaryKpis = kpis.filter((k) => k.primary);
   const extraKpis = kpis.filter((k) => !k.primary);
 
-  const combined: CombinedRow[] = [
-    ...(emptyAi ? [] : (ai?.lastTen ?? [])).map((r) => ({
-      key: `ai-${r.id}`,
-      kind: "AI audit" as const,
-      name: r.templateName || r.auditName,
-      store: r.storeName,
-      date: r.date,
-      status: STAGE_LABEL[r.completionStage],
-      result: r.scorePct == null ? "N/A" : `${Math.round(r.scorePct)}% score`,
-      scanId: r.scanId,
-    })),
-    ...(emptyDigital ? [] : (digital?.lastTen ?? [])).map((r) => ({
-      key: `dg-${r.id}`,
-      kind: "Digital audit" as const,
-      name: r.templateName || r.auditName,
-      store: r.store,
-      date: r.date,
-      status: r.status,
-      result: r.variance == null ? "N/A" : `${r.variance > 0 ? "+" : ""}${r.variance} units`,
-      scanId: r.scanId,
-    })),
-  ]
+  const digitalRows = emptyDigital ? [] : (digital?.lastTen ?? []);
+  const digitalById = new Map(digitalRows.map((r) => [r.id, r]));
+  const varianceText = (variance: number | null | undefined) =>
+    variance == null ? "N/A" : `${variance > 0 ? "+" : ""}${variance} units`;
+  // The ops list already covers every assignment (AI and digital); the digital list only adds variance.
+  const allModeRows = emptyAi ? [] : (ai?.lastTen ?? []);
+  const combined: CombinedRow[] = (
+    allModeRows.length
+      ? allModeRows.map((r) => {
+          const isAi = String(r.type).toLowerCase() === "ai";
+          const dg = isAi ? undefined : digitalById.get(r.id);
+          return {
+            key: r.id,
+            kind: isAi ? ("AI audit" as const) : ("Digital audit" as const),
+            name: r.templateName || r.auditName,
+            store: r.storeName,
+            date: r.date,
+            status: r.statusLabel ?? STAGE_LABEL[r.completionStage],
+            result: isAi
+              ? r.scorePct == null
+                ? "N/A"
+                : `${Math.round(r.scorePct)}% score`
+              : varianceText(dg?.variance),
+            scanId: r.scanId ?? dg?.scanId ?? null,
+          };
+        })
+      : digitalRows.map((r) => ({
+          key: r.id,
+          kind: "Digital audit" as const,
+          name: r.templateName || r.auditName,
+          store: r.store,
+          date: r.date,
+          status: r.status,
+          result: varianceText(r.variance),
+          scanId: r.scanId,
+        }))
+  )
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 10);
 

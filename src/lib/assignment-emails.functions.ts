@@ -216,6 +216,8 @@ export const submitAiAudit = createServerFn({ method: "POST" })
       .update({
         submission_status: "pending_review",
         submitted_at: now,
+        finalized_by: userId,
+        finalized_at: now,
       } as never)
       .eq("id", data.scanId);
 

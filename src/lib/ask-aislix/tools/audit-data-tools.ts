@@ -13,6 +13,8 @@ import { fetchAuditReportsForScans } from "./audit-reports";
 import {
   assertAssignmentAuthorized,
   assertScanAuthorized,
+  auditModeLabel,
+  auditNameOf,
   resolveAuthorizedAssignments,
   resolveAuthorizedScanIds,
   unauthorizedResult,
@@ -43,6 +45,11 @@ function participationFromArgs(args: Record<string, unknown>): AuditParticipatio
   return "all";
 }
 
+function auditModeFromArgs(args: Record<string, unknown>): "ai" | "digital" | undefined {
+  const value = pickString(args, "audit_mode").toLowerCase();
+  return value === "ai" || value === "digital" ? value : undefined;
+}
+
 export async function getMyAudits(ctx: AuditToolContext, args: Record<string, unknown>): Promise<ToolResult> {
   const participation = participationFromArgs(args);
   const limit = pickLimit(args, 20, 50);
@@ -52,19 +59,25 @@ export async function getMyAudits(ctx: AuditToolContext, args: Record<string, un
     store_id: pickString(args, "store_id"),
     limit,
     include_completed_only: Boolean(args.include_completed_only),
+    audit_mode: auditModeFromArgs(args),
   });
 
   return {
     available: true,
     data: {
       participation,
+      order: "newest first",
       count: assignments.length,
       items: assignments.map((a) => ({
         assignment_id: a.id,
         scan_id: a.scan_id,
+        audit_name: auditNameOf(a),
+        audit_type: auditModeLabel(a.audit_mode),
+        created_at: a.created_at,
         store: a.stores?.name ?? "Store",
         city: a.stores?.city,
         status: a.status,
+        assignment_state: a.assignment_state,
         approval_status: a.approval_status,
         assignee_id: a.assignee_id,
         due_at: a.due_at,
@@ -108,12 +121,55 @@ export async function getAuditDetails(ctx: AuditToolContext, args: Record<string
     scanRow = data;
   }
 
+  let comparison: { compliance_percent: unknown; summary: unknown } | null = null;
+  if (resolvedScanId) {
+    const { data } = await ctx.supabase
+      .from("planogram_comparisons")
+      .select("compliance_percent, summary")
+      .eq("org_id", ctx.scope.orgId)
+      .eq("scan_id", resolvedScanId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    comparison = data ?? null;
+  }
+
+  let findings: {
+    open_by_type: Record<string, number>;
+    items: Record<string, unknown>[];
+  } | null = null;
+  if (resolvedScanId) {
+    const { data } = await ctx.supabase
+      .from("findings")
+      .select("finding_type, severity, status, title, product_name, sku, expected_value, actual_value")
+      .eq("org_id", ctx.scope.orgId)
+      .eq("scan_id", resolvedScanId)
+      .limit(200);
+    const rows = (data ?? []) as Record<string, unknown>[];
+    const open = rows.filter((r) => !["closed", "resolved"].includes(String(r.status ?? "").toLowerCase()));
+    const openByType: Record<string, number> = {};
+    for (const r of open) {
+      const type = String(r.finding_type ?? "other");
+      openByType[type] = (openByType[type] ?? 0) + 1;
+    }
+    const severityRank = (s: unknown) =>
+      ({ critical: 0, high: 1, medium: 2, low: 3 })[String(s ?? "").toLowerCase()] ?? 4;
+    findings = {
+      open_by_type: openByType,
+      items: [...open].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, 25),
+    };
+  }
+
   return {
     available: true,
     data: {
       assignment: {
         id: assignment.id,
+        audit_name: auditNameOf(assignment),
+        audit_type: auditModeLabel(assignment.audit_mode),
+        created_at: assignment.created_at,
         status: assignment.status,
+        assignment_state: assignment.assignment_state,
         approval_status: assignment.approval_status,
         store: assignment.stores?.name,
         city: assignment.stores?.city,
@@ -139,6 +195,8 @@ export async function getAuditDetails(ctx: AuditToolContext, args: Record<string
             notes: scanRow.notes,
           }
         : null,
+      expected_list_comparison: comparison,
+      findings,
     },
   };
 }
@@ -374,8 +432,11 @@ export async function getAuditsAggregate(ctx: AuditToolContext, args: Record<str
   });
 
   const scanIds = [...new Set(assignments.map((a) => a.scan_id).filter(Boolean))] as string[];
-  const completed = assignments.filter((a) =>
-    ["Completed", "Approved", "Submitted"].includes(a.status),
+  const completed = assignments.filter(
+    (a) =>
+      a.status === "completed" ||
+      a.assignment_state === "submitted" ||
+      a.approval_status === "approved",
   ).length;
 
   const statusCounts: Record<string, number> = {};
