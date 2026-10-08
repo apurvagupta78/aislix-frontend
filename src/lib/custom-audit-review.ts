@@ -43,6 +43,8 @@ export type CustomAuditLineDraft = {
   system_qty: number | null;
   actual_qty: number | null;
   mrp_inr: number | null;
+  /** Rate / unit price column; values variances when the line has no MRP. */
+  unit_price_inr?: number | null;
   rca_code: RcaCode | null;
   rca_notes: string | null;
   /** False when the line has no expected value at all (e.g. expiry checks) — no variance then. */
@@ -77,6 +79,21 @@ function asNumber(value: AuditResponseValue): number | null {
   const n = Number(value);
   return Number.isNaN(n) ? null : n;
 }
+
+/** "₹1,180.50", "Rs. 45", "45" → number. */
+function asPrice(value: AuditResponseValue): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const raw = asString(value);
+  if (!raw) return null;
+  const cleaned = raw.replace(/^(rs\.?|inr)/i, "").replace(/[₹$€£,\s]/g, "");
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+const MRP_KEY = /^(mrp|max_retail_price)(_(inr|rs))?(_\d+)?$/;
+const UNIT_PRICE_KEY =
+  /^(unit_price|price|rate|unit_rate|net_rate|selling_price|sp|unit_cost|cost|cost_price|price_per_unit)(_(inr|rs))?(_\d+)?$/;
 
 export function normalizeRcaCode(value: AuditResponseValue): RcaCode | null {
   const raw = asString(value);
@@ -163,8 +180,12 @@ function applyFieldToDraft(
     draft.product_name = asString(value) ?? draft.product_name;
     return;
   }
-  if (concept === "mrp" || key === "mrp") {
-    draft.mrp_inr = asNumber(value) ?? draft.mrp_inr;
+  if (concept === "mrp" || MRP_KEY.test(key)) {
+    draft.mrp_inr = asPrice(value) ?? draft.mrp_inr;
+    return;
+  }
+  if (concept === "unit_price" || UNIT_PRICE_KEY.test(key)) {
+    draft.unit_price_inr = asPrice(value) ?? draft.unit_price_inr ?? null;
     return;
   }
   if (field.type === "rca" || concept === "rca" || key === "rca") {
@@ -207,7 +228,7 @@ function applyFieldToDraft(
       break;
     case "currency":
       if (field.label.toLowerCase().includes("mrp") || field.key.includes("mrp")) {
-        draft.mrp_inr = asNumber(value) ?? draft.mrp_inr;
+        draft.mrp_inr = asPrice(value) ?? draft.mrp_inr;
       }
       break;
     case "rca":
@@ -283,7 +304,8 @@ export function buildDigitalAuditLineRow(
   draft: CustomAuditLineDraft,
   ctx: CustomAuditReviewContext,
 ): Record<string, unknown> {
-  const variance = computeLineVariance(draft.expected_qty, draft.actual_qty, draft.mrp_inr, {
+  const unitValue = draft.mrp_inr ?? draft.unit_price_inr ?? null;
+  const variance = computeLineVariance(draft.expected_qty, draft.actual_qty, unitValue, {
     expectedMapped: draft.expectedMapped !== false,
   });
   return {

@@ -105,6 +105,32 @@ describe("custom audit review materialization", () => {
     expect(drafts[0]).toMatchObject({ sku: "SKU-1", expected_qty: 12, actual_qty: 9 });
   });
 
+  it("values the variance from a Unit Price column when there is no MRP", () => {
+    const text = (key: string, label: string) =>
+      ({ key, section: "records", type: "short_text", label, required: false, config: {} }) as const;
+    const digitalCsv = {
+      ...INVENTORY_DEFINITION,
+      fields: [
+        text("item_name", "Product"),
+        text("expected_qty", "Expected Qty"),
+        text("unit_price", "Unit Price"),
+        text("actual_qty", "Actual Qty"),
+        text("mrp", "MRP"),
+      ],
+    } as TemplateDefinition;
+    const ctx = { scanId: "s", assignmentId: "a", orgId: "o", storeId: "st", userId: "u" };
+    const [priced, both] = buildDigitalAuditLineDraftsFromResponses(digitalCsv, {
+      records: {
+        0: { item_name: "Oreo Vanilla 120g", expected_qty: "10", unit_price: "₹1,030.50", actual_qty: "7" },
+        1: { item_name: "Good Day 200g", expected_qty: "18", unit_price: "40", mrp: "50", actual_qty: "15" },
+      },
+    });
+    const pricedRow = buildDigitalAuditLineRow(priced!, ctx);
+    expect(pricedRow.variance_value_inr).toBe(-3091.5);
+    expect(pricedRow.mrp_inr).toBeNull();
+    expect(buildDigitalAuditLineRow(both!, ctx).variance_value_inr).toBe(-150);
+  });
+
   it("leaves variance empty when the line has no expected value (expiry checks)", () => {
     const expiryDefinition = {
       ...INVENTORY_DEFINITION,
