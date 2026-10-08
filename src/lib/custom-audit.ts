@@ -377,6 +377,8 @@ export function buildCustomAuditShelfScanInsert(input: {
     audit_mode: "digital",
     submission_status: directApproval ? "approved" : "pending_review",
     submitted_at: submittedAt,
+    finalized_by: input.userId,
+    finalized_at: submittedAt,
     template_id: input.templateId,
     template_version: input.templateVersion,
     template_snapshot: input.templateSnapshot,
@@ -547,6 +549,8 @@ export async function submitCustomAudit(input: {
         status: "completed",
         scan_id: scanId,
         approval_status: directApproval ? "approved" : "pending_review",
+        assignment_state: "submitted",
+        completed_at: new Date().toISOString(),
       })
       .eq("id", assignmentId);
 
