@@ -1,7 +1,12 @@
 import type { Json } from "@/integrations/supabase/types";
 import { parseAiAnalysisRequest, type AiAnalysisRequest } from "@/lib/ai-audit/ai-analysis";
 import { runLunaAnalysis } from "@/lib/ai-audit/luna-analysis.server";
-import { buildLunaEvidence, shelfProductsFromRows, shelfPromotionsFromAstra } from "@/lib/ai-audit/luna-evidence";
+import {
+  brandShareScopeText,
+  buildLunaEvidence,
+  shelfProductsFromRows,
+  shelfPromotionsFromAstra,
+} from "@/lib/ai-audit/luna-evidence";
 import { findReferenceMatch } from "@/lib/ai-audit/reference-match";
 
 export const MAX_AI_ANALYSIS_CHARS = 4_000;
@@ -37,6 +42,7 @@ export async function attachLunaAnalysis(payload: Record<string, unknown>, reque
       countPending: metrics.scan_complete === false,
       photoCount: typeof multiPhoto?.photo_count === "number" ? multiPhoto.photo_count : 1,
       promotions: shelfPromotionsFromAstra(metrics.astra_cv_analysis ?? payload.astra_cv_analysis),
+      brandShareScope: brandShareScopeText(metrics, payload),
     }),
   );
   payload.metrics = { ...metrics, luna_analysis: analysis };

@@ -33,6 +33,7 @@ export function buildLunaAnalysisPrompt(request: AiAnalysisRequest, evidence: Lu
     "- Promotions: use only shelf_promotions and the promotion fields on document lines (expected_promo from the",
     "  document, shelf_promotion / shelf_promo_price read by Astra). No promotion read is not proof there is none —",
     '  say "no offer tag was readable" rather than "no promotion".',
+    "- Brand share: when metrics.brand_share_scope is given, say what the share covers (e.g. \"within Biscuits\").",
     countPendingRule(evidence.countPending),
     "- Plain business English a store manager understands. No theft or loss language; say \"value at risk\".",
     "- Keep the answer under 120 words and each note under 50 words.",

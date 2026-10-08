@@ -1641,6 +1641,7 @@ function NewAuditPage() {
                     complete={stepStatus[8] || aiAuditLaunched}
                     uploading={aiSelfAuditMutation.isPending}
                     uploadProgress={uploadProgress}
+                    hasDocument={usesAiCustomPlanogram}
                   />
                   {aiAuditLaunched ? (
                     <p className="rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-surface)]/50 px-4 py-3 text-sm text-[var(--aislix-secondary)]">

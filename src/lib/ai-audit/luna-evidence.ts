@@ -100,6 +100,35 @@ function compact<T extends Record<string, unknown>>(row: T): Partial<T> {
   ) as Partial<T>;
 }
 
+/**
+ * Backend `brand_share_scope` / denominator as a sentence Luna can quote. The backend writes these
+ * on the payload root and (newer builds) on metrics, so both are read.
+ */
+export function brandShareScopeText(...sources: unknown[]): string | null {
+  const pick = (key: string): unknown => {
+    for (const source of sources) {
+      if (source && typeof source === "object" && (source as Record<string, unknown>)[key] != null) {
+        return (source as Record<string, unknown>)[key];
+      }
+    }
+    return null;
+  };
+  const scope = pick("brand_share_scope");
+  const denominator = Number(pick("brand_share_denominator"));
+  const facings = Number.isFinite(denominator) && denominator > 0 ? `${denominator} facings` : "facings";
+  const auditScope = pick("audit_scope");
+  const subCategory =
+    auditScope && typeof auditScope === "object"
+      ? String((auditScope as Record<string, unknown>).audited_sub_category ?? "").trim()
+      : "";
+  if (scope === "eligible_category") {
+    const where = subCategory ? `the audited sub-category (${subCategory})` : "the audited sub-category";
+    return `Share of the ${facings} in ${where} only; products from other categories in the photo are excluded.`;
+  }
+  if (scope === "full_image") return `Share of all ${facings} in the photos.`;
+  return null;
+}
+
 /** Persisted Astra + Aislix numbers, trimmed to what Luna needs to answer the user. */
 export function buildLunaEvidence(input: {
   referenceMatch: ReferenceMatch | undefined;
@@ -109,6 +138,8 @@ export function buildLunaEvidence(input: {
   countPending: boolean;
   photoCount: number | null;
   promotions?: ShelfPromotion[];
+  /** What the brand-share denominator covers, e.g. only the audited sub-category. */
+  brandShareScope?: string | null;
 }): LunaAnalysisEvidence {
   const match = input.referenceMatch;
   return {
@@ -160,6 +191,7 @@ export function buildLunaEvidence(input: {
     metrics: compact({
       total_facings: input.totalFacings,
       brand_share_percent: input.brandShare.slice(0, 12).map((b) => ({ brand: b.brand, share: b.share })),
+      brand_share_scope: input.brandShareScope ?? null,
       ...(match
         ? {
             document_verdict: match.verdict,

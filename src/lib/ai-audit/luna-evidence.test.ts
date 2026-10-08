@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildLunaEvidence, shelfProductsFromRows, shelfPromotionsFromAstra } from "@/lib/ai-audit/luna-evidence";
+import {
+  brandShareScopeText,
+  buildLunaEvidence,
+  shelfProductsFromRows,
+  shelfPromotionsFromAstra,
+} from "@/lib/ai-audit/luna-evidence";
 import { buildDemoSampleDocumentContext, demoSampleDocument } from "@/lib/ai-audit/demo-sample-document";
 import { usableReferenceRows } from "@/lib/ai-audit/reference-document";
 import { aiAnalysisReady } from "@/lib/ai-audit/ai-analysis";
@@ -23,6 +28,22 @@ describe("shelfProductsFromRows", () => {
         confidence: 0.9,
       },
     ]);
+  });
+});
+
+describe("brandShareScopeText", () => {
+  it("names the audited sub-category when share excludes other categories", () => {
+    const text = brandShareScopeText(
+      { audit_scope: { audited_sub_category: "biscuits" } },
+      { brand_share_scope: "eligible_category", brand_share_denominator: 22 },
+    );
+    expect(text).toBe(
+      "Share of the 22 facings in the audited sub-category (biscuits) only; products from other categories in the photo are excluded.",
+    );
+  });
+
+  it("returns null when the backend sent no scope", () => {
+    expect(brandShareScopeText({}, null)).toBeNull();
   });
 });
 

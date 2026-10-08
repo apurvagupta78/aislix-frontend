@@ -32,6 +32,8 @@ type Props = {
   maxPhotos?: number;
   /** Offers a ready-made shelf photo instead of an upload. */
   sample?: SamplePhoto;
+  /** False when the audit runs without a document; the copy must not promise a comparison. */
+  hasDocument?: boolean;
 };
 
 export function NewAuditStep7Capture({
@@ -46,6 +48,7 @@ export function NewAuditStep7Capture({
   stepNumber = 8,
   maxPhotos = MAX_SCAN_IMAGES,
   sample,
+  hasDocument = true,
 }: Props) {
   const [sweepOpen, setSweepOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -84,8 +87,8 @@ export function NewAuditStep7Capture({
       title={single ? "Capture shelf photo" : "Capture shelf photos"}
       description={
         single
-          ? "Add one clear photo of the shelf. AI counts it against your document."
-          : `Add 1–${maxPhotos} photos of the shelf — one per section, without overlapping. AI counts them together against your document.`
+          ? `Add one clear photo of the shelf. AI counts it${hasDocument ? " against your document" : ""}.`
+          : `Add 1–${maxPhotos} photos of the shelf — one per section, without overlapping. AI counts them together${hasDocument ? " against your document" : ""}.`
       }
       complete={complete}
       error={error}
