@@ -121,6 +121,8 @@ export type VisionAsset = {
   caption: string;
   mimeType: string;
   base64: string;
+  /** Stored photo the pixels came from, so the answer can show what was analysed. */
+  source?: ImageGalleryItem;
 };
 
 export type ImageGalleryItem = {

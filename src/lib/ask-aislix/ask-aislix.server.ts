@@ -471,12 +471,11 @@ export async function askAislixServer(
       if (parsed.summary) parsed.summary = prefixDemoAnswer(parsed.summary, true);
     }
 
-    if ((parsed.visual?.type === "image_gallery" || pendingImages.length) && pendingImages.length) {
-      parsed.visual = { type: "image_gallery", title: parsed.visual?.title ?? "Audit evidence", data: [] };
-      const signed = await signImageGalleryItems(supabase, pendingImages.slice(0, 20), {
-        allowDemoFallback: Boolean(scope.labeledDemo) || isDemoOrgId(scope.orgId),
-      });
-      parsed.visual.data = signed.map((img) => ({
+    const signOptions = {
+      allowDemoFallback: Boolean(scope.labeledDemo) || isDemoOrgId(scope.orgId),
+    };
+    const toGalleryData = (images: ImageGalleryItem[]) =>
+      images.map((img) => ({
         url: img.url,
         caption: img.caption,
         captured_at: img.capturedAt,
@@ -484,6 +483,29 @@ export async function askAislixServer(
         scan_id: img.scanId,
         assignment_id: img.assignmentId,
       }));
+    const analysedImages = visionAssets.flatMap((asset) => (asset.source ? [asset.source] : []));
+
+    if (pendingImages.length) {
+      parsed.visual = { type: "image_gallery", title: parsed.visual?.title ?? "Audit evidence", data: [] };
+      const signed = await signImageGalleryItems(supabase, pendingImages.slice(0, 20), signOptions);
+      parsed.visual.data = toGalleryData(signed);
+    } else if (analysedImages.length) {
+      // Photos the answer describes must be visible, whichever visual the answer chose.
+      const signed = (await signImageGalleryItems(supabase, analysedImages, signOptions)).filter(
+        (img) => img.url,
+      );
+      if (signed.length) {
+        const title = "Photos the AI reviewed";
+        if (parsed.visual?.type === "image_gallery") {
+          parsed.visual = {
+            type: "image_gallery",
+            title: parsed.visual.title || title,
+            data: toGalleryData(signed),
+          };
+        } else {
+          parsed.evidence = { title, images: toGalleryData(signed) };
+        }
+      }
     }
 
     await logRequest(supabase, {

@@ -43,6 +43,7 @@ export async function downloadVisionAssets(
         caption: item.caption,
         mimeType,
         base64: buffer.toString("base64"),
+        source: item,
       });
       totalBytes += buffer.length;
     } catch {
