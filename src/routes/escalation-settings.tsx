@@ -144,7 +144,9 @@ function EscalationSettingsPage() {
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  {rule.first_role} → after {rule.escalate_after_hours}h {rule.second_role} → after {rule.second_after_hours}h {rule.final_role}
+                  {roleLabel(rule.first_role)} → after {rule.escalate_after_hours} h →{" "}
+                  {roleLabel(rule.second_role)} → after {rule.second_after_hours} h →{" "}
+                  {roleLabel(rule.final_role)}
                 </p>
               </div>
             ))}
@@ -157,6 +159,10 @@ function EscalationSettingsPage() {
       )}
     </AppShell>
   );
+}
+
+function roleLabel(value: string): string {
+  return ESCALATION_ROLES.find((role) => role.value === value)?.label ?? value;
 }
 
 function RoleField({

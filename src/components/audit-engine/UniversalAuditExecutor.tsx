@@ -71,14 +71,10 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
 
   useEffect(() => {
     if (!session || testMode) return;
+    const mode = session.assignmentAuditMode || session.template.audit_mode;
     const ctx: AuditExecutionContext = {
       assignmentId,
-      method:
-        session.template.audit_mode === "ai"
-          ? "ai"
-          : session.template.audit_mode === "ai_assisted"
-            ? "ai_assisted"
-            : "digital",
+      method: mode === "ai" ? "ai" : mode === "ai_assisted" ? "ai_assisted" : "digital",
       templateType: session.template.template_type,
       operatingModel: session.template.operating_model,
       creationSource: null,

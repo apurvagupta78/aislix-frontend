@@ -62,6 +62,22 @@ export function exceptionLifecycleLabel(lifecycle: ExceptionLifecycle): string {
   return LIFECYCLE_LABELS[lifecycle] ?? lifecycle;
 }
 
+const OPEN_ACTION_STATUSES = [
+  "open",
+  "assigned",
+  "in_progress",
+  "overdue",
+  "rejected",
+  "pending_verification",
+] as const;
+
+const ACTION_LIFECYCLE: Record<string, ExceptionLifecycle> = {
+  assigned: "action_assigned",
+  in_progress: "investigating",
+  pending_verification: "awaiting_verification",
+  rejected: "reopened",
+};
+
 async function syncVirtualExceptions(orgId: string): Promise<void> {
   const inserts: Record<string, unknown>[] = [];
 
@@ -121,36 +137,61 @@ async function syncVirtualExceptions(orgId: string): Promise<void> {
 
   const { data: actions } = await supabase
     .from("corrective_actions")
-    .select("id, issue_type, suggestion, status, assigned_to, comparison_id")
+    .select(
+      "id, issue_type, title, suggestion, status, priority, due_at, sku, assigned_to, comparison_id, scan_id, store_id",
+    )
     .eq("org_id", orgId)
-    .in("status", ["open", "in_progress"]);
+    .in("status", [...OPEN_ACTION_STATUSES]);
 
   if (actions?.length) {
-    const compIds = [...new Set(actions.map((a) => a.comparison_id as string))];
-    const { data: comps } = await supabase
-      .from("planogram_comparisons")
-      .select("id, scan_id, store_id, assignment_id, stores:store_id (name)")
-      .in("id", compIds);
+    const compIds = [
+      ...new Set(actions.map((a) => a.comparison_id as string | null).filter(Boolean)),
+    ] as string[];
+    const { data: comps } = compIds.length
+      ? await supabase
+          .from("planogram_comparisons")
+          .select("id, scan_id, store_id, assignment_id")
+          .in("id", compIds)
+      : { data: [] as { id: string; scan_id: string; store_id: string; assignment_id: string | null }[] };
     const compById = new Map((comps ?? []).map((c) => [c.id as string, c]));
 
     for (const action of actions) {
-      const comp = compById.get(action.comparison_id as string);
+      const comp = action.comparison_id ? compById.get(action.comparison_id as string) : undefined;
+      const priority = String(action.priority ?? "medium");
       inserts.push({
         org_id: orgId,
         source_type: "corrective_action",
         source_id: action.id as string,
-        scan_id: (comp?.scan_id as string) ?? null,
-        store_id: (comp?.store_id as string) ?? null,
-        assignment_id: (comp?.assignment_id as string) ?? null,
+        scan_id: (action.scan_id as string | null) ?? (comp?.scan_id as string | undefined) ?? null,
+        store_id: (action.store_id as string | null) ?? (comp?.store_id as string | undefined) ?? null,
+        assignment_id: (comp?.assignment_id as string | undefined) ?? null,
         owner_id: action.assigned_to as string | null,
-        severity: "attention",
-        lifecycle: action.status === "in_progress" ? "investigating" : "open",
-        title: String(action.issue_type ?? "Corrective action"),
+        severity: priority === "critical" ? "critical" : priority === "low" ? "normal" : "attention",
+        lifecycle: ACTION_LIFECYCLE[String(action.status)] ?? "open",
+        due_at: (action.due_at as string | null) ?? null,
+        title: String(action.title || action.suggestion || "Corrective action"),
         description: String(action.suggestion ?? ""),
-        shelf_label: "Planogram",
-        sku_label: "—",
+        shelf_label: comp ? "Planogram" : "Shelf",
+        sku_label: (action.sku as string | null) || "—",
         impact_label: "Compliance gap",
       });
+    }
+  }
+
+  if (actions) {
+    const openActionIds = new Set(actions.map((a) => a.id as string));
+    const { data: tracked } = await supabase
+      .from("audit_exceptions")
+      .select("id, source_id")
+      .eq("org_id", orgId)
+      .eq("source_type", "corrective_action")
+      .neq("lifecycle", "resolved")
+      .limit(1000);
+    const finished = (tracked ?? [])
+      .filter((row) => !openActionIds.has(row.source_id as string))
+      .map((row) => row.id as string);
+    if (finished.length) {
+      await supabase.from("audit_exceptions").update({ lifecycle: "resolved" }).in("id", finished);
     }
   }
 
@@ -160,8 +201,9 @@ async function syncVirtualExceptions(orgId: string): Promise<void> {
     onConflict: "org_id,source_type,source_id",
     ignoreDuplicates: false,
   });
-  if (error && !String(error.message).includes("audit_exceptions")) {
-    dbError(error, "Could not sync exception records.");
+  if (error) {
+    // The queue still lists what is already materialized; a failed refresh must not blank the page.
+    console.error("[exceptions] sync failed", error.message);
   }
 }
 

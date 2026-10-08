@@ -109,7 +109,7 @@ function AuditIntelligencePage() {
     compliance: t.compliance_percent ?? null,
   }));
 
-  const storeChart = data.by_store.slice(0, 8).map((s) => ({
+  const storeChart = data.by_store.filter((s) => s.variance_value_known).slice(0, 8).map((s) => ({
     name: s.store_name.length > 12 ? `${s.store_name.slice(0, 12)}…` : s.store_name,
     variance: Math.abs(s.total_variance_value_inr),
     health: s.health_score ?? null,
@@ -140,7 +140,12 @@ function AuditIntelligencePage() {
           <KpiCard
             icon={TrendingUp}
             label="Total variance"
-            value={`₹${Math.abs(data.total_variance_inr).toLocaleString("en-IN")}`}
+            value={
+              data.variance_value_known
+                ? `₹${Math.abs(data.total_variance_inr).toLocaleString("en-IN")}`
+                : "N/A"
+            }
+            hint={data.variance_value_known ? undefined : "Add unit prices to value variances"}
             tone="neutral"
           />
           <KpiCard
@@ -176,17 +181,23 @@ function AuditIntelligencePage() {
 
           <section className="overflow-hidden rounded-xl border border-line bg-white p-4 sm:p-5">
             <h3 className="font-display text-[15px] font-semibold text-navy">Variance by store (₹)</h3>
-            <div className="mt-4 h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={storeChart}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="variance" fill="var(--aislix-darkstore-bg)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {storeChart.length ? (
+              <div className="mt-4 h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={storeChart}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="variance" fill="var(--aislix-darkstore-bg)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="mt-4 flex h-56 items-center justify-center rounded-lg bg-[#EEF1F4] px-4 text-center text-sm text-[#667085]">
+                Data unavailable — variance lines have no unit price yet.
+              </p>
+            )}
           </section>
         </div>
 
@@ -209,7 +220,9 @@ function AuditIntelligencePage() {
                   <td className={`${mpTableCellClassName()} text-mp-muted`}>{row.store_name}</td>
                   <td className={`${mpTableCellClassName()} tabular-nums`}>{row.expected_qty}</td>
                   <td className={`${mpTableCellClassName()} tabular-nums`}>{row.actual_qty}</td>
-                  <td className={`${mpTableCellClassName()} tabular-nums`}>₹{row.variance_value_inr.toFixed(2)}</td>
+                  <td className={`${mpTableCellClassName()} tabular-nums`}>
+                    {row.variance_value_known ? `₹${row.variance_value_inr.toFixed(2)}` : "N/A"}
+                  </td>
                   <td className={mpTableCellClassName()}>
                     <TierBadge tier={row.tier} />
                   </td>

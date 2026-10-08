@@ -12,6 +12,8 @@ export type VarianceByStore = {
   store_name: string;
   audit_count: number;
   total_variance_value_inr: number;
+  /** False when no variance line in this store carries a unit value. */
+  variance_value_known: boolean;
   sku_variance_count: number;
   avg_compliance: number | null;
   health_score: number | null;
@@ -25,6 +27,7 @@ export type VarianceBySku = {
   actual_qty: number;
   variance_qty: number;
   variance_value_inr: number;
+  variance_value_known: boolean;
   tier: ExceptionTier;
 };
 
@@ -40,6 +43,7 @@ export type AuditIntelligenceSummary = {
   digital_audits: number;
   ai_audits: number;
   total_variance_inr: number;
+  variance_value_known: boolean;
   critical_exceptions: number;
   attention_exceptions: number;
   by_store: VarianceByStore[];
@@ -109,6 +113,7 @@ export async function fetchAuditIntelligence(options?: {
   const storeMap = new Map<string, VarianceByStore>();
   const skuRows: VarianceBySku[] = [];
   let totalVarianceInr = 0;
+  let anyValueKnown = false;
   let critical = 0;
   let attention = 0;
 
@@ -117,7 +122,9 @@ export async function fetchAuditIntelligence(options?: {
     if (varianceQty === 0) continue;
     const expected = Number(line.expected_qty) || 0;
     const actual = Number(line.actual_qty) || 0;
-    const valueInr = Number(line.variance_value_inr) || 0;
+    const valueKnown = line.variance_value_inr != null && Number.isFinite(Number(line.variance_value_inr));
+    const valueInr = valueKnown ? Number(line.variance_value_inr) : 0;
+    anyValueKnown ||= valueKnown;
     totalVarianceInr += valueInr;
     const tier = tierForVariance(varianceQty, expected, valueInr);
     if (tier === "critical") critical++;
@@ -131,11 +138,13 @@ export async function fetchAuditIntelligence(options?: {
       store_name: storeName,
       audit_count: 0,
       total_variance_value_inr: 0,
+      variance_value_known: false,
       sku_variance_count: 0,
       avg_compliance: null,
       health_score: null,
     };
     existing.total_variance_value_inr += valueInr;
+    existing.variance_value_known ||= valueKnown;
     existing.sku_variance_count++;
     storeMap.set(storeId, existing);
 
@@ -147,6 +156,7 @@ export async function fetchAuditIntelligence(options?: {
       actual_qty: actual,
       variance_qty: varianceQty,
       variance_value_inr: valueInr,
+      variance_value_known: valueKnown,
       tier,
     });
   }
@@ -159,6 +169,7 @@ export async function fetchAuditIntelligence(options?: {
       store_name: storeName,
       audit_count: 0,
       total_variance_value_inr: 0,
+      variance_value_known: false,
       sku_variance_count: 0,
       avg_compliance: null,
       health_score: null,
@@ -198,6 +209,7 @@ export async function fetchAuditIntelligence(options?: {
     digital_audits: digitalCount,
     ai_audits: (scans?.length ?? 0) - digitalCount,
     total_variance_inr: Math.round(totalVarianceInr * 100) / 100,
+    variance_value_known: anyValueKnown,
     critical_exceptions: critical,
     attention_exceptions: attention,
     by_store: [...storeMap.values()].sort(

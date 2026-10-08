@@ -1046,7 +1046,9 @@ function NewAuditPage() {
       if (!primaryStoreId) throw new Error("Choose at least one store.");
 
       let planogramVersionId: string | null = null;
+      let ownPlanogramRows = 0;
       if (assignmentRows.length && primaryStoreId) {
+        ownPlanogramRows = assignmentRows.length;
         planogramVersionId = await createAssignmentPlanogramVersion({
           storeId: primaryStoreId,
           rows: assignmentRows,
@@ -1055,6 +1057,7 @@ function NewAuditPage() {
         });
       } else if (usesAiCustomPlanogram && primaryStoreId) {
         const referenceMeta = aiScanContext.reference?.meta;
+        ownPlanogramRows = aiScanContext.planogramRows.length;
         planogramVersionId = await createAssignmentPlanogramVersion({
           storeId: primaryStoreId,
           rows: aiScanContext.planogramRows.map((row) => toDraftRow(row)),
@@ -1064,9 +1067,11 @@ function NewAuditPage() {
             : "New Audit Planogram",
         });
       } else if (usesTemplateDemoPlanogram && primaryStoreId) {
+        const demoRows = demoPlanogramDraftRows();
+        ownPlanogramRows = demoRows.length;
         planogramVersionId = await createAssignmentPlanogramVersion({
           storeId: primaryStoreId,
-          rows: demoPlanogramDraftRows(),
+          rows: demoRows,
           sourceType: "manual",
           sourceFilename: "Aislix Demo Planogram",
         });
@@ -1162,6 +1167,12 @@ function NewAuditPage() {
         }
         const plan: AssignmentPlan = {
           ...assignmentPlan,
+          ...(ownPlanogramRows
+            ? {
+                scopeType: "planogram" as const,
+                scopeValues: { ...assignmentPlan.scopeValues, product_count: ownPlanogramRows },
+              }
+            : {}),
           templateId: templateForAssignment?.id ?? null,
           templateVersion: templateForAssignment?.version ?? null,
           templateSnapshot,
@@ -1208,8 +1219,10 @@ function NewAuditPage() {
 
       const assignmentId = await createScanAssignment({
         storeId: primaryStoreId,
+        // An assignment-owned version holds exactly this audit's lines; a
+        // location/category scope would filter them out by shelf name.
         scopeType:
-          assignmentRows.length || templateChoice === "planogram"
+          ownPlanogramRows || templateChoice === "planogram"
             ? "planogram"
             : location
               ? "location"
@@ -1217,7 +1230,7 @@ function NewAuditPage() {
         scopeValues: {
           location,
           category,
-          product_count: assignmentRows.length,
+          product_count: ownPlanogramRows,
           ...aiShelfScope,
           ...(auditName.trim() ? { audit_name: auditName.trim() } : {}),
           ...(auditDescription.trim() ? { audit_description: auditDescription.trim() } : {}),

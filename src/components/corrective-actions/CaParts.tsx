@@ -136,7 +136,9 @@ export function CaTable({ rows }: { rows: LifecycleAction[] }) {
                   >
                     {hideModelNames(row.title || row.suggestion || "Corrective action")}
                   </Link>
-                  <p className="mt-0.5 line-clamp-1 text-xs text-mp-muted">{hideModelNames(row.suggestion ?? "")}</p>
+                  {row.title && row.suggestion && row.suggestion.trim() !== row.title.trim() ? (
+                    <p className="mt-0.5 line-clamp-1 text-xs text-mp-muted">{hideModelNames(row.suggestion)}</p>
+                  ) : null}
                   <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-mp-muted">
                     <span className="font-medium text-navy">{row.code ?? "—"}</span>
                     <SourcePill source={row.source} />

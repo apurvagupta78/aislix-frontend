@@ -116,12 +116,12 @@ function ExpiryControlMain() {
               }
               hint={
                 m.evidence_coverage_pct != null && m.evidence_coverage_pct < 100
-                  ? "EVIDENCE INCOMPLETE until 100%"
+                  ? "Evidence incomplete until 100%"
                   : "Required physical units with verified expiry"
               }
             />
             <KpiCard
-              label="EVIDENCE INCOMPLETE"
+              label="Evidence incomplete"
               value={String(m.evidence_incomplete_count ?? 0)}
               tone="warn"
             />

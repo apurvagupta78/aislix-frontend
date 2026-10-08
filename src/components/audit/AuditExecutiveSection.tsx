@@ -54,11 +54,11 @@ export function AuditExecutiveSection() {
   const trendChart =
     intel?.trends.map((t) => ({
       date: t.date.slice(5),
-      compliance: t.compliance_percent ?? 0,
+      compliance: t.compliance_percent ?? null,
     })) ?? [];
 
   const storeChart =
-    intel?.by_store.slice(0, 6).map((s) => ({
+    intel?.by_store.filter((s) => s.variance_value_known).slice(0, 6).map((s) => ({
       name: s.store_name.length > 10 ? `${s.store_name.slice(0, 10)}…` : s.store_name,
       variance: Math.abs(s.total_variance_value_inr),
     })) ?? [];
@@ -104,17 +104,23 @@ export function AuditExecutiveSection() {
           <div className="rounded-xl border border-border bg-card p-4">
             <h3 className="text-sm font-semibold">Signed variance by store (₹)</h3>
             <p className="text-xs text-muted-foreground">Not confirmed financial loss — observation vs baseline</p>
-            <div className="mt-3 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={storeChart}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="variance" fill="var(--aislix-darkstore-bg)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {storeChart.length ? (
+              <div className="mt-3 h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={storeChart}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="variance" fill="var(--aislix-darkstore-bg)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="mt-3 flex h-48 items-center justify-center rounded-lg bg-[#EEF1F4] px-4 text-center text-sm text-[#667085]">
+                Data unavailable — variance lines have no unit price yet.
+              </p>
+            )}
           </div>
         </div>
       ) : null}

@@ -302,7 +302,7 @@ function MyScansPage() {
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold text-foreground">
-                          {assignment.store_name}
+                          {assignment.scope_values.audit_name?.trim() || assignment.store_name}
                         </p>
                         {statusBadge(assignment.status)}
                         <CollectionMethodBadge mode={assignment.audit_mode} />

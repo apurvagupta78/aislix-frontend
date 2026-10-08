@@ -15,7 +15,7 @@ export type ExpiryCoverageResult = {
   verifiedUnits: number | null;
   coveragePct: number | null;
   complete: boolean;
-  statusLabel: "EVIDENCE INCOMPLETE" | "Expiry Verified" | "N/A";
+  statusLabel: "Evidence incomplete" | "Expiry verified" | "N/A";
 };
 
 export function computeExpiryEvidenceCoverage(input: ExpiryCoverageInput): ExpiryCoverageResult {
@@ -47,7 +47,7 @@ export function computeExpiryEvidenceCoverage(input: ExpiryCoverageInput): Expir
     verifiedUnits: verifiedSafe,
     coveragePct,
     complete,
-    statusLabel: complete ? "Expiry Verified" : "EVIDENCE INCOMPLETE",
+    statusLabel: complete ? "Expiry verified" : "Evidence incomplete",
   };
 }
 

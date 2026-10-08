@@ -26,7 +26,7 @@ const LEGEND: { tone: EventTone; label: string; className: string }[] = [
   { tone: "due_today", label: "Due today", className: "bg-status-evidence-soft text-status-evidence-strong" },
   { tone: "overdue", label: "Overdue", className: "bg-status-danger-soft text-status-danger-strong" },
   { tone: "recurring", label: "Recurring", className: "bg-status-good-soft text-status-good-strong" },
-  { tone: "done", label: "Completed", className: "bg-slate-100 text-slate-600" },
+  { tone: "done", label: "Completed", className: "bg-[#EEF1F4] text-[#667085]" },
 ];
 
 function toneClasses(tone: EventTone) {
@@ -54,7 +54,7 @@ function AuditCalendarPage() {
     enabled: accessQuery.data === true,
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey(new Date());
 
   const events = useMemo(() => {
     const items: Array<{
@@ -67,17 +67,20 @@ function AuditCalendarPage() {
     }> = [];
 
     for (const a of assignmentsQuery.data ?? []) {
-      const date = (a.due_at ?? a.created_at).slice(0, 10);
+      const date = localDateKey(a.due_at ?? a.created_at);
+      const dueDay = a.due_at ? localDateKey(a.due_at) : null;
       let tone: EventTone = "assigned";
       if (a.status === "completed" || a.status === "cancelled") tone = "done";
-      else if (a.due_at && a.due_at.slice(0, 10) < today) tone = "overdue";
-      else if (a.due_at && a.due_at.slice(0, 10) === today) tone = "due_today";
+      else if (dueDay && dueDay < today) tone = "overdue";
+      else if (dueDay && dueDay === today) tone = "due_today";
       else if (a.status === "pending") tone = "scheduled";
 
       items.push({
         id: a.id,
         date,
-        title: `${a.store_name} · ${a.assignee_name}`,
+        title: [a.scope_values?.audit_name?.trim(), a.store_name, a.assignee_name]
+          .filter(Boolean)
+          .join(" · "),
         tone,
         href: `/audit/${a.id}`,
         kind: "assignment",
@@ -87,7 +90,7 @@ function AuditCalendarPage() {
     for (const s of schedulesQuery.data ?? []) {
       items.push({
         id: s.id,
-        date: s.next_run_at.slice(0, 10),
+        date: localDateKey(s.next_run_at),
         title: `Recurring · ${s.store_name ?? "Multi-store"}`,
         tone: s.active ? "recurring" : "done",
         href: "/audit-schedules",
@@ -255,12 +258,12 @@ function buildMonthGrid(cursor: Date) {
   const first = new Date(year, month, 1);
   const start = new Date(first);
   start.setDate(first.getDate() - first.getDay());
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey(new Date());
   const days = [];
   for (let i = 0; i < 42; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    const iso = d.toISOString().slice(0, 10);
+    const iso = localDateKey(d);
     days.push({
       iso,
       label: d.getDate(),
@@ -285,11 +288,18 @@ function shiftCursor(
 }
 
 function isInView(date: string, cursor: Date, view: CalendarView) {
-  if (view === "day") return date === cursor.toISOString().slice(0, 10);
+  if (view === "day") return date === localDateKey(cursor);
   const start = new Date(cursor);
   start.setDate(cursor.getDate() - cursor.getDay());
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
-  const d = new Date(date);
-  return d >= start && d <= end;
+  return date >= localDateKey(start) && date <= localDateKey(end);
+}
+
+/** YYYY-MM-DD in the viewer's timezone (toISOString would shift by the UTC offset). */
+function localDateKey(value: Date | string): string {
+  const d = typeof value === "string" ? new Date(value) : value;
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
 }

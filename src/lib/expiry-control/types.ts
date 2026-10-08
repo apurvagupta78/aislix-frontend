@@ -217,7 +217,7 @@ export const INSPECTION_STATUS_LABEL: Record<InspectionStatus, string> = {
   under_review: "Under review",
   verified: "Verified",
   rework_required: "Rework required",
-  incomplete: "EVIDENCE INCOMPLETE",
+  incomplete: "Evidence incomplete",
   cancelled: "Cancelled",
 };
 

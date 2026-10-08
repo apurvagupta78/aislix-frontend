@@ -55,6 +55,8 @@ export type CustomAuditSession = {
   createdAt?: string | null;
   evidencePolicy?: Partial<AuditEvidencePolicy> | null;
   requireRca?: boolean;
+  /** Capture method chosen on the assignment; overrides the template's default mode. */
+  assignmentAuditMode?: string | null;
   /** Assigned store's coordinates and geofence, for the GPS "at the store" check. */
   storeLocation?: { lat: number | null; lng: number | null; radiusM: number | null } | null;
 };
@@ -165,6 +167,7 @@ export async function loadCustomAuditSession(
     createdAt: (assignment.created_at as string | null) ?? null,
     evidencePolicy: (assignment.evidence_policy as Partial<AuditEvidencePolicy> | null) ?? null,
     requireRca: (assignment as { require_rca?: boolean | null }).require_rca === true,
+    assignmentAuditMode: (assignment as { audit_mode?: string | null }).audit_mode ?? null,
     storeLocation: storeRow
       ? {
           lat: storeRow.latitude ?? null,

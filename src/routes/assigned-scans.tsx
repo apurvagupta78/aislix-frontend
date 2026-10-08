@@ -92,10 +92,9 @@ function compliance(value: number | null) {
 
 /** "Test store · A-1-Z · Personal Care · Shampoo" */
 function scopeLine(row: Assignment): string {
-  const parts = [
-    row.audit_mode === "digital" ? "Digital audit" : "AI audit",
-    row.store_name,
-  ];
+  const parts = [row.audit_mode === "digital" ? "Digital audit" : "AI audit"];
+  if (row.scope_values.audit_name?.trim()) parts.push(row.scope_values.audit_name.trim());
+  parts.push(row.store_name);
   if (row.location) parts.push(row.location);
   if (row.scope_values.category) parts.push(row.scope_values.category);
   if (row.scope_values.sub_category) parts.push(row.scope_values.sub_category);

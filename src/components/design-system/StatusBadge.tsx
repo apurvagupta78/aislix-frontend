@@ -38,7 +38,7 @@ const assignmentMeta: Record<AssignmentStatus | "overdue" | "submitted" | "pendi
 };
 
 const scanMeta: Record<ScanStatus, Meta> = {
-  completed: { label: "Approved", className: GOOD, Icon: CheckCircle2 },
+  completed: { label: "Analysed", className: GOOD, Icon: CheckCircle2 },
   processing: { label: "In Progress", className: INFO, Icon: Loader2 },
   failed: { label: "Failed", className: DANGER, Icon: AlertTriangle },
 };
