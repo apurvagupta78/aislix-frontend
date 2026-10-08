@@ -323,7 +323,7 @@ export function PlanogramSideBySidePanel({
           </p>
         </div>
         {data ? (
-          <div className="flex shrink-0 flex-wrap gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"

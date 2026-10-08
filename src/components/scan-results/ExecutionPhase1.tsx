@@ -1219,7 +1219,7 @@ export function FinancialImpactPanel({
             issues using the business inputs you provide.
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Badge variant="outline" className="rounded-full text-xs">
             Pro feature
           </Badge>

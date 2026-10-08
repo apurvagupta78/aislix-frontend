@@ -137,7 +137,7 @@ export function DemoBrandProductAnalysis({
             which products make up the category.
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           {isDemo ? (
             <Badge variant="outline" className="text-[10px]">
               {DEMO_PLANOGRAM_LABEL}

@@ -17,7 +17,7 @@ export function ScanResultsHeaderBar({
   extra,
 }: ScanResultsHeaderBarProps) {
   return (
-    <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
+    <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
       <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
         <Sparkles className="size-3" /> Live AI analysis
       </Badge>

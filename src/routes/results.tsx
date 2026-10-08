@@ -273,24 +273,26 @@ function Results() {
           : "AI breakdown of a single shelf audit."
       }
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Button
             variant="subtle"
             size="sm"
             className="rounded-xl"
+            aria-label="Previous audit"
             disabled={!data?.navigation?.previous_scan_id}
             onClick={() => goToScan(data?.navigation?.previous_scan_id)}
           >
-            <ArrowLeft className="size-4" /> Previous
+            <ArrowLeft className="size-4" /> <span className="hidden sm:inline">Previous</span>
           </Button>
           <Button
             variant="subtle"
             size="sm"
             className="rounded-xl"
+            aria-label="Next audit"
             disabled={!data?.navigation?.next_scan_id}
             onClick={() => goToScan(data?.navigation?.next_scan_id)}
           >
-            Next <ArrowRight className="size-4" />
+            <span className="hidden sm:inline">Next</span> <ArrowRight className="size-4" />
           </Button>
           <Button asChild variant="subtle" size="sm" className="rounded-xl">
             <Link to="/compare" search={scan ? { a: scan } : {}}>
@@ -299,9 +301,6 @@ function Results() {
           </Button>
           <Button asChild variant="subtle" size="sm" className="rounded-xl">
             <Link to="/history">Audit history</Link>
-          </Button>
-          <Button asChild variant="ghost" size="sm" className="rounded-xl">
-            <Link to="/dashboard">Dashboard</Link>
           </Button>
         </div>
       }
