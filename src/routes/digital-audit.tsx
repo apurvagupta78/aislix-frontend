@@ -70,7 +70,7 @@ export const Route = createFileRoute("/digital-audit")({
       typeof search.assignmentId === "string" ? search.assignmentId : undefined,
   }),
   head: () => ({
-    meta: [{ title: "Digital Audit — Aislix" }],
+    meta: [{ title: "Digital audit — Aislix" }],
   }),
   component: DigitalAuditPage,
 });
@@ -330,15 +330,15 @@ function DigitalAuditPage() {
 
   if (!assignmentId) {
     return (
-      <AppShell title="Digital Audit">
-        <ErrorState title="Missing assignment" description="Open this audit from My Audits." />
+      <AppShell title="Digital audit">
+        <ErrorState title="No audit selected" description="Open this audit from My audits." />
       </AppShell>
     );
   }
 
   if (sessionQuery.isLoading) {
     return (
-      <AppShell title="Digital Audit">
+      <AppShell title="Digital audit">
         <Skeleton className="h-40 w-full" />
       </AppShell>
     );
@@ -346,7 +346,7 @@ function DigitalAuditPage() {
 
   if (sessionQuery.isError || !session) {
     return (
-      <AppShell title="Digital Audit">
+      <AppShell title="Digital audit">
         <ErrorState
           title="Could not load audit"
           description={toUserMessage(sessionQuery.error)}
@@ -357,7 +357,7 @@ function DigitalAuditPage() {
 
   if (session.submission_status === "pending_review" || session.submission_status === "approved") {
     return (
-      <AppShell title="Digital Audit">
+      <AppShell title="Digital audit">
         <div className="mx-auto max-w-lg py-12 text-center">
           <ClipboardList className="mx-auto size-10 text-brand" />
           <h2 className="mt-4 text-lg font-semibold">Audit submitted</h2>
@@ -366,7 +366,7 @@ function DigitalAuditPage() {
             variance report.
           </p>
           <Button className="mt-6" onClick={() => void navigate({ to: "/my-scans" })}>
-            Back to My Audits
+            Back to My audits
           </Button>
         </div>
       </AppShell>
@@ -405,7 +405,7 @@ function DigitalAuditPage() {
 
   return (
     <AppShell
-      title="Digital Audit"
+      title="Digital audit"
       description={`${session.store_name} · ${session?.lines.length} SKUs · ${session.bins.length} shelf/bin(s)`}
     >
       <div className="mx-auto max-w-3xl space-y-6 pb-28">
