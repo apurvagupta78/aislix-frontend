@@ -36,8 +36,8 @@ export type ResolveAssignmentsInput = {
   store_id?: string;
   assignment_id?: string;
   scan_id?: string;
-  date_from?: string;
-  date_to?: string;
+  date_from?: string | Date | null;
+  date_to?: string | Date | null;
   limit?: number;
   include_completed_only?: boolean;
   audit_mode?: "ai" | "digital";
@@ -57,6 +57,27 @@ export function auditModeLabel(mode: string | null | undefined): string {
   const value = String(mode ?? "").toLowerCase();
   if (value === "ai" || value === "ai_assisted") return "AI audit";
   return "Digital audit";
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Lower bound as ISO; null when absent or unparseable. */
+export function toIsoLowerBound(value: string | Date | null | undefined): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+/** Exclusive upper bound as ISO. Date-only strings include the whole day. */
+export function toIsoUpperBoundExclusive(value: string | Date | null | undefined): string | null {
+  if (!value) return null;
+  if (typeof value === "string" && DATE_ONLY.test(value.trim())) {
+    const date = new Date(`${value.trim()}T00:00:00.000Z`);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString();
+  }
+  return toIsoLowerBound(value);
 }
 
 function uniqueStrings(values: string[]): string[] {
@@ -97,8 +118,8 @@ export async function resolveAuthorizedAssignments(
 ): Promise<{ assignments: AuthorizedAssignmentRow[]; storeIds: string[] }> {
   const clamped = clampFiltersToScope(filters, scope);
   const bounds = resolveDashboardDateBounds(clamped);
-  const dateFrom = input.date_from ?? bounds.from;
-  const dateTo = input.date_to ?? bounds.to;
+  const dateFrom = toIsoLowerBound(input.date_from || bounds.from);
+  const dateTo = toIsoUpperBoundExclusive(input.date_to || bounds.to);
   const participation = input.participation ?? "all";
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 100);
 
@@ -144,9 +165,10 @@ export async function resolveAuthorizedAssignments(
     query = query.or("status.eq.completed,assignment_state.eq.submitted,approval_status.eq.approved");
   }
   if (dateFrom) query = query.gte("created_at", dateFrom);
-  if (dateTo) query = query.lte("created_at", `${dateTo}T23:59:59.999Z`);
+  if (dateTo) query = query.lt("created_at", dateTo);
 
-  const { data } = await query;
+  const { data, error } = await query;
+  if (error) console.error("[ask-aislix] scan_assignments lookup failed", error.message);
   let rows = (data ?? []) as AuthorizedAssignmentRow[];
 
   if (!scope.isOrgAdmin) {
