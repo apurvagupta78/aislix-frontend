@@ -49,7 +49,7 @@ export function LeadCaptureSection({ landingSessionId }: { landingSessionId: str
               <span className="mx-auto grid size-11 place-items-center rounded-full bg-brand-soft text-brand">
                 <CheckCircle2 className="size-6" />
               </span>
-              <p className="text-xs font-semibold uppercase tracking-wider text-brand">Continue with Aislix</p>
+              <p className="text-xs font-medium text-brand">Continue with Aislix</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-normal">You&apos;re all set.</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Your shelf audit is saved to this session. Create your workspace to continue.
@@ -66,7 +66,7 @@ export function LeadCaptureSection({ landingSessionId }: { landingSessionId: str
             </div>
           ) : (
             <form onSubmit={submit}>
-              <p className="text-xs font-semibold uppercase tracking-wider text-brand">Continue with Aislix</p>
+              <p className="text-xs font-medium text-brand">Continue with Aislix</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-normal sm:text-3xl">
                 Save your shelf audit &amp; unlock 5 free audits
               </h2>

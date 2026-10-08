@@ -4,15 +4,15 @@ export function HomeHowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="scroll-mt-20 bg-card py-20 lg:py-28"
+      className="scroll-mt-20 border-t border-border bg-white py-16 lg:py-20"
       aria-labelledby="how-title"
     >
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold text-[#2A6FA8]">How it works</p>
+          <p className="text-sm font-medium text-muted-foreground">How it works</p>
           <h2
             id="how-title"
-            className="mt-3 text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl"
+            className="mt-3 text-3xl font-semibold tracking-[-0.02em] text-foreground sm:text-4xl"
           >
             From shelf photo to retail action in four steps.
           </h2>
@@ -29,7 +29,7 @@ export function HomeHowItWorks() {
                 {i + 1}
               </span>
               <div className="md:mt-6">
-                <p className="flex items-center gap-2 text-sm font-semibold text-[#2A6FA8]">
+                <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Icon className="size-4" aria-hidden="true" />
                   {title}
                 </p>

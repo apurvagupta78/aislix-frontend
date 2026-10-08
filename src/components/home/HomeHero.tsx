@@ -12,10 +12,10 @@ const assurances = [
 export function HomeHero() {
   return (
     <section id="top" className="relative overflow-hidden bg-card">
-      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-20 pt-14 lg:grid-cols-[1fr_1.05fr] lg:gap-16 lg:px-8 lg:pb-28 lg:pt-20">
+      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-16 pt-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16 lg:px-8 lg:pb-20 lg:pt-16">
         <div>
-          <p className="flex items-center gap-2 text-sm font-medium text-[#2A6FA8]">
-            <span className="size-1.5 rounded-full bg-[#2A6FA8]" aria-hidden="true" />
+          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-[#79E2A8]" aria-hidden="true" />
             AI shelf intelligence for retail execution
           </p>
           <h1 className="mt-5 text-[40px] font-bold leading-[1.05] tracking-[-0.03em] text-foreground sm:text-5xl lg:text-[62px]">

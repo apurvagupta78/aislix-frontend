@@ -7,7 +7,7 @@ export const Route = createFileRoute("/terms")({
       { property: "og:url", content: "https://aislix.com/terms" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { title: "Terms of Service — Aislix" },
+      { title: "Terms of service — Aislix" },
       {
         name: "description",
         content:
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/terms")({
   }),
   component: () => (
     <LegalDoc
-      title="Terms of Service"
+      title="Terms of service"
       updated="1 August 2026"
       intro="These terms govern your access to the Aislix shelf intelligence platform. By creating a workspace or using any Aislix service you agree to them on behalf of yourself and the organisation you represent."
       sections={[

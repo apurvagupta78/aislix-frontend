@@ -112,7 +112,7 @@ function PlanogramsCard({ data }: { data: WorkspaceManagementData["planograms"] 
   return (
     <CardShell
       icon={LayoutGrid}
-      title="Your Planograms"
+      title="Your planograms"
       description="View and manage the shelf setups your team uses for audits."
       count={data.count}
       countLabel={data.count === 1 ? "planogram" : "planograms"}
@@ -148,7 +148,7 @@ function StoresCard({ data }: { data: WorkspaceManagementData["stores"] }) {
   return (
     <CardShell
       icon={Store}
-      title="Your Stores"
+      title="Your stores"
       description="View the stores and outlets covered by your workspace."
       count={data.count}
       countLabel={data.count === 1 ? "store" : "stores"}
@@ -188,7 +188,7 @@ function TeamCard({ data }: { data: WorkspaceManagementData["team"] }) {
   return (
     <CardShell
       icon={Users}
-      title="Your Team"
+      title="Your team"
       description="Manage team members, assignments and access to Aislix."
       count={data.count}
       countLabel={data.count === 1 ? "team member" : "team members"}
@@ -220,7 +220,7 @@ function AssignedAuditsCard({ data }: { data: WorkspaceManagementData["assigned_
   return (
     <CardShell
       icon={ClipboardCheck}
-      title="Audits You Assigned"
+      title="Audits you assigned"
       description="Track the audits you've assigned and see what is completed, in progress or still waiting."
       count={total}
       countLabel="assigned"

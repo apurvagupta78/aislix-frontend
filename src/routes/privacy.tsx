@@ -7,7 +7,7 @@ export const Route = createFileRoute("/privacy")({
       { property: "og:url", content: "https://aislix.com/privacy" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { title: "Privacy Policy — Aislix" },
+      { title: "Privacy policy — Aislix" },
       {
         name: "description",
         content:
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/privacy")({
   }),
   component: () => (
     <LegalDoc
-      title="Privacy Policy"
+      title="Privacy policy"
       updated="1 August 2026"
       intro="This policy explains what Aislix Technologies collects when you use the Aislix shelf intelligence platform, how shelf images are processed by our AI models, how long we keep data, and the rights you can exercise at any time."
       sections={[

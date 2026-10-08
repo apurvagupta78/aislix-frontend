@@ -281,7 +281,7 @@ export function PerformanceOverTimeSection({
     <section className="mt-8">
       <CommandSectionHeader
         eyebrow="Performance over time"
-        title="See How Shelf Execution Is Changing."
+        title="See how shelf execution is changing."
         description="Track your key shelf metrics across audits and see whether execution is improving, holding steady or slipping."
         info="Each point represents actual audit data in the selected view. KPI totals use the underlying audit numerator and denominator where available."
       />

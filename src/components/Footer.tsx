@@ -9,20 +9,9 @@ const itemClass =
 
 function ColumnTitle({ children }: { children: ReactNode }) {
   return (
-    <p className="text-sm font-semibold text-foreground">
+    <p className="text-sm font-medium text-foreground">
       {children}
     </p>
-  );
-}
-
-function Soon({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center gap-2 text-sm text-muted-foreground/70">
-      {label}
-      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
-        Soon
-      </span>
-    </span>
   );
 }
 
@@ -37,9 +26,8 @@ export function SiteFooter() {
           <div className="sm:col-span-2 lg:col-span-1">
             <Logo />
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              AI-powered retail shelf intelligence for supermarkets, dark stores, FMCG brands,
-              distributors and local stores. Turn shelf photos into actionable insights and track
-              improvement over time.
+              Shelf photos in, retail actions out — for supermarkets, dark stores, FMCG brands,
+              distributors and local stores.
             </p>
             <div className="mt-4 flex items-center gap-2">
               <a
@@ -47,7 +35,7 @@ export function SiteFooter() {
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label="Aislix on LinkedIn"
-                className="grid size-9 place-items-center rounded-xl border border-border/80 bg-card text-muted-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
+                className="grid size-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
               >
                 <Linkedin className="size-4" />
               </a>
@@ -56,7 +44,7 @@ export function SiteFooter() {
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label="Aislix on X"
-                className="grid size-9 place-items-center rounded-xl border border-border/80 bg-card text-sm font-semibold text-muted-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
+                className="grid size-9 place-items-center rounded-lg text-sm font-semibold text-muted-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
               >
                 X
               </a>
@@ -65,7 +53,7 @@ export function SiteFooter() {
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label="Aislix on YouTube"
-                className="grid size-9 place-items-center rounded-xl border border-border/80 bg-card text-muted-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
+                className="grid size-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
               >
                 <Youtube className="size-4" />
               </a>
@@ -97,7 +85,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <Link to="/contact" search={{ subject: "API access" }} className={itemClass}>
-                  API Access
+                  API access
                 </Link>
               </li>
               <li>
@@ -121,12 +109,6 @@ export function SiteFooter() {
                   Contact
                 </Link>
               </li>
-              <li>
-                <Soon label="Careers" />
-              </li>
-              <li>
-                <Soon label="Blog" />
-              </li>
             </ul>
           </div>
 
@@ -144,9 +126,6 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Soon label="Status" />
-              </li>
-              <li>
                 <Link to="/security" className={itemClass}>
                   Security
                 </Link>
@@ -159,22 +138,22 @@ export function SiteFooter() {
             <ul className="space-y-2">
               <li>
                 <Link to="/privacy" className={itemClass}>
-                  Privacy Policy
+                  Privacy policy
                 </Link>
               </li>
               <li>
                 <Link to="/terms" className={itemClass}>
-                  Terms of Service
+                  Terms of service
                 </Link>
               </li>
               <li>
                 <Link to="/cookies" className={itemClass}>
-                  Cookie Policy
+                  Cookie policy
                 </Link>
               </li>
               <li>
                 <Link to="/refunds" className={itemClass}>
-                  Refund Policy
+                  Refund policy
                 </Link>
               </li>
             </ul>

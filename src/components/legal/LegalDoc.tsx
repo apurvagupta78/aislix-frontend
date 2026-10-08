@@ -15,9 +15,9 @@ export function LegalDoc({
 }) {
   return (
     <MarketingPage>
-      <section className="border-b border-border bg-surface">
+      <section className="border-b border-border bg-white">
         <div className="mx-auto max-w-3xl px-5 py-14 sm:px-8 sm:py-16">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">Legal</p>
+          <p className="text-xs font-medium text-brand">Legal</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{intro}</p>
           <p className="mt-4 text-xs text-muted-foreground">Last updated {updated}</p>
@@ -27,7 +27,7 @@ export function LegalDoc({
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 lg:grid-cols-[220px_1fr]">
         <nav aria-label="On this page" className="hidden lg:block">
           <div className="sticky top-24 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               On this page
             </p>
             <ul className="space-y-1.5">

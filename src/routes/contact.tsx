@@ -148,9 +148,9 @@ function Contact() {
 
   return (
     <MarketingPage>
-      <section className="border-b border-border bg-surface">
+      <section className="border-b border-border bg-white">
         <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-16">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">Contact</p>
+          <p className="text-xs font-medium text-brand">Contact</p>
           <h1 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
             Talk to the team behind Aislix shelf intelligence
           </h1>
@@ -326,7 +326,7 @@ function Contact() {
           <div className="card-surface overflow-hidden">
             <div className="relative h-56 sm:h-72">
               <iframe
-                title="Aislix office location - New Delhi, India"
+                title="Aislix office location - new delhi, india"
                 src="https://www.openstreetmap.org/export/embed.html?bbox=76.9%2C28.5%2C77.5%2C28.75&layer=mapnik&marker=28.6139%2C77.2090"
                 className="absolute inset-0 h-full w-full border-0"
                 loading="lazy"

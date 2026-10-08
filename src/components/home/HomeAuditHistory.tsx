@@ -12,20 +12,20 @@ const PROCESS = ["Audit", "Fix", "Rescan", "Verify", "Track"] as const;
 
 export function HomeAuditHistory() {
   return (
-    <section id="audit-history" className="home-section scroll-mt-16 bg-surface">
+    <section id="audit-history" className="home-section scroll-mt-16 bg-white">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading
           eyebrow="AUDIT HISTORY"
-          title="Your Shelf. Your History. One Place."
+          title="Your shelf. Your history. One place."
           subtitle="Every audit becomes part of your retail history. Compare visits, see what changed, identify recurring issues and verify whether corrective actions actually worked."
         />
 
         <div className="mx-auto mt-10 max-w-lg">
-          <div className="rounded-lg border border-border bg-card p-5 shadow-lift sm:p-6">
+          <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-foreground">Store 101 · Oral Care</p>
-                <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="mt-0.5 text-xs font-medium text-muted-foreground">
                   Demo / Example
                 </p>
               </div>
@@ -41,13 +41,13 @@ export function HomeAuditHistory() {
                     <p className="text-xs font-semibold text-foreground">{visit.date}</p>
                     <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
                       <div>
-                        <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">OSA</dt>
+                        <dt className="text-xs text-muted-foreground">OSA</dt>
                         <dd className="text-sm font-semibold tabular-nums text-foreground">
                           {visit.osa}%
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        <dt className="text-xs text-muted-foreground">
                           Planogram
                         </dt>
                         <dd className="text-sm font-semibold tabular-nums text-foreground">
@@ -55,7 +55,7 @@ export function HomeAuditHistory() {
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        <dt className="text-xs text-muted-foreground">
                           Issues
                         </dt>
                         <dd className="text-sm font-semibold tabular-nums text-foreground">

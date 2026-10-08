@@ -30,7 +30,7 @@ export function HomeWhatsAppProblem() {
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading
           eyebrow="STOP LOSING SHELF AUDITS"
-          title="Stop Losing Shelf Audits in WhatsApp or Emails"
+          title="Stop losing shelf audits in WhatsApp or emails"
           subtitle="A shelf visit shouldn't end when the photo is shared."
         />
         <p className="mx-auto mt-4 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
@@ -40,10 +40,10 @@ export function HomeWhatsAppProblem() {
         </p>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
-          <div className="rounded-lg border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] p-5 shadow-soft sm:p-6">
+          <div className="rounded-lg border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] p-5 sm:p-6">
             <div className="flex items-center gap-2 text-muted-foreground">
               <MessageCircle className="size-4" strokeWidth={1.75} aria-hidden="true" />
-              <span className="text-xs font-semibold uppercase tracking-wider">Scattered evidence</span>
+              <span className="text-xs font-medium">Scattered evidence</span>
             </div>
             <ul className="mt-4 space-y-2.5">
               {SCATTERED.map((item) => (
@@ -61,8 +61,8 @@ export function HomeWhatsAppProblem() {
             <ArrowRight className="size-6 text-brand/60" strokeWidth={1.75} aria-hidden="true" />
           </div>
 
-          <div className="rounded-lg border border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] p-5 shadow-soft sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--aislix-primary)]">
+          <div className="rounded-lg border border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] p-5 sm:p-6">
+            <p className="text-xs font-medium text-[var(--aislix-primary)]">
               Structured Aislix record
             </p>
             <p className="mt-3 text-base font-semibold tracking-tight text-foreground">

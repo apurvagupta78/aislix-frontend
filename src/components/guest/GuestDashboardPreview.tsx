@@ -4,7 +4,7 @@ export function GuestDashboardPreview() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           Guest workspace · Demo data
         </p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
@@ -20,7 +20,7 @@ export function GuestDashboardPreview() {
         {GUEST_KPI_CARDS.map((kpi, i) => (
           <div
             key={kpi.label}
-            className="rounded-xl border border-border bg-card p-4 shadow-soft"
+            className="rounded-xl border border-border bg-card p-4"
             style={{ borderTopWidth: 3, borderTopColor: kpi.accent }}
           >
             <p className="text-xs font-medium text-muted-foreground">{kpi.label}</p>
@@ -33,7 +33,7 @@ export function GuestDashboardPreview() {
 
       <div
         id="history"
-        className="overflow-hidden rounded-xl border border-border bg-card shadow-soft"
+        className="overflow-hidden rounded-xl border border-border bg-card"
       >
         <div className="border-b border-border px-4 py-3">
           <h3 className="text-sm font-semibold text-foreground">Recent audits</h3>
@@ -41,7 +41,7 @@ export function GuestDashboardPreview() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[32rem] text-left text-sm">
-            <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="text-xs text-muted-foreground">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Audit</th>
                 <th className="px-4 py-2.5 font-medium">Store</th>

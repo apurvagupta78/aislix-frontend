@@ -29,7 +29,7 @@ export function ProblemSection() {
           {CARDS.map(({ Icon, title, body }) => (
             <div
               key={title}
-              className="rounded-xl border border-border bg-card p-6 shadow-soft"
+              className="rounded-xl border border-border bg-card p-6"
             >
               <Icon className="size-5 text-primary" strokeWidth={1.7} />
               <h3 className="mt-4 text-base font-semibold text-foreground">{title}</h3>

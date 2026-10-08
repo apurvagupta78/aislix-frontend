@@ -24,7 +24,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
     <section id="top" className="relative overflow-hidden bg-hero-glow">
       <div className="mx-auto grid max-w-6xl gap-12 px-5 pb-16 pt-12 sm:px-8 sm:pb-20 sm:pt-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-14">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-soft">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground">
             <span className="size-1.5 rounded-full bg-primary" />
             AI-Powered Retail Shelf Intelligence
           </span>
@@ -66,7 +66,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
         {/* Product visual */}
         <div className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-lift sm:grid-cols-2">
           <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            <p className="border-b border-border px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground">
               Shelf photo
             </p>
             <img
@@ -79,7 +79,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
 
           <div className="grid gap-4">
             <div className="rounded-xl border border-border bg-surface p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 AI analysis
               </p>
               <div className="mt-3 grid grid-cols-3 gap-2">
@@ -103,7 +103,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
             </div>
 
             <div className="rounded-xl border border-border bg-surface p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Top issues detected
               </p>
               <ul className="mt-2 space-y-1.5">

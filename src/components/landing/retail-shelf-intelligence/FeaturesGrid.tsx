@@ -13,27 +13,27 @@ import {
 import { SectionHeading } from "./shared";
 
 const FEATURES = [
-  { Icon: Boxes, title: "Product Detection", body: "Identify every product on the shelf." },
+  { Icon: Boxes, title: "Product detection", body: "Identify every product on the shelf." },
   { Icon: ScanBarcode, title: "SKU Recognition", body: "Identify SKU and variant-level details." },
-  { Icon: Tags, title: "Brand Recognition", body: "Understand exactly which brands are present." },
-  { Icon: BarChart3, title: "Product Count", body: "Count products automatically." },
-  { Icon: PackageX, title: "Out-of-Stock Detection", body: "Identify missing products." },
-  { Icon: AlertTriangle, title: "Low Stock Alerts", body: "Identify low-stock risks." },
-  { Icon: LayoutGrid, title: "Shelf Position", body: "Understand where products are placed." },
+  { Icon: Tags, title: "Brand recognition", body: "Understand exactly which brands are present." },
+  { Icon: BarChart3, title: "Product count", body: "Count products automatically." },
+  { Icon: PackageX, title: "Out-of-stock detection", body: "Identify missing products." },
+  { Icon: AlertTriangle, title: "Low stock alerts", body: "Identify low-stock risks." },
+  { Icon: LayoutGrid, title: "Shelf position", body: "Understand where products are placed." },
   {
     Icon: ClipboardCheck,
-    title: "Planogram Compliance",
+    title: "Planogram compliance",
     body: "Detect shelf and planogram violations.",
   },
-  { Icon: Gauge, title: "Shelf Health Score", body: "Get an overall shelf-performance score." },
-  { Icon: Sparkles, title: "Retail Execution", body: "Turn shelf data into actionable execution." },
+  { Icon: Gauge, title: "Shelf health score", body: "Get an overall shelf-performance score." },
+  { Icon: Sparkles, title: "Retail execution", body: "Turn shelf data into actionable execution." },
 ];
 
 export function FeaturesGrid() {
   return (
     <section id="features" className="scroll-mt-16 bg-surface py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <SectionHeading eyebrow="Capabilities" title="One Photo. Multiple Layers of Intelligence." />
+        <SectionHeading eyebrow="Capabilities" title="One photo. Multiple layers of intelligence." />
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {FEATURES.map(({ Icon, title, body }) => (

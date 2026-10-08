@@ -53,12 +53,12 @@ function IntelligenceRow({
   context?: string;
 }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-lg border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
+    <div className="flex items-start gap-2.5 rounded-lg border border-border/80 bg-background/80 px-3 py-2">
       <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-brand-soft text-brand">
         <Icon className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1 text-left">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           {title}
         </p>
         <p className="text-[13px] font-semibold leading-snug tabular-nums text-foreground">
@@ -78,7 +78,7 @@ export function HomepageDemoAuditPreview() {
   const rows = [
     {
       icon: Package,
-      title: "Products & Brands",
+      title: "Products & brands",
       value: `${stats.productsDetected} products · ${stats.brandsDetected} brands detected`,
     },
     {
@@ -88,18 +88,18 @@ export function HomepageDemoAuditPreview() {
     },
     {
       icon: LayoutGrid,
-      title: "Shelf Execution",
+      title: "Shelf execution",
       value: `${stats.shelfExecutionPercent}% compliant`,
     },
     {
       icon: BarChart3,
-      title: "Brand & Competition",
+      title: "Brand & competition",
       value: `${stats.primaryBrand} ${stats.primaryBrandShelfSharePercent}% shelf share · ${stats.brandsDetected} brands`,
       context: "Brand presence vs category competition",
     },
     {
       icon: BadgePercent,
-      title: "Prices & Promotions",
+      title: "Prices & promotions",
       value: `${stats.priceIssueCount} issue${stats.priceIssueCount === 1 ? "" : "s"} detected`,
     },
     {
@@ -114,9 +114,9 @@ export function HomepageDemoAuditPreview() {
       <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
         {/* Shelf photograph — ~55% on desktop */}
         <div className="lg:w-[55%]">
-          <div className="relative overflow-hidden rounded-xl border border-border bg-muted/20 shadow-sm">
+          <div className="relative overflow-hidden rounded-xl border border-border bg-muted/20">
             <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-2">
-              <Badge className="rounded-md bg-brand px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-brand-foreground">
+              <Badge className="rounded-md bg-brand px-2 py-1 text-xs font-medium text-brand-foreground">
                 AI Shelf Audit
               </Badge>
               <Badge
@@ -142,7 +142,7 @@ export function HomepageDemoAuditPreview() {
                   <div
                     key={box.id}
                     className={cn(
-                      "absolute rounded-sm border shadow-sm",
+                      "absolute rounded-sm border",
                       overlayStyles(box.kind),
                     )}
                     style={{
@@ -153,7 +153,7 @@ export function HomepageDemoAuditPreview() {
                     }}
                   >
                     {box.kind === "issue" || box.kind === "availability" ? (
-                      <span className="absolute -top-0.5 left-1 max-w-[95%] truncate rounded bg-background/90 px-1 py-px text-[8px] font-medium text-foreground shadow-sm sm:text-[9px]">
+                      <span className="absolute -top-0.5 left-1 max-w-[95%] truncate rounded bg-background/90 px-1 py-px text-[8px] font-medium text-foreground sm:text-[9px]">
                         {box.label}
                       </span>
                     ) : null}
@@ -170,7 +170,7 @@ export function HomepageDemoAuditPreview() {
 
         {/* Intelligence preview — ~45% on desktop */}
         <div className="flex flex-col justify-center gap-2 lg:w-[45%] lg:py-0">
-          <p className="mb-0.5 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-brand lg:text-left">
+          <p className="mb-0.5 text-center text-xs font-medium text-brand lg:text-left">
             Retail insights preview
           </p>
           {rows.map((row) => (

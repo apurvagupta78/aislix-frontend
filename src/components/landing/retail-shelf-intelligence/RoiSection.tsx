@@ -12,10 +12,10 @@ export function RoiSection() {
   return (
     <section className="bg-background py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <SectionHeading eyebrow="Business value" title="Turn Every Shelf Photo Into a Business Decision." />
+        <SectionHeading eyebrow="Business value" title="Turn every shelf photo into a business decision." />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {OUTCOMES.map(({ Icon, title, body }) => (
-            <div key={title} className="rounded-xl border border-border bg-card p-6 shadow-soft">
+            <div key={title} className="rounded-xl border border-border bg-card p-6">
               <span className="grid size-9 place-items-center rounded-lg bg-secondary">
                 <Icon className="size-4 text-primary" strokeWidth={1.8} />
               </span>

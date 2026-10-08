@@ -30,7 +30,7 @@ export function GuestNavPage({ pathname }: { pathname: string }) {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           Guest mode · Demo data
         </p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
@@ -51,20 +51,20 @@ export function GuestNavPage({ pathname }: { pathname: string }) {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Demo records</h3>
             <p className="text-xs text-muted-foreground">Illustrative · not your live org</p>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2 py-1 text-xs font-medium text-muted-foreground">
             <Lock className="size-3" aria-hidden="true" />
             Read-only
           </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[32rem] text-left text-sm">
-            <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="text-xs text-muted-foreground">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Name</th>
                 <th className="px-4 py-2.5 font-medium">Store</th>

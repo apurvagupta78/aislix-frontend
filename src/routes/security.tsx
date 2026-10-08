@@ -84,9 +84,9 @@ const pillars = [
 function SecurityPage() {
   return (
     <MarketingPage>
-      <section className="border-b border-border bg-surface">
+      <section className="border-b border-border bg-white">
         <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-16">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">Security</p>
+          <p className="text-xs font-medium text-brand">Security</p>
           <h1 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
             Shelf data is commercial data. We treat it that way.
           </h1>

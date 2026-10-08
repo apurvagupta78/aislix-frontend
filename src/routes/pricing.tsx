@@ -80,7 +80,7 @@ function Pricing() {
       <SiteHeader />
       <main>
         <section className="mx-auto max-w-[90rem] px-6 pb-8 pt-24 text-center sm:px-8 lg:pt-28">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Pricing</p>
+          <p className="text-xs font-medium text-brand">Pricing</p>
           <h1 className="mx-auto mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             Start free. Scale your retail intelligence.
           </h1>

@@ -225,7 +225,7 @@ export function RetailIntelligenceDemo() {
       <section id="demo" className="scroll-mt-16 border-t border-border bg-background py-16 sm:py-20">
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
           <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand">Live shelf audit</p>
+            <p className="text-xs font-medium text-brand">Live shelf audit</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-normal sm:text-4xl">See What Aislix Sees</h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
               Run a live AI shelf audit right here — no signup, no setup.
@@ -315,7 +315,7 @@ export function RetailIntelligenceDemo() {
 
             {showImagePane ? (
               <div className="relative border-t border-border bg-surface px-4 py-5 sm:px-6 sm:py-6">
-                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="mb-3 text-xs font-medium text-muted-foreground">
                   {phase === "done" ? "Annotated shelf photo" : "Shelf photo"}
                 </p>
                 <div className="relative mx-auto max-w-3xl">

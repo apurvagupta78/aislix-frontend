@@ -7,7 +7,7 @@ export const Route = createFileRoute("/refunds")({
       { property: "og:url", content: "https://aislix.com/refunds" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { title: "Refund Policy — Aislix" },
+      { title: "Refund policy — Aislix" },
       {
         name: "description",
         content:
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/refunds")({
   }),
   component: () => (
     <LegalDoc
-      title="Refund Policy"
+      title="Refund policy"
       updated="1 August 2026"
       intro="We want you to pay only for shelf audits that deliver value. This policy explains when a subscription payment can be refunded, how trials and cancellations work, and how billing errors are corrected."
       sections={[

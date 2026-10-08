@@ -296,7 +296,7 @@ export function LiveDemoSection({
           </div>
         ) : (
           <SectionHeading
-            title="See What Aislix Sees"
+            title="See what Aislix sees"
             subtitle="Try a real shelf audit — no login required."
             eyebrow="Live demo"
           />
@@ -365,7 +365,7 @@ export function LiveDemoSection({
           ref={demoCardRef}
           className={
             homepageIntro
-              ? "mt-10 overflow-hidden rounded-3xl border border-border bg-surface p-3 shadow-soft sm:p-4"
+              ? "mt-10 overflow-hidden rounded-3xl border border-border bg-surface p-3 sm:p-4"
               : "mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift"
           }
         >
@@ -416,7 +416,7 @@ export function LiveDemoSection({
 
           {showImagePane ? (
             <div className="relative border-t border-border bg-surface px-4 py-5 sm:px-6 sm:py-6">
-              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="mb-3 text-xs font-medium text-muted-foreground">
                 {phase === "done"
                   ? "Annotated shelf photo"
                   : homepageIntro

@@ -15,15 +15,15 @@ export function HomeTryAislix() {
   return (
     <section
       id="live-dashboard"
-      className="scroll-mt-20 bg-card py-20 lg:py-28"
+      className="scroll-mt-20 border-t border-border bg-white py-16 lg:py-20"
       aria-labelledby="try-title"
     >
       <div className="mx-auto grid max-w-7xl gap-10 px-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:px-8">
         <div>
-          <p className="text-sm font-semibold text-[#2A6FA8]">Try Aislix free</p>
+          <p className="text-sm font-medium text-muted-foreground">Try Aislix free</p>
           <h2
             id="try-title"
-            className="mt-3 text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl"
+            className="mt-3 text-3xl font-semibold tracking-[-0.02em] text-foreground sm:text-4xl"
           >
             See what Aislix can find on your shelf.
           </h2>

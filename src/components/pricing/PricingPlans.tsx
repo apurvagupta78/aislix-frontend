@@ -41,7 +41,7 @@ export function CycleToggle({
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-full border border-border/70 bg-white p-1 shadow-sm",
+        "inline-flex items-center rounded-full border border-border/70 bg-white p-1",
         className,
       )}
       role="group"
@@ -163,7 +163,7 @@ export function PlanCard({
         "relative flex h-full min-w-0 flex-col rounded-2xl border bg-white px-6 pb-6 pt-8",
         plan.popular
           ? "border-brand shadow-[0_12px_40px_-20px_rgba(15,23,42,0.35)]"
-          : "border-border/70 shadow-sm",
+          : "border-border/70",
       )}
     >
       <div className="mb-4 flex h-6 items-center">
@@ -255,8 +255,8 @@ export function EnterpriseSection({
   pending?: boolean;
 }) {
   return (
-    <section className="rounded-2xl border border-border/70 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Enterprise</p>
+    <section className="rounded-2xl border border-border/70 bg-white px-6 py-10 text-center sm:px-10">
+      <p className="text-xs font-medium text-brand">Enterprise</p>
       <h3 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
         From ₹19,999/month
       </h3>
@@ -290,12 +290,12 @@ function Cell({ value }: { value: string | boolean }) {
 export function ComparisonTable() {
   const ids = PLAN_DEFINITIONS.map((p) => p.id);
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/70 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-white">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[56rem] border-collapse text-left">
           <thead>
             <tr className="border-b border-border/60 bg-muted/10">
-              <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <th className="px-4 py-3 text-xs font-medium text-muted-foreground">
                 Feature
               </th>
               {PLAN_DEFINITIONS.map((p) => (
@@ -311,7 +311,7 @@ export function ComparisonTable() {
                 <tr className="bg-brand-soft/30">
                   <td
                     colSpan={ids.length + 1}
-                    className="px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-brand"
+                    className="px-4 py-2 text-xs font-medium text-brand"
                   >
                     {group.group}
                   </td>
@@ -349,7 +349,7 @@ export function CurrencySelect({
       <SelectTrigger
         aria-label="Display currency"
         className={cn(
-          "h-9 w-[7.5rem] rounded-full border-border/70 bg-white text-sm font-medium shadow-sm",
+          "h-9 w-[7.5rem] rounded-full border-border/70 bg-white text-sm font-medium",
           className,
         )}
       >

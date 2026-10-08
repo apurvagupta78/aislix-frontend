@@ -26,11 +26,9 @@ export function AuthLayout({
         </div>
       </div>
 
-      <div className="relative hidden overflow-hidden border-l border-border bg-surface lg:block">
-        <div className="absolute inset-0 grid-lines opacity-50" />
-        <div className="absolute inset-0 bg-hero-glow" />
+      <div className="relative hidden overflow-hidden border-l border-border bg-white lg:block">
         <div className="relative flex h-full flex-col justify-center px-14">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">
+          <p className="text-sm font-medium text-muted-foreground">
             Retail shelf intelligence
           </p>
           <p className="mt-4 max-w-md text-2xl font-semibold leading-snug tracking-tight">
@@ -46,7 +44,7 @@ export function AuthLayout({
               { l: "Planogram gaps and shortfalls", v: "Compare" },
               { l: "Corrective actions until closed", v: "Act" },
             ].map((k) => (
-              <div key={k.l} className="rounded-2xl border border-border bg-card p-4">
+              <div key={k.l} className="rounded-lg border border-border bg-white p-4">
                 <p className="text-lg font-semibold tracking-tight">{k.v}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{k.l}</p>
               </div>

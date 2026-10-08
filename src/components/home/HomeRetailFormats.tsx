@@ -4,14 +4,14 @@ import { toneCard, toneText } from "@/lib/home/homepage-tone";
 export function HomeRetailFormats() {
   return (
     <section
-      className="border-y border-border bg-surface py-20 lg:py-24"
+      className="border-t border-border bg-white py-16 lg:py-20"
       aria-labelledby="formats-title"
     >
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2
             id="formats-title"
-            className="text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl"
+            className="text-3xl font-semibold tracking-[-0.02em] text-foreground sm:text-4xl"
           >
             One view of execution across every retail format.
           </h2>
@@ -23,9 +23,9 @@ export function HomeRetailFormats() {
           {retailFormats.map(({ icon: Icon, title, body, tone }) => (
             <li
               key={title}
-              className={`flex flex-col items-center rounded-2xl border px-5 py-7 text-center shadow-soft ${toneCard[tone]}`}
+              className={`flex flex-col items-center rounded-2xl border px-5 py-7 text-center ${toneCard[tone]}`}
             >
-              <span className="flex size-10 items-center justify-center rounded-xl bg-white shadow-sm">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-white">
                 <Icon className={`size-5 ${toneText[tone]}`} aria-hidden="true" />
               </span>
               <h3 className="mt-4 text-base font-semibold text-foreground">{title}</h3>

@@ -5,7 +5,7 @@ const WORKFLOWS = [
   {
     modelClass: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
     Icon: Store,
-    title: "Local Stores",
+    title: "Local stores",
     headline: "Turn every store visit into measurable execution.",
     body: "Track availability, assortment, facings, pricing and promotions without complicated retail systems.",
   },
@@ -19,7 +19,7 @@ const WORKFLOWS = [
   {
     modelClass: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
     Icon: Building2,
-    title: "Dark Stores",
+    title: "Dark stores",
     headline: "Know if products are where they should be.",
     body: "Monitor availability, location accuracy, planogram compliance, assortment and facings.",
   },
@@ -41,16 +41,16 @@ const WORKFLOWS = [
 
 export function HomeRetailWorkflows() {
   return (
-    <section id="workflows" className="home-section scroll-mt-16 bg-surface">
+    <section id="workflows" className="home-section scroll-mt-16 bg-white">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading
           eyebrow="ONE PLATFORM"
-          title="Five Retail Workflows. One Source of Truth."
+          title="Five retail workflows. One source of truth."
           subtitle="Every retail team sees the shelf differently. Aislix adapts the audit to what matters most for your role."
         />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {WORKFLOWS.map(({ Icon, title, headline, body, modelClass }) => (
-            <div key={title} className={`card-hover rounded-lg border p-5 shadow-soft ${modelClass}`}>
+            <div key={title} className={`card-hover rounded-lg border p-5 ${modelClass}`}>
               <Icon className="size-5 text-[var(--aislix-primary)]" strokeWidth={1.75} aria-hidden="true" />
               <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
               <p className="mt-2 text-xs font-medium leading-snug text-foreground/90">{headline}</p>

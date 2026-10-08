@@ -32,7 +32,7 @@ export function HeroSection() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button
               size="xl"
-              className="min-h-12 w-full bg-accent-green text-brand-foreground shadow-card hover:bg-accent-green/90 sm:w-auto"
+              className="min-h-12 w-full bg-accent-green text-brand-foreground hover:bg-accent-green/90 sm:w-auto"
               onClick={() => startDemo(LANDING_SAMPLE_EVENT, "hero_sample")}
             >
               Try Sample Shelf <ArrowRight className="size-4" />

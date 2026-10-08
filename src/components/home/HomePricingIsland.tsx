@@ -20,16 +20,16 @@ export function HomePricingIsland() {
   return (
     <section
       id="pricing"
-      className="scroll-mt-[5.5rem] border-t border-border bg-surface py-20 lg:py-28"
+      className="scroll-mt-[5.5rem] border-t border-border bg-white py-16 lg:py-20"
       aria-labelledby="pricing-title"
     >
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div className="max-w-2xl text-left">
-            <p className="text-sm font-semibold text-[#2A6FA8]">Pricing</p>
+            <p className="text-sm font-medium text-muted-foreground">Pricing</p>
             <h2
               id="pricing-title"
-              className="mt-3 text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl"
+              className="mt-3 text-3xl font-semibold tracking-[-0.02em] text-foreground sm:text-4xl"
             >
               Plans that scale from one local store to a national chain.
             </h2>

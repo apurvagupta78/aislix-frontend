@@ -20,14 +20,14 @@ import { HERO_SHELF_IMAGE, DEMO_SHELF_IMAGE } from "@/lib/home/homepage-data";
 const STEPS = [
   {
     n: 1,
-    title: "At the Store",
+    title: "At the store",
     body: "Capture a photo of the shelf or fill a quick digital audit.",
     tone: "local" as const,
     icon: Store,
   },
   {
     n: 2,
-    title: "No More WhatsApp",
+    title: "No more WhatsApp",
     body: "Stop losing photos in personal chats. Send directly via WhatsApp or the Aislix app.",
     tone: "supermarket" as const,
     icon: MessageCircle,
@@ -41,14 +41,14 @@ const STEPS = [
   },
   {
     n: 4,
-    title: "Audit History",
+    title: "Audit history",
     body: "Every audit is saved with date, store, photos, findings and status. Track progress over time.",
     tone: "local" as const,
     icon: FileText,
   },
   {
     n: 5,
-    title: "Action & Improvement",
+    title: "Action & improvement",
     body: "Assign corrective actions, track SLAs and re-audit to ensure issues are resolved.",
     tone: "supermarket" as const,
     icon: TrendingUp,
@@ -58,13 +58,13 @@ const STEPS = [
 const BENEFITS = [
   {
     icon: Eye,
-    title: "Full Visibility",
+    title: "Full visibility",
     body: "See what's really happening on the ground.",
     tone: "local" as const,
   },
   {
     icon: Zap,
-    title: "Save Time",
+    title: "Save time",
     body: "Replace manual follow-ups and scattered photos.",
     tone: "supermarket" as const,
   },
@@ -76,19 +76,19 @@ const BENEFITS = [
   },
   {
     icon: BarChart3,
-    title: "Track Progress",
+    title: "Track progress",
     body: "Audit history shows real improvement.",
     tone: "darkstore" as const,
   },
   {
     icon: Users,
-    title: "Better Collaboration",
+    title: "Better collaboration",
     body: "Keep field teams, managers and HQ aligned.",
     tone: "warehouse" as const,
   },
   {
     icon: Leaf,
-    title: "Drive Growth",
+    title: "Drive growth",
     body: "Better execution leads to stronger brand performance.",
     tone: "supermarket" as const,
   },
@@ -133,7 +133,7 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
           loading="lazy"
         />
         <div className="absolute inset-0 flex items-center justify-center bg-[var(--aislix-primary)]/25">
-          <div className="w-[42%] overflow-hidden rounded-lg border-2 border-white shadow-lift">
+          <div className="w-[42%] overflow-hidden rounded-lg border-2 border-white">
             <img src={DEMO_SHELF_IMAGE} alt="" className="aspect-[9/16] w-full object-cover" loading="lazy" />
           </div>
         </div>
@@ -142,7 +142,7 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
   }
   if (step.n === 2) {
     return (
-      <div className="mt-4 rounded-xl border border-[var(--aislix-supermarket-border)] bg-white p-3 shadow-soft">
+      <div className="mt-4 rounded-xl border border-[var(--aislix-supermarket-border)] bg-white p-3">
         <div className="flex items-start gap-2.5">
           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--aislix-supermarket-bg)] text-[#4F6B2E]">
             <MessageCircle className="size-4" aria-hidden="true" />
@@ -202,7 +202,7 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
     <div className="mt-4 rounded-xl border border-[var(--aislix-supermarket-border)] bg-white p-3">
       <div className="flex items-center gap-2 text-[#4F6B2E]">
         <CheckCircle2 className="size-4" aria-hidden="true" />
-        <p className="text-xs font-bold uppercase tracking-wide">Issue Resolved</p>
+        <p className="text-xs font-medium">Issue Resolved</p>
       </div>
       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
         Planogram compliance improved from 62% to 92%.
@@ -225,12 +225,12 @@ export function HomePhotoToActionFlow() {
   return (
     <section
       id="photo-to-action"
-      className="scroll-mt-[5.5rem] border-t border-border bg-surface py-20 lg:py-28"
+      className="scroll-mt-[5.5rem] border-t border-border bg-white py-16 lg:py-20"
       aria-labelledby="flow-title"
     >
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
-          <h2 id="flow-title" className="text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl">
+          <h2 id="flow-title" className="text-3xl font-semibold tracking-[-0.02em] text-foreground sm:text-4xl">
             From a photo to real action.{" "}
             <span className="text-[#4F6B2E]">All in one place.</span>
           </h2>
@@ -247,11 +247,11 @@ export function HomePhotoToActionFlow() {
             return (
               <Fragment key={step.title}>
                 <article
-                  className={`flex flex-1 flex-col rounded-2xl border p-4 shadow-soft sm:p-5 ${tone.card}`}
+                  className={`flex flex-1 flex-col rounded-2xl border p-4 sm:p-5 ${tone.card}`}
                 >
                   <div className="flex items-start gap-3">
                     <span
-                      className={`flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${tone.iconBg}`}
+                      className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${tone.iconBg}`}
                     >
                       {Icon ? (
                         <Icon className="size-5" aria-hidden="true" />

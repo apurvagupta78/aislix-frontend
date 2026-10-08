@@ -117,7 +117,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
   if (query.error || !query.data) {
     return (
       <EmptyState
-        title="Could not load Control Tower"
+        title="Could not load control tower"
         description={query.error instanceof Error ? query.error.message : "Try refreshing the page."}
       />
     );
@@ -201,7 +201,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
         <Card className="card-surface overflow-hidden">
           <CardHeader className="border-b border-border/60 bg-muted/20 pb-3">
             <DashboardSectionHeader
-              title="Audit Execution"
+              title="Audit execution"
               description="Assignment status in the selected period"
               viewAllTo="/dashboard/audit-execution"
               viewAllSearch={viewAll()}
@@ -253,7 +253,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
         <Card className="card-surface overflow-hidden">
           <CardHeader className="border-b border-border/60 bg-muted/20 pb-3">
             <DashboardSectionHeader
-              title="Operational Trend"
+              title="Operational trend"
               description="Audits completed vs findings over the selected period"
               viewAllTo="/dashboard/operational-trend"
               viewAllSearch={viewAll()}
@@ -355,7 +355,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
         <Card className="card-surface">
           <CardHeader className="pb-2">
             <DashboardSectionHeader
-              title="Top Risk SKUs"
+              title="Top risk SKUs"
               description="Highest-impact SKUs from open findings"
               viewAllTo="/dashboard/risk-skus"
               viewAllSearch={viewAll()}
@@ -392,7 +392,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
       <Card className="card-surface border-[var(--aislix-darkstore-border)]">
         <CardHeader className="pb-2">
           <DashboardSectionHeader
-            title="Critical Findings"
+            title="Critical findings"
             description="Unresolved high and critical findings"
             viewAllTo="/findings"
             viewAllSearch={viewAll({ severity: "critical" })}
@@ -427,7 +427,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
         <Card className="card-surface">
           <CardHeader className="pb-2">
             <DashboardSectionHeader
-              title="Corrective Action Health"
+              title="Corrective action health"
               description="Open workload from live corrective actions"
               viewAllTo="/corrective-actions"
               viewAllSearch={viewAll()}
@@ -522,7 +522,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
         <Card className="card-surface">
           <CardHeader className="pb-2">
             <DashboardSectionHeader
-              title="Evidence Coverage"
+              title="Evidence coverage"
               description="Verified vs required evidence units from persisted coverage"
               viewAllTo="/dashboard/evidence-coverage"
               viewAllSearch={viewAll()}
@@ -558,7 +558,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
       <Card className="card-surface">
         <CardHeader className="pb-2">
           <DashboardSectionHeader
-            title="Recurring Issues"
+            title="Recurring issues"
             description="RCA codes that appear more than once"
             viewAllTo="/exceptions"
             viewAllSearch={viewAll()}

@@ -32,7 +32,7 @@ export function ControlTowerDashboardHeader({
   return (
     <PageHeader
       eyebrow="Overview"
-      title="Control Tower"
+      title="Control tower"
       description="See what needs attention, drill in, and assign fixes — at a glance."
       meta={
         <>

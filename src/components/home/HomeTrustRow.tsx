@@ -48,7 +48,7 @@ export function HomeTrustRow() {
           {audiences.map(({ label, Icon, body, modelClass }) => (
             <div
               key={label}
-              className={`card-hover flex flex-col items-center rounded-lg border p-5 text-center shadow-soft ${modelClass}`}
+              className={`card-hover flex flex-col items-center rounded-lg border p-5 text-center ${modelClass}`}
             >
               <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--aislix-border)] bg-white/80 text-[var(--aislix-primary)]">
                 <Icon className="size-3.5" strokeWidth={1.75} aria-hidden="true" />

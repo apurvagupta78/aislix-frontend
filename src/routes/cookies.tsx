@@ -7,7 +7,7 @@ export const Route = createFileRoute("/cookies")({
       { property: "og:url", content: "https://aislix.com/cookies" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { title: "Cookie Policy — Aislix" },
+      { title: "Cookie policy — Aislix" },
       {
         name: "description",
         content:
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/cookies")({
   }),
   component: () => (
     <LegalDoc
-      title="Cookie Policy"
+      title="Cookie policy"
       updated="1 August 2026"
       intro="Aislix uses a small number of cookies and equivalent browser storage to keep you signed in, remember your workspace preferences and understand how the product is used. This page lists each category and how to control it."
       sections={[

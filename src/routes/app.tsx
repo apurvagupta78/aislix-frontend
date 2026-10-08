@@ -41,7 +41,7 @@ function AppDownloadPage() {
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <article className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
             <h2 className="text-lg font-semibold text-[#04203F]">Android</h2>
             <p className="mt-1 text-sm text-[#667085]">Version {APP_VERSION} · pilot release, not yet on the Play Store.</p>
             <Button asChild variant="brand" className="mt-4 w-full rounded-xl">
@@ -62,7 +62,7 @@ function AppDownloadPage() {
             </p>
           </article>
 
-          <article className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
             <h2 className="text-lg font-semibold text-[#04203F]">iPhone</h2>
             <p className="mt-1 text-sm text-[#667085]">Works from Safari, no download needed.</p>
             <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-[#04203F]">

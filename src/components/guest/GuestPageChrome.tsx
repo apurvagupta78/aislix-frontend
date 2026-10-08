@@ -32,7 +32,7 @@ export function GuestPageChrome({ children, className }: GuestPageChromeProps) {
       <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-card py-5 lg:flex">
         <div className="px-4">
           <Logo to="/" />
-          <Badge variant="outline" className="mt-3 rounded-md text-[10px] uppercase tracking-wide">
+          <Badge variant="outline" className="mt-3 rounded-md text-xs">
             Guest mode
           </Badge>
         </div>
@@ -74,7 +74,7 @@ export function GuestPageChrome({ children, className }: GuestPageChromeProps) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className="rounded-md bg-[var(--aislix-supermarket-bg)] text-[10px] font-semibold uppercase tracking-wide text-[#4F6B2E]">
+            <Badge className="rounded-md bg-[var(--aislix-supermarket-bg)] text-xs font-medium text-[#4F6B2E]">
               Demo ON
             </Badge>
             <div className="flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1.5">
