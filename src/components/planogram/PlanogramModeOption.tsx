@@ -10,12 +10,12 @@ export const PLANOGRAM_UPLOAD_OPTIONS: Array<{
 }> = [
   {
     mode: "custom",
-    label: "Use My Planogram",
+    label: "Use my planogram",
     detail: "Compare the shelf against your own planogram.",
   },
   {
     mode: "none",
-    label: "Audit Without Planogram",
+    label: "Audit without a planogram",
     detail: "Analyse the visible shelf without an expected layout.",
   },
 ];

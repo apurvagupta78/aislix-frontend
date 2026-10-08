@@ -44,7 +44,7 @@ export const ROLE_PROFILES: Record<string, RoleProfile> = {
   },
   darkstore: {
     role_id: "darkstore",
-    label: "Dark Store",
+    label: "Dark store",
     introduction:
       "Your shelf audit shows what's available, what's in the right place, and where shelf execution needs attention.",
     primary_kpis: [
@@ -57,7 +57,7 @@ export const ROLE_PROFILES: Record<string, RoleProfile> = {
   },
   fmcg: {
     role_id: "fmcg",
-    label: "FMCG Brand",
+    label: "FMCG brand",
     introduction:
       "Your shelf audit shows your brand's shelf presence, availability, facings, placement and promotional execution.",
     primary_kpis: [
@@ -83,7 +83,7 @@ export const ROLE_PROFILES: Record<string, RoleProfile> = {
   },
   local: {
     role_id: "local",
-    label: "Local Store",
+    label: "Local store",
     introduction:
       "Your shelf audit shows availability, required products, facings, pricing and promotions.",
     primary_kpis: [

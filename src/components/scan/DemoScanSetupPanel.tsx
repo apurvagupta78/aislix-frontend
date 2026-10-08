@@ -98,7 +98,7 @@ const HOMEPAGE_SAMPLE_OPTIONS: Array<{
   },
   {
     mode: "custom",
-    label: "Use My Planogram",
+    label: "Use my planogram",
     detail: "Compare the shelf against your own planogram.",
   },
   {
@@ -117,7 +117,7 @@ const HOMEPAGE_UPLOAD_OPTIONS: Array<{
   REFERENCE_OPTION,
   {
     mode: "custom",
-    label: "Use My Planogram",
+    label: "Use my planogram",
     detail: "Compare the shelf against your own planogram.",
   },
   {

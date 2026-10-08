@@ -97,13 +97,13 @@ export const Route = createFileRoute("/scan")({
   },
   head: () => ({
     meta: [
-      { title: "Start a New AI Audit — Aislix" },
+      { title: "New AI audit — Aislix" },
       {
         name: "description",
         content:
           "Choose the store and audit type, then upload a shelf photo. Aislix will analyse it against your selected setup.",
       },
-      { property: "og:title", content: "Start a New AI Audit — Aislix" },
+      { property: "og:title", content: "New AI audit — Aislix" },
       {
         property: "og:description",
         content:
@@ -591,7 +591,7 @@ function ScanPage() {
 
   return (
     <AppShell
-      title="Start a New AI Audit"
+      title="New AI audit"
       description="Choose the store and audit type, then upload a shelf photo. Aislix will analyse it against your selected setup."
       actions={
         items.length && !busy ? (

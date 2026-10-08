@@ -40,7 +40,7 @@ export function HomepageRolePicker({
               )}
             >
               <p className="text-xs font-medium text-foreground">
-                {roleTabLabel(option.role).toUpperCase()}
+                {roleTabLabel(option.role)}
               </p>
               <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
                 {option.description}

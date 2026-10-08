@@ -18,36 +18,36 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
   { label: string; description: string }
 > = {
   role: {
-    label: "Choose Your Audit Type",
+    label: "Choose your audit type",
     description:
       "Choose your role first. Aislix will customise the audit setup, checks and insights around what matters to your business.",
   },
   basics: {
-    label: "Shelf Basics",
+    label: "Shelf basics",
     description: "Start with the basic details of the shelf you want Aislix to audit.",
   },
   fixture: {
-    label: "Describe Your Shelf",
+    label: "Describe your shelf",
     description:
       "Tell Aislix what the shelf looks like — its type, size and number of shelves. This helps Aislix understand the physical space before analysing the products.",
   },
   products: {
-    label: "Add Products & Where They Belong",
+    label: "Add products and where they belong",
     description:
       "Tell Aislix which products should appear on this shelf, where each one belongs, and how many front-facing units should normally be visible. Aislix will use this as the reference when auditing your shelf photo.",
   },
   layout: {
-    label: "Show Aislix Where Products Belong",
+    label: "Show Aislix where products belong",
     description:
       "Set where each product should appear on the shelf and how many front-facing units should normally be visible. Aislix will use this to check shelf placement and facings during your audit.",
   },
   assortment: {
-    label: "Required Products",
+    label: "Required products",
     description:
       "Mark the products that are required for this store or shelf. Aislix will check during the audit whether those products are visibly present.",
   },
   prices: {
-    label: "Set the Expected Shelf Prices",
+    label: "Set the expected shelf prices",
     description:
       "Add the price that should be displayed for each product. Aislix will compare it with the price visible in the shelf photo.",
   },
@@ -62,17 +62,17 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
       "Confirm how many front-facing units should be visible for each product. Aislix uses this when checking shelf presence.",
   },
   role_settings: {
-    label: "Distributor Setup",
+    label: "Distributor setup",
     description:
       "Tell Aislix which distributor portfolio this audit belongs to. Aislix will use the distributor's products and must-stock requirements to check outlet execution.",
   },
   scoring: {
-    label: "Set Your Targets",
+    label: "Set your targets",
     description:
       "Tell Aislix what level of shelf performance you expect. These targets are used to show whether your audit is on track.",
   },
   readiness: {
-    label: "Ready to Audit",
+    label: "Ready to audit",
     description:
       "Aislix checks that it has the information needed to run your audit. Review what's ready and what's still missing before you begin.",
   },
@@ -109,7 +109,7 @@ export const HOMEPAGE_FREE_AUDIT_INTRO =
   "Choose the type of shelf you want to analyse. For this free demo, Aislix has already prepared the products, shelf layout and audit rules — so you can see how Aislix compares the real shelf with what should be there.";
 
 export const HOMEPAGE_DEMO_READY_CARD = {
-  title: "Your Demo Shelf Is Ready",
+  title: "Your demo shelf is ready",
   subtitle: "Everything is pre-configured for this demo.",
   summaryLine: "17 products · 5 shelves · 20 shelf positions",
   summary: (productCount: number, shelfCount: number, positionCount: number) =>
@@ -150,7 +150,7 @@ export const HOMEPAGE_NO_PLANOGRAM_PRODUCTS = {
   title: "No product setup required.",
   description:
     "Aislix will analyse the products that are visible in your shelf photo and provide the insights that can be determined from the image.",
-  cta: "Continue to Audit",
+  cta: "Continue to audit",
 } as const;
 
 export const HOMEPAGE_DISTRIBUTOR_SETUP = {
@@ -170,7 +170,7 @@ export const HOMEPAGE_DEMO_DISTRIBUTOR_STATUS = {
 } as const;
 
 export const HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM = {
-  title: "Audit Your Shelf Without a Planogram",
+  title: "Audit your shelf without a planogram",
   introduction:
     "No planogram? No problem. Aislix will analyse what is visible in your shelf photo and show you the retail insights that can be measured from the image.",
   limitation:
@@ -179,22 +179,22 @@ export const HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM = {
   capabilities: [
     {
       id: "products_brands",
-      title: "PRODUCTS & BRANDS",
+      title: "Products and brands",
       description: "See what products and brands are visible on the shelf.",
     },
     {
       id: "availability_facings",
-      title: "AVAILABILITY & FACINGS",
+      title: "Availability and facings",
       description: "Identify visible products and estimate their shelf presence and front facings.",
     },
     {
       id: "prices_promotions",
-      title: "PRICES & PROMOTIONS",
+      title: "Prices and promotions",
       description: "Read visible prices and promotional signs when the image is clear enough.",
     },
     {
       id: "shelf_issues",
-      title: "SHELF ISSUES",
+      title: "Shelf issues",
       description: "Highlight visible shelf issues and areas that need attention.",
     },
   ],
@@ -261,7 +261,7 @@ export const HOMEPAGE_ASSORTMENT_FIELD_HELP = {
 } as const;
 
 export const HOMEPAGE_ASSORTMENT_CSV = {
-  label: "Add Many Products at Once",
+  label: "Add many products at once",
   supporting: "Upload a CSV when you have a larger product list. Columns match the manual form above.",
   templateButton: "Download Template",
   uploadButton: "Upload CSV",
@@ -297,7 +297,7 @@ export const HOMEPAGE_PRICE_FIELD_HELP = {
 } as const;
 
 export const HOMEPAGE_PRICES_CSV = {
-  label: "Add Many Prices at Once",
+  label: "Add many prices at once",
   supporting: "Upload a CSV when you have a larger price list.",
   templateButton: "Download Template",
   uploadButton: "Upload CSV",
@@ -336,7 +336,7 @@ export const HOMEPAGE_PROMOTION_FIELD_HELP = {
 } as const;
 
 export const HOMEPAGE_PROMOTIONS_CSV = {
-  label: "Add Multiple Promotions",
+  label: "Add multiple promotions",
   supporting: "Upload a CSV when you have several promotions to configure.",
   templateButton: "Download Template",
   uploadButton: "Upload CSV",
@@ -357,13 +357,13 @@ export const HOMEPAGE_DEMO_SCORING_STATUS = {
 } as const;
 
 export const HOMEPAGE_SCORING_TARGET_FIELDS = [
-  { key: "osa_target", label: "On-Shelf Availability", placeholder: "e.g. 95" },
-  { key: "planogram_target", label: "Planogram Compliance", placeholder: "e.g. 90" },
-  { key: "assortment_target", label: "Assortment Compliance", placeholder: "e.g. 90" },
-  { key: "price_target", label: "Price Compliance", placeholder: "e.g. 95" },
-  { key: "promotional_target", label: "Promotional Compliance", placeholder: "e.g. 85" },
-  { key: "msl_target", label: "Must-Stock Compliance", placeholder: "e.g. 90" },
-  { key: "share_of_shelf_target", label: "Share of Shelf", placeholder: "e.g. 55" },
+  { key: "osa_target", label: "On-shelf availability", placeholder: "e.g. 95" },
+  { key: "planogram_target", label: "Planogram compliance", placeholder: "e.g. 90" },
+  { key: "assortment_target", label: "Assortment compliance", placeholder: "e.g. 90" },
+  { key: "price_target", label: "Price compliance", placeholder: "e.g. 95" },
+  { key: "promotional_target", label: "Promotional compliance", placeholder: "e.g. 85" },
+  { key: "msl_target", label: "Must-stock compliance", placeholder: "e.g. 90" },
+  { key: "share_of_shelf_target", label: "Share of shelf", placeholder: "e.g. 55" },
 ] as const;
 
 /** Targets that need planogram/reference setup — hidden or read-only in audit-without-planogram mode. */
@@ -375,12 +375,12 @@ export const HOMEPAGE_READINESS_TRUST =
 export const HOMEPAGE_READINESS_SUMMARY_LABEL = "Audit readiness";
 
 export const HOMEPAGE_DEMO_READINESS_STATUS = {
-  title: "Your Demo Is Ready",
+  title: "Your demo is ready",
   description: "All required demo data is already configured. Start the audit to see Aislix in action.",
 } as const;
 
 export const HOMEPAGE_NONE_READINESS_STATUS = {
-  title: "Your Photo Is Ready for Analysis",
+  title: "Your photo is ready for analysis",
   description:
     "Aislix will analyse what is visible in the shelf image. Checks that require an expected shelf setup will not be scored.",
 } as const;
@@ -388,27 +388,27 @@ export const HOMEPAGE_NONE_READINESS_STATUS = {
 export const HOMEPAGE_READINESS_CHECKS = [
   {
     id: "products" as const,
-    title: "PRODUCTS",
+    title: "Products",
     description: "Products added to this shelf setup.",
   },
   {
     id: "shelf_layout" as const,
-    title: "SHELF LAYOUT",
+    title: "Shelf layout",
     description: "Product positions and expected facings.",
   },
   {
     id: "required_products" as const,
-    title: "REQUIRED PRODUCTS",
+    title: "Required products",
     description: "Products that must be present.",
   },
   {
     id: "prices" as const,
-    title: "PRICES",
+    title: "Prices",
     description: "Expected shelf prices.",
   },
   {
     id: "promotions" as const,
-    title: "PROMOTIONS",
+    title: "Promotions",
     description: "Active promotions that should be visible.",
   },
 ] as const;
@@ -422,7 +422,7 @@ export const HOMEPAGE_READINESS_STATUS_LABELS: Record<
   optional: { label: "Optional", className: "text-muted-foreground" },
   not_required: { label: "Not required", className: "text-muted-foreground" },
   not_applicable: { label: "Not applicable", className: "text-muted-foreground" },
-  ready_to_analyse: { label: "Ready to Analyse", className: "text-success" },
+  ready_to_analyse: { label: "Ready to analyse", className: "text-success" },
 };
 
 export const HOMEPAGE_SCORING_NONE_MODE_KEYS = new Set([
