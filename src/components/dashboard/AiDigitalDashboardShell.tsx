@@ -26,7 +26,7 @@ import { toast } from "sonner";
 
 import { AskAislixSection } from "@/components/ask-aislix/AskAislixSection";
 import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
-import { WorkspaceFilterBar } from "@/components/filters/GlobalFilterBarShell";
+import { WorkspaceFilterBar, WorkspaceFiltersToggle } from "@/components/filters/GlobalFilterBarShell";
 import { MpDonut } from "@/components/control-tower/MpCharts";
 import { DemoPreviewToggle } from "@/components/control-tower/DemoPreviewToggle";
 import {
@@ -451,7 +451,7 @@ function CompletionChips({
   scopeLabel?: string;
 }) {
   return (
-    <>
+    <div className="flex flex-wrap items-center gap-1.5">
       {(
         [
           ["all", "All"],
@@ -474,8 +474,8 @@ function CompletionChips({
           {label}
         </button>
       ))}
-      <span className="text-xs text-[#667085]">{scopeLabel ?? "Showing your stores"}</span>
-    </>
+      <span className="ml-1 text-xs text-[#667085]">{scopeLabel ?? "Showing your stores"}</span>
+    </div>
   );
 }
 
@@ -507,6 +507,7 @@ export function AiDigitalDashboardShell() {
   const [customMetrics, setCustomMetrics] = useState<DashboardCustomMetricsPrefs>({ items: [] });
   const [customOpen, setCustomOpen] = useState(false);
   const [showAllMetrics, setShowAllMetrics] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const filterKey = global?.filters
     ? {
@@ -1628,21 +1629,30 @@ export function AiDigitalDashboardShell() {
             </button>
           ))}
         </div>
-        {tab !== "overview" ? (
-          <button
-            type="button"
-            onClick={() => setEditLayout((v) => !v)}
-            className={cn(
-              "mb-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
-              editLayout
-                ? "bg-[#04203F] text-white"
-                : "text-[#667085] hover:bg-[#F4F7F9] hover:text-[#04203F]",
-            )}
-          >
-            {editLayout ? "Done" : "Customize"}
-          </button>
-        ) : null}
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <WorkspaceFiltersToggle
+            open={filtersOpen}
+            onToggle={() => setFiltersOpen((v) => !v)}
+            className="h-8 text-xs"
+          />
+          {tab !== "overview" ? (
+            <button
+              type="button"
+              onClick={() => setEditLayout((v) => !v)}
+              className={cn(
+                "h-8 rounded-lg px-2.5 text-xs font-medium transition-colors",
+                editLayout
+                  ? "bg-[#04203F] text-white"
+                  : "text-[#667085] hover:bg-[#F4F7F9] hover:text-[#04203F]",
+              )}
+            >
+              {editLayout ? "Done" : "Customize"}
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {filtersOpen ? <WorkspaceFilterBar /> : null}
 
       {tab === "overview" ? (
         <div className="flex flex-col gap-6">
@@ -1732,19 +1742,14 @@ export function AiDigitalDashboardShell() {
               {renderMetricGrid(renderAiCard)}
 
               <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
-                <WorkspaceFilterBar
-                  embedded
-                  footer={
-                    <CompletionChips
-                      completion={completion}
-                      onChange={setCompletion}
-                      scopeLabel={data?.scopeLabel}
-                    />
-                  }
-                />
-                <div className="border-t border-[#D9E2E8] p-4">
-                <div className="mb-3">
+                <div className="p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <TitleLink title="Last 10 audits" to="/history" />
+                  <CompletionChips
+                    completion={completion}
+                    onChange={setCompletion}
+                    scopeLabel={data?.scopeLabel}
+                  />
                 </div>
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <div className="flex gap-1 rounded-lg border border-[#D9E2E8] bg-white p-0.5">
@@ -1913,19 +1918,14 @@ export function AiDigitalDashboardShell() {
               {renderMetricGrid(renderDigitalCard)}
 
               <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
-                <WorkspaceFilterBar
-                  embedded
-                  footer={
+                <div className="p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <TitleLink title="Last 10 digital audits" to="/history" />
                     <CompletionChips
                       completion={completion}
                       onChange={setCompletion}
                       scopeLabel={data?.scopeLabel}
                     />
-                  }
-                />
-                <div className="border-t border-[#D9E2E8] p-4">
-                  <div className="mb-3">
-                    <TitleLink title="Last 10 digital audits" to="/history" />
                   </div>
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <div className="flex gap-1 rounded-lg border border-[#D9E2E8] bg-white p-0.5">

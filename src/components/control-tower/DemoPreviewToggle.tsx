@@ -19,7 +19,7 @@ export function DemoPreviewToggle({
 }) {
   if (compact) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1.5">
+      <div className="flex items-center gap-2 rounded-lg border border-[#D9E2E8] bg-white px-3 py-1.5">
         <Label
           htmlFor="demo-data-toggle"
           className={cn("text-sm font-medium text-navy", locked ? "cursor-default" : "cursor-pointer")}
@@ -40,10 +40,10 @@ export function DemoPreviewToggle({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-[#C1E4F8] bg-[#EAF6FD]/80 px-3 py-2",
+        "flex items-center gap-3 rounded-lg border border-[#D9E2E8] bg-white px-3 py-2",
       )}
     >
-      <FlaskConical className="size-4 shrink-0 text-[#557187]" aria-hidden />
+      <FlaskConical className="size-4 shrink-0 text-[#667085]" aria-hidden />
       <div className="min-w-0 flex-1">
         <Label htmlFor="demo-preview-toggle" className="text-sm font-medium text-navy">
           Demo Data
