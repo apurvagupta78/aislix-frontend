@@ -10,6 +10,7 @@ import {
   actionTypeLabel,
   escalationLabel,
   isActionLate,
+  isUnreviewedAction,
   type ActionStage,
 } from "@/lib/corrective-action-catalog";
 import type { LifecycleAction } from "@/lib/corrective-action-lifecycle";
@@ -90,6 +91,18 @@ export function StagePill({
 }: {
   action: Pick<LifecycleAction, "status" | "due_at"> & { resolved_by_verification?: boolean };
 }) {
+  if (isUnreviewedAction(action.status)) {
+    const proposed = action.status === "proposed";
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#D9E2E8] bg-white px-2 py-0.5 text-[11px] font-semibold text-navy">
+        <span
+          className="size-1.5 rounded-full"
+          style={{ background: proposed ? AISLIX_PALETTE.purple : "#EEF1F4" }}
+        />
+        {proposed ? "Waiting for review" : "Rejected at review"}
+      </span>
+    );
+  }
   const late = isActionLate(action);
   const stage = actionStage(action.status);
   const label =

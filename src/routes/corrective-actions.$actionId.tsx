@@ -343,7 +343,7 @@ function ActionDetailPage() {
   function renderBody() {
     if (!action) return null;
     const stage = actionStage(action.status);
-    const open = stage === "open" || stage === "in_progress";
+    const open = (stage === "open" || stage === "in_progress") && !isUnreviewedAction(action.status);
     const needsPlan = requiresRootCause(action.priority);
     const planDone = Boolean(action.root_cause?.trim() && action.preventive_action?.trim());
     const aiVerify = action.verification_method === "ai_rescan" && Boolean(action.scan_id);
