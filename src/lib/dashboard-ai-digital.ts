@@ -22,6 +22,12 @@ import {
   resolveDashboardDateBounds,
   type DashboardFilterState,
 } from "@/lib/dashboard-filters";
+import {
+  assigneeByScan,
+  auditorOf,
+  resolvePeopleFilter,
+  scanIdsMatchingSku,
+} from "@/lib/ai-dashboard-scope";
 
 export type DashboardTab = "ai" | "digital";
 
@@ -39,6 +45,7 @@ export type DashboardMetricFilters = Partial<
     | "category"
     | "subCategory"
     | "teamMemberId"
+    | "teamManagerId"
     | "datePreset"
     | "dateFrom"
     | "dateTo"
@@ -212,9 +219,6 @@ export async function fetchAiDashboardMetrics(
   if (filters?.category && filters.category !== "all") {
     scanQuery = scanQuery.eq("category", filters.category);
   }
-  if (filters?.skuId && filters.skuId.trim()) {
-    // skuId filter applied post-query via product rows when present
-  }
   const needsStoreGeo =
     (filters?.country && filters.country !== "all") || (filters?.city && filters.city !== "all");
   let storeIdAllow: Set<string> | null = null;
@@ -237,11 +241,23 @@ export async function fetchAiDashboardMetrics(
   if (bounds?.to) scanQuery = scanQuery.lt("created_at", bounds.to.toISOString());
 
   const { data: scansRaw } = await scanQuery;
-  const scans = (scansRaw ?? []).filter((s) => {
+  let scans = (scansRaw ?? []).filter((s) => {
     if (!storeIdAllow) return true;
     const sid = s.store_id as string | null;
     return sid != null && storeIdAllow.has(sid);
   });
+  const people = await resolvePeopleFilter(orgId, filters);
+  if (people) {
+    const assignees = await assigneeByScan(scans.map((s) => s.id as string));
+    scans = scans.filter((s) => {
+      const who = auditorOf({ id: s.id as string, created_by: s.created_by as string | null }, assignees);
+      return who != null && people.has(who);
+    });
+  }
+  if (filters?.skuId?.trim()) {
+    const withSku = await scanIdsMatchingSku(scans.map((s) => s.id as string), filters.skuId);
+    scans = scans.filter((s) => withSku.has(s.id as string));
+  }
 
   const scanIds = (scans ?? []).map((s) => s.id as string);
   if (!scanIds.length) return { ...empty, auditCount: 0 };
@@ -407,6 +423,16 @@ export async function fetchAiDashboardMetrics(
     .not("status", "in", "(closed,resolved)")
     .limit(2000);
   if (!usingDemoOverride) openFindingsQ = applyStoreScopeFilter(openFindingsQ, scope) ?? openFindingsQ;
+  const narrowed = Boolean(
+    storeIdAllow ||
+      people ||
+      filters?.skuId?.trim() ||
+      (scopedStoreId && scopedStoreId !== "all") ||
+      (filters?.category && filters.category !== "all") ||
+      bounds?.from ||
+      bounds?.to,
+  );
+  if (narrowed) openFindingsQ = openFindingsQ.in("scan_id", scanIds.slice(0, 200));
   const [verificationRows, { data: openFindingRows }] = await Promise.all([
     listScanFieldVerificationsForScans(verifiedScanIds),
     openFindingsQ,
@@ -610,9 +636,8 @@ export async function fetchDigitalDashboardMetrics(
   if (scopedStoreId && scopedStoreId !== "all" && !experience.labeledDemo) {
     assignmentQuery = assignmentQuery.eq("store_id", scopedStoreId);
   }
-  if (filters?.teamMemberId && filters.teamMemberId !== "all") {
-    assignmentQuery = assignmentQuery.eq("assignee_id", filters.teamMemberId);
-  }
+  const digitalPeople = await resolvePeopleFilter(orgId, filters);
+  if (digitalPeople) assignmentQuery = assignmentQuery.in("assignee_id", [...digitalPeople]);
   const needsStoreGeo =
     (filters?.country && filters.country !== "all") || (filters?.city && filters.city !== "all");
   let storeIdAllow: Set<string> | null = null;

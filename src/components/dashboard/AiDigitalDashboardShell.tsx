@@ -54,6 +54,9 @@ import {
 import { AISLIX } from "@/lib/aislix-theme";
 import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
 import { DashboardOverviewPanel } from "@/components/dashboard/DashboardOverviewPanel";
+import { AiActionsSlaSection, AiVarianceSection } from "@/components/dashboard/AiDashboardInsights";
+import { fetchAiVarianceSummary } from "@/lib/ai-variance-summary";
+import { fetchAiDashboardActions } from "@/lib/ai-dashboard-actions";
 import { SegmentHomePanel } from "@/components/dashboard/SegmentHomePanel";
 import {
   fetchNotificationPreferences,
@@ -515,6 +518,7 @@ export function AiDigitalDashboardShell() {
         category: global.filters.category,
         subCategory: global.filters.subCategory,
         teamMemberId: global.filters.teamMemberId,
+        teamManagerId: global.filters.teamManagerId,
         datePreset: global.filters.datePreset,
         dateFrom: global.filters.dateFrom,
         dateTo: global.filters.dateTo,
@@ -691,6 +695,28 @@ export function AiDigitalDashboardShell() {
     // Don't compete with AI dashboard on first paint — load digital when that tab is open
     // (or after AI settles so Ask Aislix can still see digital signals quickly).
     enabled: tab !== "ai" || (!opsQuery.isPending && Boolean(opsQuery.data)),
+  });
+
+  const { completion: _completion, ...insightFilters } = filterKey;
+  const varianceQuery = useQuery({
+    queryKey: ["dashboard-ai-variances-v1", insightFilters, demoPreview.previewDemo],
+    queryFn: () =>
+      fetchAiVarianceSummary(insightFilters, {
+        previewDemo: demoPreview.previewDemo,
+        userEmail: demoPreview.userEmail,
+      }),
+    staleTime: 60_000,
+    enabled: tab === "ai",
+  });
+  const aiActionsQuery = useQuery({
+    queryKey: ["dashboard-ai-actions-v1", insightFilters, demoPreview.previewDemo],
+    queryFn: () =>
+      fetchAiDashboardActions(insightFilters, {
+        previewDemo: demoPreview.previewDemo,
+        userEmail: demoPreview.userEmail,
+      }),
+    staleTime: 60_000,
+    enabled: tab === "ai",
   });
 
   const data = opsQuery.data;
@@ -931,7 +957,18 @@ export function AiDigitalDashboardShell() {
           <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-[#04203F]">Last completed audit</h3>
+                <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[#04203F]">
+                  Last completed audit
+                  {data?.lastReport?.submitted === false ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#D9E2E8] bg-white px-2 py-0.5 text-[11px] font-medium text-[#04203F]"
+                      title="The AI analysis is finished; the audit has not been submitted yet."
+                    >
+                      <span className="size-1.5 rounded-full bg-[#9B86D9]" aria-hidden />
+                      Not submitted
+                    </span>
+                  ) : null}
+                </h3>
                 {data?.lastReport ? (
                   <p className="mt-0.5 text-xs text-[#667085]">
                     {data.lastReport.auditName} · {data.lastReport.storeName} ·{" "}
@@ -1696,11 +1733,13 @@ export function AiDigitalDashboardShell() {
           ))}
         </div>
         <div className="mb-1.5 flex items-center gap-1.5">
-          <WorkspaceFiltersToggle
-            open={filtersOpen}
-            onToggle={() => setFiltersOpen((v) => !v)}
-            className="h-8 text-xs"
-          />
+          {tab !== "ai" ? (
+            <WorkspaceFiltersToggle
+              open={filtersOpen}
+              onToggle={() => setFiltersOpen((v) => !v)}
+              className="h-8 text-xs"
+            />
+          ) : null}
           {tab !== "overview" ? (
             <button
               type="button"
@@ -1718,7 +1757,7 @@ export function AiDigitalDashboardShell() {
         </div>
       </div>
 
-      {filtersOpen ? <WorkspaceFilterBar /> : null}
+      {tab === "ai" ? <WorkspaceFilterBar extended /> : filtersOpen ? <WorkspaceFilterBar /> : null}
 
       {tab === "overview" ? (
         <div className="flex flex-col gap-6">
@@ -1806,6 +1845,9 @@ export function AiDigitalDashboardShell() {
               />
 
               {renderMetricGrid(renderAiCard)}
+
+              <AiVarianceSection summary={varianceQuery.data} loading={varianceQuery.isPending} />
+              <AiActionsSlaSection actions={aiActionsQuery.data} loading={aiActionsQuery.isPending} />
 
               <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
                 <div className="p-4">

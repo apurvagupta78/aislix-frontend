@@ -53,6 +53,7 @@ const PROMO_STATUS: Record<string, { label: string; tone: "green" | "pink" | "gr
 
 function promoCell(line: ReferenceMatchLine) {
   const status = line.promo_status ? PROMO_STATUS[line.promo_status] : null;
+  const noOffer = !line.expected_promo && !line.shelf_promotion;
   return (
     <div className="max-w-[200px] space-y-1">
       <p className="text-[11px] text-[#667085]">
@@ -60,7 +61,11 @@ function promoCell(line: ReferenceMatchLine) {
         {line.shelf_promotion ? `“${line.shelf_promotion}”` : "—"}
         {line.shelf_promo_price != null ? ` (${priceText(line.shelf_promo_price)})` : ""}
       </p>
-      {status ? <AiPill tone={status.tone}>{status.label}</AiPill> : <AiPill tone="grey">N/A</AiPill>}
+      {status ? (
+        <AiPill tone={status.tone}>{status.label}</AiPill>
+      ) : (
+        <AiPill tone="grey">{noOffer ? "No offer on document or shelf" : "N/A"}</AiPill>
+      )}
     </div>
   );
 }
@@ -184,7 +189,6 @@ export function ReferenceMatchSection({
   const showDocumentTable = docColumns.length > 0 && (!documentUrl || isPdf);
   const verdict = match.verdict ? VERDICT[match.verdict] : null;
   const docLabel = doc.source === "csv" ? "CSV / Excel" : documentTypeLabel(doc.document_type);
-  const showPromo = match.lines.some((line) => line.expected_promo || line.shelf_promotion);
   const compared = [
     `${docLabel}${doc.document_number ? ` ${doc.document_number}` : ""}`,
     doc.supplier_name,
@@ -516,9 +520,7 @@ export function ReferenceMatchSection({
                 </div>
               ),
             },
-            ...(showPromo
-              ? [{ key: "promo", header: "Promotion", className: "min-w-[150px]", cell: promoCell }]
-              : []),
+            { key: "promo", header: "Promotion", className: "min-w-[150px]", cell: promoCell },
           ]}
         />
 

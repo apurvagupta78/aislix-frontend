@@ -185,6 +185,20 @@ export function agingBuckets(actions: InsightAction[], now = Date.now()): AgingB
   return buckets;
 }
 
+/** Fixed actions with a due date: how many were verified or closed by their SLA due date. */
+export function slaCompliance(actions: InsightAction[]): { met: number; total: number; pct: number | null } {
+  let met = 0;
+  let total = 0;
+  for (const a of actions) {
+    const stage = actionStage(a.status);
+    const done = finishedAt(a);
+    if ((stage !== "closed" && stage !== "verified") || !done || !a.due_at) continue;
+    total += 1;
+    if (new Date(done).getTime() <= new Date(a.due_at).getTime()) met += 1;
+  }
+  return { met, total, pct: total ? Math.round((met / total) * 100) : null };
+}
+
 export function actionsBySource(actions: InsightAction[]): { ai: number; digital: number } {
   let ai = 0;
   let digital = 0;

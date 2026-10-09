@@ -156,8 +156,10 @@ export async function fetchLifecycleActions(input: {
   scanId?: string;
   storeId?: string;
   status?: string;
+  /** Defaults to the active org (e.g. the demo data org on dashboards). */
+  orgId?: string;
 } = {}): Promise<LifecycleAction[]> {
-  const orgId = await requireOrgId();
+  const orgId = input.orgId ?? (await requireOrgId());
   let query = supabase.from("corrective_actions").select("*").eq("org_id", orgId).order("created_at", { ascending: false }).limit(1000);
   if (input.findingId) query = query.eq("finding_id", input.findingId);
   if (input.scanId) query = query.eq("scan_id", input.scanId);

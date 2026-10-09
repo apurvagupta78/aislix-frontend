@@ -25,12 +25,15 @@ export function WorkspaceFilterBar({
   className,
   embedded,
   footer,
+  extended,
 }: {
   className?: string;
   /** When true, renders inside a parent card (no outer border/radius). */
   embedded?: boolean;
   /** Extra controls rendered inside the filter card (e.g. completion chips). */
   footer?: ReactNode;
+  /** Team and SKU search in the main row. */
+  extended?: boolean;
 }) {
   const ctx = useOptionalGlobalFilters();
 
@@ -41,7 +44,7 @@ export function WorkspaceFilterBar({
 
   const body = (
     <div className="p-3 md:p-4">
-      <DashboardFilterBar filters={filters} onChange={setFilters} options={options ?? EMPTY_OPTIONS} />
+      <DashboardFilterBar filters={filters} onChange={setFilters} options={options ?? EMPTY_OPTIONS} extended={extended} />
       {footer ? <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">{footer}</div> : null}
     </div>
   );

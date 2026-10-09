@@ -136,6 +136,7 @@ export function applyDashboardRoleChange(
     category: "all",
     subCategory: "all",
     teamMemberId: "all",
+    teamManagerId: "all",
     kri: "all",
   };
 }

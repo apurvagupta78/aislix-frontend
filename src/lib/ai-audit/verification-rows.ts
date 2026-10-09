@@ -39,6 +39,8 @@ export type VerificationRow = {
   identity: { brand: string | null; product: string | null; variant: string | null };
   label: string;
   planned: boolean;
+  category?: string | null;
+  sku?: string | null;
   expected: FieldRecord;
   ai: FieldRecord;
   /** Status the pipeline persisted for this field (location / price / promotion), when assessed. */
@@ -117,6 +119,8 @@ function fromPlanogram(p: AstraPlanogramProduct): Draft {
   return {
     identity: { brand: str(p.brand), product: str(p.product_name), variant: str(p.variant) },
     planned: true,
+    category: str(p.category),
+    sku: str(p.sku),
     expected: {
       ...emptyRecord(),
       present: 1,
@@ -147,6 +151,8 @@ function fromReferenceLine(l: ReferenceMatchLine, planned?: AstraPlanogramProduc
   return {
     identity: { brand: l.brand, product: l.product_name, variant: l.variant },
     planned: true,
+    category: planned ? str(planned.category) : null,
+    sku: planned ? str(planned.sku) : null,
     expected: {
       ...emptyRecord(),
       present: 1,
@@ -185,10 +191,13 @@ function aiOnly(input: {
   location?: string | null;
   price?: unknown;
   promotion?: string | null;
+  category?: string | null;
 }): Draft {
   return {
     identity: { brand: input.brand, product: input.product, variant: input.variant },
     planned: false,
+    category: input.category ?? null,
+    sku: null,
     expected: emptyRecord(),
     ai: {
       ...emptyRecord(),
@@ -216,6 +225,7 @@ function shelfDraft(p: AstraShelfProduct): Draft {
     location: str(p.location_label),
     price: p.visible_price,
     promotion: str(p.promotion_text),
+    category: str(p.category),
   });
 }
 

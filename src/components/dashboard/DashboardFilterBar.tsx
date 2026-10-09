@@ -474,14 +474,77 @@ function useFilterOptions(filters: DashboardFilterState, options: DashboardFilte
   return { countryOptions, cityOptions, storeOptions, categoryOptions, kriOptions };
 }
 
-function DesktopToolbar({
+/** A manager and everyone who reports to them. */
+function TeamControl({
   filters,
   onChange,
   options,
+  className,
 }: {
   filters: DashboardFilterState;
   onChange: (next: DashboardFilterState) => void;
   options: DashboardFilterOptions;
+  className?: string;
+}) {
+  const managers = options.team_managers ?? [];
+  if (!managers.length) {
+    return (
+      <Link
+        to="/team"
+        className={cn(CONTROL, "inline-flex items-center gap-1.5 text-muted-foreground", className)}
+        title="Teams appear here once you set who reports to whom on the Team page"
+      >
+        <Users className="size-3.5 shrink-0" />
+        <span className="truncate">No teams yet · set up</span>
+      </Link>
+    );
+  }
+  return (
+    <SearchableSelect
+      label="Team"
+      icon={Users}
+      value={filters.teamManagerId ?? "all"}
+      onValueChange={(v) => onChange({ ...filters, teamManagerId: v })}
+      options={managers.map((m) => ({ value: m.user_id, label: `${m.name || m.email}'s team` }))}
+      allLabel="All teams"
+      className={className}
+    />
+  );
+}
+
+function SkuSearch({
+  filters,
+  onChange,
+  className,
+}: {
+  filters: DashboardFilterState;
+  onChange: (next: DashboardFilterState) => void;
+  className?: string;
+}) {
+  return (
+    <label className={cn("relative block", className)}>
+      <Barcode className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        className={cn(CONTROL, "w-full pl-8")}
+        value={filters.skuId ?? ""}
+        placeholder="SKU or product"
+        aria-label="SKU or product"
+        onChange={(e) => onChange({ ...filters, skuId: e.target.value })}
+      />
+    </label>
+  );
+}
+
+function DesktopToolbar({
+  filters,
+  onChange,
+  options,
+  extended,
+}: {
+  filters: DashboardFilterState;
+  onChange: (next: DashboardFilterState) => void;
+  options: DashboardFilterOptions;
+  extended?: boolean;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const { countryOptions, cityOptions, storeOptions, categoryOptions, kriOptions } =
@@ -491,7 +554,7 @@ function DesktopToolbar({
     (filters.subCategory !== "all" ? 1 : 0) +
     (filters.teamMemberId !== "all" ? 1 : 0) +
     (filters.auditAssignment !== "all" ? 1 : 0) +
-    ((filters.skuId ?? "").trim() ? 1 : 0) +
+    (!extended && (filters.skuId ?? "").trim() ? 1 : 0) +
     ((filters.itemCode ?? "").trim() ? 1 : 0) +
     ((filters.itemName ?? "").trim() ? 1 : 0);
 
@@ -547,6 +610,12 @@ function DesktopToolbar({
         allLabel="All categories"
         className="min-w-[118px] max-w-[160px]"
       />
+      {extended ? (
+        <>
+          <TeamControl filters={filters} onChange={onChange} options={options} className="min-w-[118px] max-w-[180px]" />
+          <SkuSearch filters={filters} onChange={onChange} className="w-[170px]" />
+        </>
+      ) : null}
       <MoreFiltersPopover
         filters={filters}
         onChange={onChange}
@@ -674,6 +743,7 @@ function MobileFilters({
             allLabel="All sub-categories"
             className="w-full"
           />
+          <TeamControl filters={draft} onChange={setDraft} options={options} className="w-full" />
           {options.only_self && options.team_members.length <= 1 ? (
             <div className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-2.5 text-xs text-muted-foreground">
               <Users className="size-3.5" />
@@ -755,11 +825,14 @@ export function DashboardFilterBar({
   onChange,
   options,
   summaryLabel,
+  extended,
 }: {
   filters: DashboardFilterState;
   onChange: (next: DashboardFilterState) => void;
   options: DashboardFilterOptions;
   summaryLabel?: string;
+  /** Team and SKU search in the main row instead of "More filters". */
+  extended?: boolean;
 }) {
   const chips = dashboardFilterChips(filters, options);
   const activeCount = chips.length;
@@ -767,7 +840,7 @@ export function DashboardFilterBar({
   return (
     <section className="space-y-1.5" aria-label="Dashboard filters">
       <div className="hidden md:block">
-        <DesktopToolbar filters={filters} onChange={onChange} options={options} />
+        <DesktopToolbar filters={filters} onChange={onChange} options={options} extended={extended} />
       </div>
 
       <div className="md:hidden">

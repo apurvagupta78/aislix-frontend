@@ -30,6 +30,8 @@ export type DashboardFilterState = {
   category: string;
   subCategory: string;
   teamMemberId: string;
+  /** A manager; scopes to them and everyone who reports to them (directly or indirectly). */
+  teamManagerId: string;
   auditAssignment: DashboardAssignmentFilter;
   /** Role primary KPI focus — "all" shows every KRI area. */
   kri: AuditKpiId | "all";
@@ -49,6 +51,7 @@ export const DEFAULT_DASHBOARD_FILTERS: DashboardFilterState = {
   category: "all",
   subCategory: "all",
   teamMemberId: "all",
+  teamManagerId: "all",
   auditAssignment: "all",
   kri: "all",
   skuId: "",
@@ -85,6 +88,7 @@ export type DashboardTeamMember = {
   user_id: string;
   name: string;
   email: string;
+  reports_to?: string | null;
 };
 
 export type DashboardSubCategoryOption = {
@@ -100,6 +104,8 @@ export type DashboardFilterOptions = {
   categories: string[];
   subcategories: DashboardSubCategoryOption[];
   team_members: DashboardTeamMember[];
+  /** Members with at least one direct report — the "Team" filter. */
+  team_managers?: DashboardTeamMember[];
   kri_options: Array<{ value: AuditKpiId; label: string }>;
   only_self: boolean;
   current_user_id: string | null;
@@ -161,6 +167,7 @@ export function isDefaultDashboardFilters(filters: DashboardFilterState): boolea
     filters.category === "all" &&
     filters.subCategory === "all" &&
     filters.teamMemberId === "all" &&
+    (filters.teamManagerId ?? "all") === "all" &&
     filters.auditAssignment === "all" &&
     filters.kri === "all" &&
     !(filters.skuId ?? "").trim() &&
@@ -215,6 +222,11 @@ export function dashboardFilterChips(
   if (filters.teamMemberId !== "all") {
     const member = options.team_members.find((m) => m.user_id === filters.teamMemberId);
     chips.push({ key: "teamMemberId", label: member?.name || member?.email || "Team member" });
+  }
+
+  if ((filters.teamManagerId ?? "all") !== "all") {
+    const manager = (options.team_managers ?? options.team_members).find((m) => m.user_id === filters.teamManagerId);
+    chips.push({ key: "teamManagerId", label: `Team: ${manager?.name || manager?.email || "Manager"}` });
   }
 
   if (filters.auditAssignment !== "all") {

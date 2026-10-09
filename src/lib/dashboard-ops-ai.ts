@@ -21,6 +21,13 @@ import {
   type DashboardMetricFilters,
 } from "@/lib/dashboard-ai-digital";
 import { isDemoOrgId, resolveDemoExperience } from "@/lib/demo-environment";
+import {
+  assigneeByScan,
+  auditorOf,
+  resolvePeopleFilter,
+  resolveStoreFilter,
+  scanIdsMatchingSku,
+} from "@/lib/ai-dashboard-scope";
 import { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/demo-shelf-images";
 
 export { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/demo-shelf-images";
@@ -109,6 +116,8 @@ export type LastAuditReport = {
   auditName: string;
   storeName: string;
   date: string;
+  /** False when the AI analysis finished but the audit has not been submitted; null when there is no assignment. */
+  submitted?: boolean | null;
   compliancePct: number | null;
   findingsCount: number;
   confidencePct: number | null;
@@ -402,8 +411,16 @@ export async function fetchOpsAiDashboard(
   if (bounds?.from) assignQ = assignQ.gte("created_at", bounds.from.toISOString());
   if (bounds?.to) assignQ = assignQ.lt("created_at", bounds.to.toISOString());
 
-  const { data: assignmentsRaw } = await assignQ;
-  let assignments = assignmentsRaw ?? [];
+  const [{ data: assignmentsRaw }, geoStores, people] = await Promise.all([
+    assignQ,
+    resolveStoreFilter(orgId, { country: filters?.country, city: filters?.city }),
+    resolvePeopleFilter(orgId, filters),
+  ]);
+  let assignments = (assignmentsRaw ?? []).filter((a) => {
+    if (geoStores && !(a.store_id && geoStores.has(a.store_id as string))) return false;
+    if (people && !(a.assignee_id && people.has(a.assignee_id as string))) return false;
+    return true;
+  });
 
   if (filters?.completion && filters.completion !== "all") {
     assignments = assignments.filter((a) => stageOf(a) === filters.completion);
@@ -457,6 +474,16 @@ export async function fetchOpsAiDashboard(
   );
   const templateName = new Map((templates ?? []).map((t) => [t.id, t.name]));
   const scanById = new Map((scans ?? []).map((s) => [s.id, s]));
+
+  const categoryFilter =
+    filters?.category && filters.category !== "all" ? filters.category.trim().toLowerCase() : null;
+  if (categoryFilter) {
+    assignments = assignments.filter((a) => {
+      const scan = a.scan_id ? scanById.get(a.scan_id as string) : null;
+      const scoped = (a.scope_values as Record<string, unknown> | null)?.category;
+      return [scan?.category, scoped].some((c) => typeof c === "string" && c.trim().toLowerCase() === categoryFilter);
+    });
+  }
 
   // Completion mix
   let completedN = 0;
@@ -691,9 +718,6 @@ export async function fetchOpsAiDashboard(
   // Deprecated separate list — folded into lastTen + Assignment filter
   const myAssignedAudits: AssignedAuditRow[] = [];
 
-  // Last completed report (built in parallel with synopsis + metrics)
-  const lastCompleted = assignments.find((a) => stageOf(a) === "completed" && a.scan_id);
-
   let findingsQ = supabase
     .from("findings")
     .select("id", { count: "exact", head: true })
@@ -731,12 +755,69 @@ export async function fetchOpsAiDashboard(
     .map((s) => s.id as string)
     .slice(0, 200);
 
+  /** Newest AI scan whose analysis finished, in the current filters — submitted or not. */
+  const latestFinishedScan = async () => {
+    let q = supabase
+      .from("shelf_scans")
+      .select("id, store_id, created_by, created_at, processing_completed_at, category, planogram_compliance_percent")
+      .eq("org_id", orgId)
+      .eq("status", "completed")
+      .or("audit_mode.eq.ai,audit_mode.is.null")
+      .order("processing_completed_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (!experience.labeledDemo) {
+      q = applyStoreScopeFilter(q, scope) ?? q;
+      if (scopedStoreId && scopedStoreId !== "all") q = q.eq("store_id", scopedStoreId);
+    }
+    if (bounds?.from) q = q.gte("created_at", bounds.from.toISOString());
+    if (bounds?.to) q = q.lt("created_at", bounds.to.toISOString());
+    const { data } = await q;
+    let candidates = (data ?? []).filter((s) => {
+      if (geoStores && !(s.store_id && geoStores.has(s.store_id as string))) return false;
+      if (categoryFilter && String(s.category ?? "").trim().toLowerCase() !== categoryFilter) return false;
+      return true;
+    });
+    if (people) {
+      const assignees = await assigneeByScan(candidates.map((s) => s.id as string));
+      candidates = candidates.filter((s) => {
+        const who = auditorOf({ id: s.id as string, created_by: s.created_by as string | null }, assignees);
+        return who != null && people.has(who);
+      });
+    }
+    if (filters?.skuId?.trim()) {
+      const withSku = await scanIdsMatchingSku(candidates.map((s) => s.id as string), filters.skuId);
+      candidates = candidates.filter((s) => withSku.has(s.id as string));
+    }
+    return candidates[0] ?? null;
+  };
+
   const buildLastReport = async (): Promise<LastAuditReport | null> => {
-    if (!lastCompleted?.scan_id) return null;
-    const scanId = lastCompleted.scan_id as string;
-    const tmplName = lastCompleted.template_id
-      ? templateName.get(lastCompleted.template_id as string) ?? "Completed audit"
-      : "Completed audit";
+    const latest = await latestFinishedScan();
+    if (!latest) return null;
+    const scanId = latest.id as string;
+    const { data: assignmentRows } = await supabase
+      .from("scan_assignments")
+      .select("id, status, assignment_state, approval_status, template_id, scope_values, last_compliance_percent, store_id")
+      .eq("scan_id", scanId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const lastCompleted = assignmentRows?.[0] ?? null;
+    const storeId = (latest.store_id as string | null) ?? (lastCompleted?.store_id as string | null) ?? null;
+    const templateId = (lastCompleted?.template_id as string | null) ?? null;
+    const [{ data: storeRow }, { data: templateRow }] = await Promise.all([
+      storeId && !storeName.has(storeId)
+        ? supabase.from("stores").select("name").eq("id", storeId).maybeSingle()
+        : Promise.resolve({ data: null as { name: string } | null }),
+      templateId && !templateName.has(templateId)
+        ? supabase.from("audit_templates").select("name").eq("id", templateId).maybeSingle()
+        : Promise.resolve({ data: null as { name: string } | null }),
+    ]);
+    const category = String(latest.category ?? "").trim();
+    const tmplName =
+      scopeAuditName(lastCompleted?.scope_values) ??
+      (templateId ? templateName.get(templateId) ?? templateRow?.name : null) ??
+      (category ? `Shelf audit · ${category}` : "Shelf audit");
 
     const [resultRes, findingsRes, imageUrlsRaw] = await Promise.all([
       supabase
@@ -758,19 +839,17 @@ export async function fetchOpsAiDashboard(
       imageUrlsRaw.length || !experience.labeledDemo ? imageUrlsRaw : [...DEMO_SHELF_FALLBACK_IMAGES];
     const insights = parseInsights(result?.executive_summary);
     const conf = metricNum(result?.metrics, "average_confidence");
-    const scan = scanById.get(scanId);
     return {
       scanId,
-      assignmentId: lastCompleted.id as string,
+      assignmentId: (lastCompleted?.id as string | undefined) ?? null,
       auditName: tmplName,
-      storeName: lastCompleted.store_id
-        ? storeName.get(lastCompleted.store_id as string) ?? "—"
-        : "—",
-      date: (lastCompleted.created_at as string) ?? "",
+      storeName: storeId ? storeName.get(storeId) ?? storeRow?.name ?? "—" : "—",
+      date: ((latest.processing_completed_at ?? latest.created_at) as string) ?? "",
+      submitted: lastCompleted ? stageOf(lastCompleted) === "completed" : null,
       compliancePct:
-        scan?.planogram_compliance_percent != null
-          ? Number(scan.planogram_compliance_percent)
-          : lastCompleted.last_compliance_percent != null
+        latest.planogram_compliance_percent != null
+          ? Number(latest.planogram_compliance_percent)
+          : lastCompleted?.last_compliance_percent != null
             ? Number(lastCompleted.last_compliance_percent)
             : metricNum(result?.metrics, "planogram_compliance_percent"),
       findingsCount,

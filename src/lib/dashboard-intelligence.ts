@@ -406,7 +406,7 @@ function recentAuditStatus(scan: ScanRow, assignment?: AssignmentRow): RecentAud
 async function loadTeamMembers(orgId: string): Promise<DashboardTeamMember[]> {
   const { data, error } = await supabase
     .from("organization_members")
-    .select("user_id, status, invited_email, profiles:user_id(full_name, email)")
+    .select("user_id, status, invited_email, reports_to_user_id, profiles:user_id(full_name, email)")
     .eq("org_id", orgId)
     .eq("status", "active");
   if (error) dbError(error, "Could not load team members.");
@@ -416,6 +416,7 @@ async function loadTeamMembers(orgId: string): Promise<DashboardTeamMember[]> {
       user_id: row.user_id as string,
       name: profile?.full_name?.trim() || profile?.email?.trim() || (row.invited_email as string) || "Member",
       email: profile?.email?.trim() || (row.invited_email as string) || "",
+      reports_to: (row.reports_to_user_id as string | null) ?? null,
     };
   });
 }
@@ -580,6 +581,7 @@ function buildFilterOptions(
     categories,
     subcategories,
     team_members: membersForFilter,
+    team_managers: teamMembers.filter((m) => teamMembers.some((r) => r.reports_to === m.user_id)),
     kri_options: buildKriOptions(kriRole),
     only_self: teamMembers.length <= 1,
     current_user_id: currentUserId,
