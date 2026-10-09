@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { AskAislixSection } from "@/components/ask-aislix/AskAislixSection";
 import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
 import { WorkspaceFilterBar, WorkspaceFiltersToggle } from "@/components/filters/GlobalFilterBarShell";
-import { MpDonut } from "@/components/control-tower/MpCharts";
+import { MpDonut, MpRankBars } from "@/components/control-tower/MpCharts";
 import { DemoPreviewToggle } from "@/components/control-tower/DemoPreviewToggle";
 import {
   BrandShareMultiRing,
@@ -1035,8 +1035,8 @@ export function AiDigitalDashboardShell() {
               emptyRealAi,
               data?.executive.audits
                 ?? data?.synopsis?.historyCount
-                ?? (data?.completionMix ?? []).reduce((sum, row) => sum + (row.value || 0), 0)
-                || ai?.auditCount,
+                ?? ((data?.completionMix ?? []).reduce((sum, row) => sum + (row.value || 0), 0)
+                  || ai?.auditCount),
             )}
             accent={accent}
             moreTo="/history"
@@ -1106,6 +1106,72 @@ export function AiDigitalDashboardShell() {
             )}
           </ChartCard>
         );
+      case "chart_field_match": {
+        const rows = (ai?.fieldMatchRates ?? []).filter((r) => r.checked > 0);
+        return (
+          <ChartCard title="Plan vs AI detected" moreTo="/history">
+            <p className="-mt-1 mb-3 text-xs text-[#667085]">
+              Planned products where what the AI read from the photo matched the plan.
+            </p>
+            {rows.length ? (
+              <MpRankBars
+                max={100}
+                data={rows.map((r) => ({
+                  label: r.notVisible ? `${r.label} · ${r.notVisible} not visible in photo` : r.label,
+                  value: Math.round((r.matched / r.checked) * 100),
+                  display: `${Math.round((r.matched / r.checked) * 100)}% · ${r.matched} of ${r.checked}`,
+                  color: AISLIX_PALETTE.green,
+                }))}
+              />
+            ) : (
+              <p className="text-sm text-[#667085]">Data unavailable — no planogram audits yet.</p>
+            )}
+          </ChartCard>
+        );
+      }
+      case "chart_ai_accuracy": {
+        const rows = ai?.aiAccuracyByField ?? [];
+        const audits = ai?.verifiedAudits;
+        return (
+          <ChartCard title="AI accuracy vs human checks" moreTo="/history">
+            <p className="-mt-1 mb-3 text-xs text-[#667085]">
+              {audits?.total
+                ? `Human verified in ${audits.verified} of ${audits.total} recent audits. Share of checked fields where the AI read the same value.`
+                : "Share of human-checked fields where the AI read the same value."}
+            </p>
+            {rows.length ? (
+              <MpRankBars
+                max={100}
+                data={rows.map((r) => ({
+                  label: r.label,
+                  value: Math.round((r.agreed / r.verified) * 100),
+                  display: `${Math.round((r.agreed / r.verified) * 100)}% · ${r.agreed} of ${r.verified}`,
+                  color: AISLIX_PALETTE.blue,
+                }))}
+              />
+            ) : (
+              <p className="text-sm text-[#667085]">
+                Verification required — no fields have been human verified yet.
+              </p>
+            )}
+          </ChartCard>
+        );
+      }
+      case "chart_open_by_field": {
+        const rows = ai?.openFindingsByField ?? [];
+        return (
+          <ChartCard title="Open corrective actions by field" moreTo="/corrective-actions">
+            {rows.length ? (
+              <MpRankBars
+                data={rows.map((r) => ({ label: r.label, value: r.value, color: AISLIX_PALETTE.purple }))}
+                unit=" open"
+              />
+            ) : (
+              <p className="text-sm text-[#667085]">No open AI corrective actions.</p>
+            )}
+          </ChartCard>
+        );
+      }
       case "chart_top_facings": {
         const rows = (ai?.topProductsByFacings ?? []).slice(0, 6);
         return (

@@ -1804,8 +1804,8 @@ export function buildFullScanReportExcel(
       ? verifications.map((v, idx) => [
           v.detected_product_id ?? "",
           v.field_key,
-          v.ai_value ?? "",
-          v.verified_value ?? "",
+          v.ai_value ?? v.ai_text ?? "",
+          v.verified_value ?? v.verified_text ?? "",
           v.verified_at ?? "",
           idx === 0 ? aiFacingsTotal : "",
           idx === 0 ? verifiedFacingsTotal : "",

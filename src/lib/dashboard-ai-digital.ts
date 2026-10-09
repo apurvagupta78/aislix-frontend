@@ -9,7 +9,15 @@ import { findingRecurrenceKey } from "@/lib/finding-subject";
 import {
   listScanFieldVerificationsForScans,
   operationalActual,
+  verifiedFieldValue,
 } from "@/lib/ai-audit/field-verifications";
+import {
+  aggregateAiAccuracy,
+  aggregateFieldMatchRates,
+  openFindingsByField,
+  type FieldAccuracy,
+  type FieldMatchRate,
+} from "@/lib/ai-audit/field-check-aggregate";
 import {
   resolveDashboardDateBounds,
   type DashboardFilterState,
@@ -53,6 +61,13 @@ export type AiDashboardMetrics = {
   aiVsVerifiedUnitVariance: number | null;
   aiUnitAccuracyPct: number | null;
   aiFacingAccuracyPct: number | null;
+  /** Plan vs AI detected per field across planned products (persisted statuses). */
+  fieldMatchRates: FieldMatchRate[];
+  /** Human-verified fields where the AI had read the same value. */
+  aiAccuracyByField: FieldAccuracy[];
+  /** Audits with at least one human-verified field / audits considered. */
+  verifiedAudits: { verified: number; total: number };
+  openFindingsByField: { label: string; value: number }[];
   brandShare: { label: string; value: number }[];
   categoryShare: { label: string; value: number }[];
   topProductsByFacings: { label: string; value: number }[];
@@ -160,6 +175,10 @@ export async function fetchAiDashboardMetrics(
     aiVsVerifiedUnitVariance: null,
     aiUnitAccuracyPct: null,
     aiFacingAccuracyPct: null,
+    fieldMatchRates: [],
+    aiAccuracyByField: [],
+    verifiedAudits: { verified: 0, total: 0 },
+    openFindingsByField: [],
     brandShare: [],
     categoryShare: [],
     topProductsByFacings: [],
@@ -379,8 +398,28 @@ export async function fetchAiDashboardMetrics(
   let verifiedFacingsSum = 0;
   let facingDelta = 0;
   let unitsDelta = 0;
-  const verificationRows = await listScanFieldVerificationsForScans(scanIds.slice(0, 20));
+  const verifiedScanIds = scanIds.slice(0, 80);
+  let openFindingsQ = supabase
+    .from("findings")
+    .select("finding_type")
+    .eq("org_id", orgId)
+    .in("audit_origin", ["ai", "ai_assisted"])
+    .not("status", "in", "(closed,resolved)")
+    .limit(2000);
+  if (!usingDemoOverride) openFindingsQ = applyStoreScopeFilter(openFindingsQ, scope) ?? openFindingsQ;
+  const [verificationRows, { data: openFindingRows }] = await Promise.all([
+    listScanFieldVerificationsForScans(verifiedScanIds),
+    openFindingsQ,
+  ]);
+  const fieldMatchRates = aggregateFieldMatchRates((resultRows ?? []).map((r) => r.metrics));
+  const aiAccuracyByField = aggregateAiAccuracy(verificationRows);
+  const verifiedAudits = {
+    verified: new Set(verificationRows.filter((v) => verifiedFieldValue(v) != null).map((v) => v.scan_id)).size,
+    total: verifiedScanIds.length,
+  };
+  const openFindings = openFindingsByField((openFindingRows ?? []) as Array<{ finding_type: string | null }>);
   for (const v of verificationRows) {
+    if (v.field_key !== "facings" && v.field_key !== "visible_units") continue;
     // Eligible = AI field present (or already verified). Ignore empty stubs.
     if (v.ai_value == null && v.verified_value == null) continue;
     eligible += 1;
@@ -450,6 +489,10 @@ export async function fetchAiDashboardMetrics(
       verifiedFacingsSum > 0
         ? Math.max(0, 100 - (absFacingErr / verifiedFacingsSum) * 100)
         : null,
+    fieldMatchRates,
+    aiAccuracyByField,
+    verifiedAudits,
+    openFindingsByField: openFindings,
     brandShare: toShare(brandFacings),
     categoryShare: toShare(categoryFacings),
     topProductsByFacings: top(productFacings),

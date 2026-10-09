@@ -30,7 +30,7 @@ import { useWorkspaceContext } from "@/hooks/use-customer-context";
 import { AiAuditResultsPage } from "@/components/ai-audit/AiAuditResultsPage";
 import { AiAuditSubmitPanel } from "@/components/ai-audit/AiAuditSubmitPanel";
 import { AiFieldVerificationPanel } from "@/components/ai-audit/AiFieldVerificationPanel";
-import { visibleUnitsLookupFromScan } from "@/lib/ai-audit/verification-units";
+import { astraAnalysisFromScanResult } from "@/lib/ai-audit/astra-response";
 import { ReportActionsFooter } from "@/components/scan-results/ReportActionsFooter";
 import { AstraComparisonResults } from "@/components/ai-audit/AstraComparisonResults";
 import { normalizeAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
@@ -253,8 +253,20 @@ function Results() {
   // Do not wait on digital-session isPending/isFetching — that left LIVE AI /results
   // stuck on "Loading results" when the digital probe hung (ensureFnvQc, etc.).
   const showAstraShelfResults = Boolean(display) && !isDigitalAudit;
-  const visibleUnitsFor = useMemo(
-    () => (display ? visibleUnitsLookupFromScan(display) : () => null),
+  const verificationAnalysis = useMemo(
+    () => (display ? astraAnalysisFromScanResult(display) : null),
+    [display],
+  );
+  const verificationInventory = useMemo(
+    () =>
+      (display?.inventory ?? []).map((row) => ({
+        id: row.id,
+        brand: row.brand,
+        product: row.product,
+        variant: row.variant,
+        facings: row.facings ?? row.quantity,
+        quantity: row.quantity,
+      })),
     [display],
   );
   const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
@@ -433,18 +445,14 @@ function Results() {
                       {showAstraShelfResults ? (
                         <>
                           <AiAuditResultsPage data={display} imageUrl={imageUrl} />
-                          <AiFieldVerificationPanel
-                            scanId={scan!}
-                            products={(display.inventory ?? []).map((row) => ({
-                              id: row.id,
-                              brand: row.brand,
-                              product: row.product,
-                              facings: row.facings ?? row.quantity,
-                              quantity: row.quantity,
-                              visible_units: visibleUnitsFor(row.brand, row.product, row.variant),
-                            }))}
-                            canEdit={!assignmentQuery.data?.submitted}
-                          />
+                          {verificationAnalysis ? (
+                            <AiFieldVerificationPanel
+                              scanId={scan!}
+                              analysis={verificationAnalysis}
+                              inventory={verificationInventory}
+                              canEdit={!assignmentQuery.data?.submitted}
+                            />
+                          ) : null}
                           <AiAuditSubmitPanel
                             scanId={scan!}
                             assignmentId={assignmentId}

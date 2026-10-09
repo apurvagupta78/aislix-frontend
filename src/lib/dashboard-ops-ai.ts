@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getUser, requireOrgId } from "@/lib/db/context";
 import {
   listScanFieldVerificationsForScans,
+  verifiedFieldValue,
 } from "@/lib/ai-audit/field-verifications";
 import {
   resolveDashboardDateBounds,
@@ -76,6 +77,10 @@ const EMPTY_AI_METRICS: AiDashboardMetrics = {
   aiVsVerifiedUnitVariance: null,
   aiUnitAccuracyPct: null,
   aiFacingAccuracyPct: null,
+  fieldMatchRates: [],
+  aiAccuracyByField: [],
+  verifiedAudits: { verified: 0, total: 0 },
+  openFindingsByField: [],
   brandShare: [],
   categoryShare: [],
   topProductsByFacings: [],
@@ -793,7 +798,7 @@ export async function fetchOpsAiDashboard(
         .then((r) => r.data ?? []),
     ]);
     const scansWithVerify = new Set(
-      verRows.filter((v) => v.verified_value != null).map((v) => v.scan_id),
+      verRows.filter((v) => verifiedFieldValue(v) != null).map((v) => v.scan_id),
     );
     verificationCoveragePct =
       scansWithVerify.size > 0 ? pct(scansWithVerify.size, aiScanIds.length) : null;

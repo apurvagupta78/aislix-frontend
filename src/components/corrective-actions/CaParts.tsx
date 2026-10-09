@@ -76,9 +76,15 @@ const STAGE_TINT: Record<ActionStage, string> = {
   closed: ACCENT_TINT.green,
 };
 
-export function StagePill({ action }: { action: Pick<LifecycleAction, "status" | "due_at"> }) {
+export function StagePill({
+  action,
+}: {
+  action: Pick<LifecycleAction, "status" | "due_at"> & { resolved_by_verification?: boolean };
+}) {
   const late = isActionLate(action);
   const stage = actionStage(action.status);
+  const label =
+    stage === "submitted" && action.resolved_by_verification ? "Resolved by verification" : actionStageLabel(action.status);
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold text-navy"
@@ -88,7 +94,7 @@ export function StagePill({ action }: { action: Pick<LifecycleAction, "status" |
       }}
     >
       <span className="size-1.5 rounded-full" style={{ background: late ? CA_PINK_BAR : STAGE_COLORS[stage] }} />
-      {late ? `Overdue · ${actionStageLabel(action.status)}` : actionStageLabel(action.status)}
+      {late ? `Overdue · ${label}` : label}
     </span>
   );
 }

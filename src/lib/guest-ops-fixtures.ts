@@ -20,6 +20,26 @@ const aiMetrics: AiDashboardMetrics = {
   aiVsVerifiedUnitVariance: 3.2,
   aiUnitAccuracyPct: 96,
   aiFacingAccuracyPct: 93,
+  fieldMatchRates: [
+    { field: "present", label: "Product found", matched: 38, checked: 40, notVisible: 0 },
+    { field: "brand", label: "Brand", matched: 37, checked: 38, notVisible: 0 },
+    { field: "facings", label: "Facings", matched: 31, checked: 38, notVisible: 0 },
+    { field: "location", label: "Location", matched: 22, checked: 24, notVisible: 14 },
+    { field: "price", label: "Price", matched: 27, checked: 30, notVisible: 8 },
+    { field: "promotion", label: "Promotion", matched: 6, checked: 9, notVisible: 0 },
+  ],
+  aiAccuracyByField: [
+    { field: "facings", label: "Facings", agreed: 46, verified: 50 },
+    { field: "location", label: "Location", agreed: 18, verified: 19 },
+    { field: "price", label: "Price (₹)", agreed: 21, verified: 22 },
+  ],
+  verifiedAudits: { verified: 18, total: 42 },
+  openFindingsByField: [
+    { label: "Facings / quantity", value: 7 },
+    { label: "Price", value: 3 },
+    { label: "Promotion", value: 3 },
+    { label: "Location", value: 2 },
+  ],
   brandShare: [
     { label: "Colgate", value: 34 },
     { label: "Sensodyne", value: 22 },

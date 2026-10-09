@@ -46,6 +46,8 @@ export type LifecycleAction = {
   verified_at: string | null;
   rejection_reason: string | null;
   closed_at: string | null;
+  /** A human verification disproved the AI finding; waits for manager approval. */
+  resolved_by_verification: boolean;
   sku: string | null;
   code: string | null;
   source: "ai" | "digital";
@@ -621,6 +623,7 @@ function mapAction(
     verified_at: (row.verified_at as string) ?? null,
     rejection_reason: (row.rejection_reason as string) ?? null,
     closed_at: (row.closed_at as string) ?? null,
+    resolved_by_verification: row.resolved_by_verification === true,
     sku: (row.sku as string) ?? null,
     code: (row.code as string) ?? null,
     source: row.source === "digital" ? "digital" : "ai",

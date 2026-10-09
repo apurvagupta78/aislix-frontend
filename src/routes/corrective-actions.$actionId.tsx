@@ -666,6 +666,19 @@ function ActionDetailPage() {
               <p className="mt-3 text-sm text-navy">Verified {new Date(action.verified_at).toLocaleString()}</p>
             ) : null}
 
+            {stage === "submitted" && action.resolved_by_verification ? (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#D9E2E8] bg-white p-3">
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[#7DB7D6]" aria-hidden />
+                <div className="text-sm">
+                  <p className="font-semibold text-navy">Resolved by verification</p>
+                  <p className="text-mp-muted">
+                    {action.resolution_notes ?? "A human check on the shelf disproved the AI finding."} No shelf
+                    correction was made — approve to close it without a fix, or send it back.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             {stage === "submitted" && isManager && recheckStatus !== "pending" ? (
               <div className="mt-3 space-y-3">
                 <Button
