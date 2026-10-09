@@ -368,6 +368,27 @@ export function weeklyCompliance(actions: SlaAction[], weeks = 8, now = Date.now
   return points;
 }
 
+/**
+ * Open deadlines closest to breach: still not confirmed fixed, soonest (or most overdue) first.
+ * Reads the saved deadline only.
+ */
+export function topOpenDeadlines<T extends SlaAction>(
+  actions: T[],
+  limit = 5,
+  now = Date.now(),
+): Array<T & { minutesLeft: number }> {
+  const open: Array<T & { minutesLeft: number }> = [];
+  for (const a of actions) {
+    const outcome = slaOutcome(a, now);
+    if (outcome !== "open" && outcome !== "late_open") continue;
+    const due = ms(a.due_at);
+    if (due == null) continue;
+    open.push({ ...a, minutesLeft: Math.round((due - now) / 60000) });
+  }
+  open.sort((a, b) => a.minutesLeft - b.minutesLeft);
+  return open.slice(0, limit);
+}
+
 /** Filters used by the SLA page and dashboard links (`sla`, `outcome` search params). */
 export function matchesSlaFilters(a: SlaAction, slaType: string, outcome: string, now = Date.now()): boolean {
   if (slaType !== "all" && slaTypeOf(a) !== slaType) return false;

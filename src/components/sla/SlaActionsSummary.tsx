@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 
 import { CaKpiCard } from "@/components/corrective-actions/CaParts";
 import {
@@ -10,9 +11,10 @@ import {
   TypeChart,
 } from "@/components/corrective-actions/CaCharts";
 import { StoreVarianceMatrix } from "@/components/corrective-actions/StoreVarianceMatrix";
-import { MpCard } from "@/components/design-system/MpCard";
+import { MpCard, MpCardHeader } from "@/components/design-system/MpCard";
 import {
   AuditChecksGrid,
+  CLICKABLE_ROW,
   ComplianceTrendChart,
   DelayReasonsChart,
   OpenActionsList,
@@ -24,6 +26,9 @@ import {
   type SlaStatusKey,
 } from "@/components/sla/SlaCharts";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { issueCategoryLabel } from "@/lib/corrective-action-catalog";
+import type { LifecycleAction } from "@/lib/corrective-action-lifecycle";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AislixAccent } from "@/lib/ai-audit/kpi-palette";
 import type { ScopedActions } from "@/lib/ai-dashboard-actions";
@@ -46,6 +51,7 @@ import {
   slaByStore,
   slaByType,
   slaSummary,
+  topOpenDeadlines,
   weeklyCompliance,
 } from "@/lib/sla-insights";
 import type { CorrectiveActionsSearch } from "@/routes/corrective-actions";
@@ -232,6 +238,118 @@ function SlaTypeChips({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
+function timeRemaining(minutes: number): string {
+  if (minutes < 0) return `${formatMinutes(-minutes)} overdue`;
+  if (minutes === 0) return "Due now";
+  return `${formatMinutes(minutes)} left`;
+}
+
+function placeLabel(value: string | null | undefined, pending: boolean): string {
+  if (pending) return "…";
+  const text = value?.trim();
+  return text ? text : "N/A";
+}
+
+/** The five open deadlines closest to breach. A row opens the SLA page. */
+function TopSlaTable({
+  actions,
+  onOpen,
+}: {
+  actions: ReturnType<typeof topOpenDeadlines<LifecycleAction>>;
+  onOpen: () => void;
+}) {
+  const storeIds = [...new Set(actions.map((a) => a.store_id).filter((id): id is string => Boolean(id)))].sort();
+  const scanIds = [...new Set(actions.map((a) => a.scan_id).filter((id): id is string => Boolean(id)))].sort();
+  const places = useQuery({
+    queryKey: ["sla-deadline-places", storeIds.join(","), scanIds.join(",")],
+    enabled: storeIds.length > 0 || scanIds.length > 0,
+    queryFn: async () => {
+      const [storeRes, scanRes] = await Promise.all([
+        storeIds.length
+          ? supabase.from("stores").select("id, city").in("id", storeIds)
+          : Promise.resolve({ data: [] as { id: string; city: string | null }[], error: null }),
+        scanIds.length
+          ? supabase.from("shelf_scans").select("id, category").in("id", scanIds)
+          : Promise.resolve({ data: [] as { id: string; category: string | null }[], error: null }),
+      ]);
+      if (storeRes.error) throw storeRes.error;
+      if (scanRes.error) throw scanRes.error;
+      return {
+        city: new Map((storeRes.data ?? []).map((s) => [s.id, s.city])),
+        category: new Map((scanRes.data ?? []).map((s) => [s.id, s.category])),
+      };
+    },
+  });
+  const pending = places.isPending && (storeIds.length > 0 || scanIds.length > 0);
+
+  return (
+    <MpCard>
+      <MpCardHeader
+        title="Top 5 SLAs"
+        description="The open deadlines closest to breach, from these audit results."
+      />
+      {!actions.length ? (
+        <div className="px-4 pb-4 md:px-5">
+          <ChartUnavailable reason="No open SLA deadlines in these filters." />
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[880px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-line text-xs text-mp-muted">
+                {["Action type", "Store", "Location", "Category", "Assigned to", "Time remaining"].map((label) => (
+                  <th key={label} className="px-4 py-2 font-medium first:md:pl-5 last:text-right last:md:pr-5">
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {actions.map((a) => {
+                const overdue = a.minutesLeft < 0;
+                return (
+                  <tr
+                    key={a.id}
+                    className={cn("border-b border-[#EEF1F4]", CLICKABLE_ROW)}
+                    onClick={onOpen}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onOpen();
+                    }}
+                    tabIndex={0}
+                    aria-label={`${issueCategoryLabel(a.issue_category)} at ${a.store_name ?? "No store"}, ${timeRemaining(a.minutesLeft)}. Open SLA page.`}
+                  >
+                    <td className="px-4 py-2 font-medium text-navy md:pl-5">{issueCategoryLabel(a.issue_category)}</td>
+                    <td className="max-w-[180px] truncate px-4 py-2 text-navy" title={a.store_name ?? undefined}>
+                      {a.store_name?.trim() || "N/A"}
+                    </td>
+                    <td className="px-4 py-2 text-[#667085]">
+                      {placeLabel(a.store_id ? places.data?.city.get(a.store_id) : null, pending)}
+                    </td>
+                    <td className="px-4 py-2 text-[#667085]">
+                      {placeLabel(a.scan_id ? places.data?.category.get(a.scan_id) : null, pending)}
+                    </td>
+                    <td className="px-4 py-2 text-navy">{a.assigned_name?.trim() || "Unassigned"}</td>
+                    <td className="px-4 py-2 text-right md:pr-5">
+                      <span className="inline-flex items-center justify-end gap-2 text-navy">
+                        <span
+                          className="size-1.5 rounded-full"
+                          style={{ background: overdue ? "#ECBDCC" : "#79E2A8" }}
+                          aria-hidden
+                        />
+                        <span className="tabular-nums">{timeRemaining(a.minutesLeft)}</span>
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </MpCard>
+  );
+}
+
 const STATUS_SEARCH: Record<SlaStatusKey, CorrectiveActionsSearch> = {
   met: { outcome: "met" },
   breached: { outcome: "breached" },
@@ -264,6 +382,7 @@ export function SlaSummarySection({ data, loading, source }: SectionProps) {
   const alerts = useMemo(() => slaAlerts(rows), [rows]);
   const trend = useMemo(() => weeklyCompliance(rows), [rows]);
 
+  const deadlines = useMemo(() => topOpenDeadlines(all), [all]);
   const typeSearch = slaType !== "all" ? { sla: slaType } : {};
   const openActions = (search: CorrectiveActionsSearch) =>
     void navigate({ to: "/corrective-actions", search: { source, ...typeSearch, ...search } });
@@ -347,6 +466,14 @@ export function SlaSummarySection({ data, loading, source }: SectionProps) {
           </>
         }
       />
+      {loading ? (
+        <div className="h-40 animate-pulse rounded-xl border border-[#D9E2E8] bg-[#F4F7F9]" aria-hidden />
+      ) : (
+        <TopSlaTable
+          actions={deadlines}
+          onOpen={() => void navigate({ to: "/sla", search: { source } })}
+        />
+      )}
       <SlaTypeChips value={slaType} onChange={setSlaType} />
       {loading ? (
         <SectionSkeleton count={8} />

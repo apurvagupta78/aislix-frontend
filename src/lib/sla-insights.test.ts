@@ -11,6 +11,7 @@ import {
   slaOutcome,
   slaSummary,
   slaTypeOf,
+  topOpenDeadlines,
   targetMinutes,
   type SlaAction,
 } from "./sla-insights";
@@ -152,6 +153,23 @@ describe("summaries", () => {
       ["soon", "due_soon"],
       ["lateOpen", "missed"],
     ]);
+  });
+
+  it("ranks the open deadlines closest to breach", () => {
+    const ranked = topOpenDeadlines(
+      [
+        action({ id: "later", due_at: iso(400), status: "open" }),
+        action({ id: "soon", due_at: iso(20), status: "open" }),
+        action({ id: "late", due_at: iso(-15), status: "in_progress" }),
+        action({ id: "fixed", due_at: iso(-5), status: "verified", verified_at: iso(-10) }),
+        action({ id: "waiting", due_at: iso(2), status: "pending_verification" }),
+        action({ id: "nodue", due_at: null, status: "open" }),
+      ],
+      5,
+      NOW,
+    );
+    expect(ranked.map((a) => a.id)).toEqual(["late", "soon", "later"]);
+    expect(ranked[0]!.minutesLeft).toBe(-15);
   });
 
   it("filters by type and outcome", () => {
