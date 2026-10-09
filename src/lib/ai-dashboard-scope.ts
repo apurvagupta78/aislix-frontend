@@ -57,15 +57,18 @@ export async function resolvePeopleFilter(orgId: string, filters?: ScopeFilters)
 
 /** Store ids allowed by the store / country / city filters; null when none is set. */
 export async function resolveStoreFilter(orgId: string, filters?: ScopeFilters): Promise<Set<string> | null> {
-  const country = active(filters?.country) ? filters!.country! : null;
-  const city = active(filters?.city) ? filters!.city! : null;
-  const storeId = active(filters?.storeId) ? filters!.storeId! : null;
+  const country = active(filters?.country) ? filters.country : null;
+  const city = active(filters?.city) ? filters.city : null;
+  const storeId = active(filters?.storeId) ? filters.storeId : null;
   if (!country && !city) return storeId ? new Set([storeId]) : null;
-  let q = supabase.from("stores").select("id").eq("org_id", orgId);
-  if (country) q = q.eq("country", country);
-  if (city) q = q.eq("city", city);
+  let q = supabase.from("stores").select("id, city, country").eq("org_id", orgId);
+  if (country && country !== "No country") q = q.eq("country", country);
+  if (city && city !== "No city") q = q.eq("city", city);
   const { data } = await q;
-  const ids = new Set((data ?? []).map((s) => s.id as string));
+  const ids = new Set((data ?? [])
+    .filter((s) => country !== "No country" || !s.country?.trim())
+    .filter((s) => city !== "No city" || !s.city?.trim())
+    .map((s) => s.id as string));
   if (storeId) return new Set(ids.has(storeId) ? [storeId] : []);
   return ids;
 }

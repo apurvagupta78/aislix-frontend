@@ -183,6 +183,7 @@ function scan(id: string, store: string, products: AstraPlanogramProduct[]): Var
     date: "2026-10-08T10:00:00Z",
     store,
     city: "Delhi",
+    country: "India",
     team: "Asha's team",
     category: null,
     metrics: {
@@ -251,6 +252,20 @@ describe("View by selection", () => {
     scan("s2", "Store B", [planned({})]),
   ];
   const summary = summariseVariances(scans);
+
+  it("View by Category inside one city returns only that city's rows", () => {
+    const twoCities = summariseVariances([
+      { ...scan("delhi", "Delhi store", [planned({ actual_facings: 4, facing_variance: -2 })]), city: "Delhi" },
+      { ...scan("mumbai", "Mumbai store", [planned({ actual_facings: 3, facing_variance: -3 })]), city: "Mumbai" },
+    ]);
+    const view = selectVariances(twoCities, [], { lens: "category", value: "all" }, { lens: "city", value: "Delhi" });
+    expect(view.audits).toBe(1);
+    expect(view.facts.map((f) => f.scanId)).toEqual(["delhi"]);
+    expect(view.records.map((r) => r.scanId)).toEqual(["delhi"]);
+    expect(lensGroups("category", view.facts, view.records, [])).toEqual([
+      expect.objectContaining({ value: "Snacks", audits: 1, facings: 4, issues: 1, sharePct: 100 }),
+    ]);
+  });
 
   it("View by Location shows location issues only, in every store", () => {
     const view = selectVariances(summary, [], { lens: "location", value: "all" });
