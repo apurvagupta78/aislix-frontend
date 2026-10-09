@@ -159,6 +159,8 @@ describe("results", () => {
     expect(compareToPlan("location", "AMB-D0303", "AMB-D0302")).toBe("mismatch");
     expect(compareToPlan("brand", null, "Lay's")).toBe("na");
     expect(compareToPlan("location", "A-1", null)).toBe("not_visible");
+    expect(compareToPlan("product", "Trident Spearmint Sugar Free Gum", "Sugar Free Gum Spearmint")).toBe("match");
+    expect(compareToPlan("product", "Trident Spearmint Sugar Free Gum", "Trident Peppermint Gum")).toBe("mismatch");
   });
 
   it("checks whether the AI agreed with the human", () => {

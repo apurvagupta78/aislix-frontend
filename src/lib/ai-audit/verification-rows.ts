@@ -334,6 +334,22 @@ function textKey(value: FieldValue): string {
   return norm(value);
 }
 
+function words(value: FieldValue): Set<string> {
+  return new Set(String(value ?? "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+}
+
+/** Names match regardless of word order, or when one name is the other plus extra words (e.g. the brand). */
+function sameName(a: FieldValue, b: FieldValue): boolean {
+  const ka = textKey(a);
+  const kb = textKey(b);
+  if (!ka || !kb) return false;
+  if (ka === kb || ka.includes(kb) || kb.includes(ka)) return true;
+  const wa = words(a);
+  const wb = words(b);
+  const [small, large] = wa.size <= wb.size ? [wa, wb] : [wb, wa];
+  return small.size > 0 && [...small].every((w) => large.has(w));
+}
+
 /** Plan vs a value (the human value when verified, else the AI value). */
 export function compareToPlan(key: VerificationFieldKey, expected: FieldValue, value: FieldValue): FieldResult {
   if (expected == null || expected === "") return "na";
@@ -349,7 +365,7 @@ export function compareToPlan(key: VerificationFieldKey, expected: FieldValue, v
   const b = textKey(value);
   if (!a || !b) return "not_visible";
   if (key === "location") return a === b ? "match" : "mismatch";
-  return a === b || a.includes(b) || b.includes(a) ? "match" : "mismatch";
+  return sameName(expected, value) ? "match" : "mismatch";
 }
 
 /** Result for one field: the human value wins; otherwise the pipeline's own status when it assessed the field. */
@@ -367,7 +383,7 @@ export function aiAgrees(key: VerificationFieldKey, ai: FieldValue, verified: Fi
   if (TEXT_VERIFICATION_FIELDS.has(key)) {
     const a = textKey(ai);
     const b = textKey(verified);
-    return key === "location" ? a === b : a === b || a.includes(b) || b.includes(a);
+    return key === "location" ? a === b : sameName(ai, verified);
   }
   if (key === "price") return Math.round(Number(ai) * 100) === Math.round(Number(verified) * 100);
   return Number(ai) === Number(verified);
