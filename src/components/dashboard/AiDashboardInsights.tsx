@@ -649,7 +649,7 @@ export function AiLensPanel({
       <MpCard>
         <MpCardHeader
           title="View metrics by"
-          description={`Every metric, variance and action below follows this choice — from the latest ${auditLimit} AI audits in your filters${audits ? ` (${audits} audit${audits === 1 ? "" : "s"})` : ""}.`}
+          description={`Metrics and variances below follow this choice — from the latest ${auditLimit} AI audits in your filters${audits ? ` (${audits} audit${audits === 1 ? "" : "s"})` : ""}.`}
           action={
             selection.value !== ALL_VALUES ? (
               <Button type="button" variant="outline" size="sm" onClick={() => onChange({ lens: selection.lens, value: ALL_VALUES })}>

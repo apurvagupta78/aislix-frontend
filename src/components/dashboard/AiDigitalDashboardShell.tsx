@@ -1832,15 +1832,6 @@ export function AiDigitalDashboardShell() {
                 }
               />
 
-              <AiLensPanel
-                selection={lensSelection}
-                onChange={setLensSelection}
-                groups={lensView?.groups ?? []}
-                audits={lensView?.variances.audits ?? 0}
-                auditLimit={varianceQuery.data?.auditLimit ?? 50}
-                loading={varianceQuery.isPending}
-              />
-
               {renderMetricGrid(
                 renderAiCard,
                 <>
@@ -1854,6 +1845,14 @@ export function AiDigitalDashboardShell() {
                     source="ai"
                     data={lensView?.actions ?? aiActionsQuery.data}
                     loading={aiActionsQuery.isPending}
+                  />
+                  <AiLensPanel
+                    selection={lensSelection}
+                    onChange={setLensSelection}
+                    groups={lensView?.groups ?? []}
+                    audits={lensView?.variances.audits ?? 0}
+                    auditLimit={varianceQuery.data?.auditLimit ?? 50}
+                    loading={varianceQuery.isPending}
                   />
                 </>,
               )}
