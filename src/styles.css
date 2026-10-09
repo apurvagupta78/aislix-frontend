@@ -579,9 +579,9 @@
 }
 
 /*
- * AI audit results: soft pastel cards and KPI tiles. Siblings cycle purple → blue → pink →
- * green → cyan so neighbours never share a colour. Cards that hold KPI tiles stay white so the
- * tiles carry the colour.
+ * AI audit results: soft pastel cards and KPI tiles. Cards cycle purple → blue → pink → green →
+ * cyan in page order (data-tone, set by AiAuditResultsPage) and tiles cycle within their grid, so
+ * neighbours never share a colour. Cards that hold KPI tiles stay white so the tiles carry it.
  */
 .ai-tinted {
   --ai-purple: #f1edfa;
@@ -595,28 +595,33 @@
   --ai-cyan: #e9f5fb;
   --ai-cyan-edge: #c6e4f3;
 }
-.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 1) {
+.ai-tinted :is([data-ai-tile], [data-mp-tile]):nth-child(5n + 1),
+.ai-tinted [data-ai-card][data-tone="purple"] {
   --ai-fill: var(--ai-purple);
   --ai-edge: var(--ai-purple-edge);
 }
-.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 2) {
+.ai-tinted :is([data-ai-tile], [data-mp-tile]):nth-child(5n + 2),
+.ai-tinted [data-ai-card][data-tone="blue"] {
   --ai-fill: var(--ai-blue);
   --ai-edge: var(--ai-blue-edge);
 }
-.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 3) {
+.ai-tinted :is([data-ai-tile], [data-mp-tile]):nth-child(5n + 3),
+.ai-tinted [data-ai-card][data-tone="pink"] {
   --ai-fill: var(--ai-pink);
   --ai-edge: var(--ai-pink-edge);
 }
-.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 4) {
+.ai-tinted :is([data-ai-tile], [data-mp-tile]):nth-child(5n + 4),
+.ai-tinted [data-ai-card][data-tone="green"] {
   --ai-fill: var(--ai-green);
   --ai-edge: var(--ai-green-edge);
 }
-.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 5) {
+.ai-tinted :is([data-ai-tile], [data-mp-tile]):nth-child(5n + 5),
+.ai-tinted [data-ai-card][data-tone="cyan"] {
   --ai-fill: var(--ai-cyan);
   --ai-edge: var(--ai-cyan-edge);
 }
 .ai-tinted [data-ai-card] {
-  background: var(--ai-fill);
+  background: var(--ai-fill, #ffffff);
   border-color: var(--ai-edge);
 }
 .ai-tinted [data-ai-card] > [data-ai-card-header] {
