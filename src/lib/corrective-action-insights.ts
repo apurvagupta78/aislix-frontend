@@ -25,9 +25,69 @@ export type InsightAction = {
   after_score: number | null;
   code: string | null;
   title: string;
+  issue_type?: string | null;
 };
 
 const DAY = 864e5;
+
+/** What was wrong on the shelf, in the words a store manager uses. */
+export const VARIANCE_TYPES = [
+  { value: "planogram", label: "Planogram compliance" },
+  { value: "quantity", label: "Quantity / facings" },
+  { value: "missing", label: "Missing product" },
+  { value: "location", label: "Location" },
+  { value: "product", label: "Product / brand" },
+  { value: "price", label: "Price" },
+  { value: "promotion", label: "Promotion / display" },
+  { value: "other", label: "Other" },
+] as const;
+
+export type VarianceType = (typeof VARIANCE_TYPES)[number]["value"];
+
+export function varianceTypeLabel(type: string): string {
+  return VARIANCE_TYPES.find((t) => t.value === type)?.label ?? "Other";
+}
+
+export function actionVarianceType(a: Pick<InsightAction, "action_type" | "title"> & { issue_type?: string | null }): VarianceType {
+  const issue = (a.issue_type ?? "").toLowerCase();
+  const kind = (a.action_type ?? "").toLowerCase();
+  const title = (a.title ?? "").toLowerCase();
+  if (/price|pricing|mrp/.test(issue) || kind === "pricing") return "price";
+  if (/promo|display|pop|offer/.test(issue) || kind === "display" || kind === "promotion") return "promotion";
+  if (/location|placement|position/.test(issue)) return "location";
+  if (/brand|wrong_product|variant|product_mismatch/.test(issue)) return "product";
+  if (/qty|quantity|facing|shortfall|units/.test(issue) || /below planned quantity|facings/.test(title)) return "quantity";
+  if (/missing|oos|out_of_stock|empty/.test(issue) || kind === "availability") return "missing";
+  if (/unexpected|planogram|category|unplanned/.test(issue) || kind === "planogram") return "planogram";
+  return "other";
+}
+
+export type StoreVarianceRow = {
+  storeId: string | null;
+  store: string;
+  total: number;
+  open: number;
+  counts: Record<VarianceType, number>;
+};
+
+/** Every action per store, split by variance type; `open` counts actions not yet fixed. */
+export function variancesByStore(actions: InsightAction[]): { rows: StoreVarianceRow[]; totals: Record<VarianceType, number> } {
+  const empty = () => Object.fromEntries(VARIANCE_TYPES.map((t) => [t.value, 0])) as Record<VarianceType, number>;
+  const totals = empty();
+  const map = new Map<string, StoreVarianceRow>();
+  for (const a of actions) {
+    const key = a.store_id ?? "none";
+    const row = map.get(key) ?? { storeId: a.store_id, store: a.store_name ?? "No store", total: 0, open: 0, counts: empty() };
+    const type = actionVarianceType(a);
+    row.counts[type] += 1;
+    row.total += 1;
+    const stage = actionStage(a.status);
+    if (stage !== "closed" && stage !== "verified") row.open += 1;
+    totals[type] += 1;
+    map.set(key, row);
+  }
+  return { rows: [...map.values()].sort((x, y) => y.total - x.total || x.store.localeCompare(y.store)), totals };
+}
 
 function finishedAt(a: InsightAction): string | null {
   return a.closed_at ?? a.verified_at ?? null;

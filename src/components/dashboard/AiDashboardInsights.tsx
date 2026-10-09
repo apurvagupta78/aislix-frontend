@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { Download, ExternalLink, Search } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, ExternalLink, Search } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -35,14 +35,22 @@ import {
   ownerWorkload,
   pipelineCounts,
   slaCompliance,
+  variancesByStore,
 } from "@/lib/corrective-action-insights";
-import type { VarianceDimension, VarianceSummary } from "@/lib/ai-variance-summary";
+import { StoreVarianceMatrix } from "@/components/corrective-actions/StoreVarianceMatrix";
+import type { CorrectiveActionsSearch } from "@/routes/corrective-actions";
+import type { VarianceDimension, VarianceRecord, VarianceSummary } from "@/lib/ai-variance-summary";
 import { downloadCsvFile } from "@/lib/kpi-details-csv";
 import { toCsv } from "@/lib/store-import";
 import { cn } from "@/lib/utils";
 
 /** PURPLE → BLUE → PINK → GREEN → CYAN; no same accent side by side or stacked in a 4-column grid. */
 const ACCENTS: AislixAccent[] = ["purple", "blue", "pink", "green", "cyan", "purple", "blue", "pink"];
+const CA_ACCENTS: AislixAccent[] = ["purple", "blue", "pink", "green", "cyan", "pink", "green", "grey"];
+
+/** Whole card is the link; hover tints the card background only. */
+const CLICKABLE =
+  "block rounded-xl [&>*]:transition-colors hover:[&>*]:bg-[#F4F7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy";
 
 const DIMENSIONS: Array<{ id: VarianceDimension; label: string; question: string }> = [
   { id: "store", label: "Store", question: "Which stores drift most from the plan?" },
@@ -169,20 +177,112 @@ function downloadVariances(summary: VarianceSummary) {
 
 const PAGE = 25;
 
+type SortKey = "date" | "store" | "product" | "field" | "expected" | "ai" | "human" | "result";
+type SortState = { key: SortKey; dir: "asc" | "desc" };
+
+const SORT_COLUMNS: Array<{ key: SortKey; label: string }> = [
+  { key: "date", label: "Date" },
+  { key: "store", label: "Store" },
+  { key: "product", label: "Product" },
+  { key: "field", label: "Field" },
+  { key: "expected", label: "Expected" },
+  { key: "ai", label: "AI detected" },
+  { key: "human", label: "Human verified" },
+  { key: "result", label: "Result" },
+];
+
+function sortValue(r: VarianceRecord, key: SortKey): string | number {
+  switch (key) {
+    case "date":
+      return r.date;
+    case "store":
+      return r.store.toLowerCase();
+    case "product":
+      return r.product.toLowerCase();
+    case "field":
+      return r.fieldLabel.toLowerCase();
+    case "expected":
+      return numericOrText(r.expected);
+    case "ai":
+      return numericOrText(r.aiDetected);
+    case "human":
+      return numericOrText(r.humanVerified);
+    case "result":
+      return r.difference != null ? Math.abs(r.difference) : r.resultLabel.toLowerCase();
+  }
+}
+
+function numericOrText(value: string): string | number {
+  const n = Number(value.replace(/[^\d.-]/g, ""));
+  return value.trim() && /\d/.test(value) && Number.isFinite(n) ? n : value.toLowerCase();
+}
+
+function compareRecords(a: VarianceRecord, b: VarianceRecord, sort: SortState): number {
+  const x = sortValue(a, sort.key);
+  const y = sortValue(b, sort.key);
+  const blankX = x === "" || x === "—";
+  const blankY = y === "" || y === "—";
+  if (blankX !== blankY) return blankX ? 1 : -1;
+  let c: number;
+  if (typeof x === "number" && typeof y === "number") c = x - y;
+  else if (typeof x === "number") c = -1;
+  else if (typeof y === "number") c = 1;
+  else c = x.localeCompare(y);
+  return sort.dir === "asc" ? c : -c;
+}
+
+function SortHeader({
+  column,
+  sort,
+  onSort,
+  className,
+}: {
+  column: { key: SortKey; label: string };
+  sort: SortState;
+  onSort: (key: SortKey) => void;
+  className?: string;
+}) {
+  const active = sort.key === column.key;
+  const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <th
+      className={cn("py-2 pr-3 font-medium", className)}
+      aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(column.key)}
+        className={cn("inline-flex items-center gap-1 hover:text-navy", active && "text-navy")}
+      >
+        {column.label}
+        <Icon className={cn("size-3", !active && "opacity-40")} aria-hidden />
+      </button>
+    </th>
+  );
+}
+
 export function AiVarianceSection({ summary, loading }: { summary: VarianceSummary | undefined; loading: boolean }) {
   const [dimension, setDimension] = useState<VarianceDimension>("store");
   const [field, setField] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [visible, setVisible] = useState(PAGE);
+  const [sort, setSort] = useState<SortState>({ key: "date", dir: "desc" });
+
+  const onSort = (key: SortKey) => {
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "date" || key === "result" ? "desc" : "asc" }));
+    setVisible(PAGE);
+  };
 
   const records = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (summary?.records ?? []).filter((r) => {
-      if (field !== "all" && r.field !== field) return false;
-      if (!q) return true;
-      return [r.product, r.store, r.city, r.team, r.category, r.sku].some((t) => t.toLowerCase().includes(q));
-    });
-  }, [summary, field, search]);
+    return (summary?.records ?? [])
+      .filter((r) => {
+        if (field !== "all" && r.field !== field) return false;
+        if (!q) return true;
+        return [r.product, r.store, r.city, r.team, r.category, r.sku].some((t) => t.toLowerCase().includes(q));
+      })
+      .sort((a, b) => compareRecords(a, b, sort));
+  }, [summary, field, search, sort]);
 
   const dim = DIMENSIONS.find((d) => d.id === dimension)!;
   const groups = (summary?.groups[dimension] ?? []).slice(0, 8).map((g) => ({
@@ -350,14 +450,15 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
                 <table className="w-full min-w-[980px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-line text-xs text-mp-muted">
-                      <th className="px-4 py-2 font-medium md:px-5">Date</th>
-                      <th className="py-2 pr-3 font-medium">Store</th>
-                      <th className="py-2 pr-3 font-medium">Product</th>
-                      <th className="py-2 pr-3 font-medium">Field</th>
-                      <th className="py-2 pr-3 font-medium">Expected</th>
-                      <th className="py-2 pr-3 font-medium">AI detected</th>
-                      <th className="py-2 pr-3 font-medium">Human verified</th>
-                      <th className="py-2 pr-3 font-medium">Result</th>
+                      {SORT_COLUMNS.map((c, i) => (
+                        <SortHeader
+                          key={c.key}
+                          column={c}
+                          sort={sort}
+                          onSort={onSort}
+                          className={i === 0 ? "px-4 md:px-5" : undefined}
+                        />
+                      ))}
                       <th className="py-2 pr-4 font-medium">
                         <span className="sr-only">Open audit</span>
                       </th>
@@ -427,35 +528,74 @@ export function AiActionsSlaSection({ actions, loading }: { actions: LifecycleAc
   const workload = useMemo(() => ownerWorkload(rows), [rows]);
   const byVerification = rows.filter((a) => a.resolved_by_verification && a.status === "pending_verification").length;
 
-  const cards = [
-    { label: "Open actions", value: String(kpis.open), context: "Open or in progress", info: "AI audit actions the owner still has to fix." },
+  const byStore = useMemo(() => variancesByStore(rows), [rows]);
+  const navigate = useNavigate();
+  const openActions = (search: CorrectiveActionsSearch) =>
+    void navigate({ to: "/corrective-actions", search: { source: "ai", ...search } });
+
+  const cards: Array<{
+    label: string;
+    value: string;
+    context: string;
+    info: string;
+    target: CorrectiveActionsSearch | "sla";
+  }> = [
+    {
+      label: "Open actions",
+      value: String(kpis.open),
+      context: "Open or in progress",
+      info: "AI audit actions the owner still has to fix.",
+      target: { stage: "active" },
+    },
     {
       label: "Awaiting approval",
       value: String(kpis.submitted),
       context: byVerification ? `${byVerification} resolved by verification` : "Fix submitted, not yet approved",
       info: "Fixes submitted by the owner, and issues a human verification disproved — both wait for a manager.",
+      target: { stage: "submitted" },
     },
-    { label: "Overdue", value: String(kpis.overdue), context: "Past the SLA due date", info: "Open or in-progress actions past their SLA due date." },
+    {
+      label: "Overdue",
+      value: String(kpis.overdue),
+      context: "Past the SLA due date",
+      info: "Open or in-progress actions past their SLA due date.",
+      target: { stage: "overdue" },
+    },
     {
       label: "SLA met",
       value: sla.pct == null ? "N/A" : `${sla.pct}%`,
       context: sla.total ? `${sla.met} of ${sla.total} fixed on time` : "No fixed actions with an SLA yet",
-      info: "Fixed actions that were verified or closed by their SLA due date.",
+      info: "Fixed actions that were verified or closed by their SLA due date. Opens the SLA & escalation settings.",
+      target: "sla",
     },
-    { label: "Fixed (30 days)", value: String(kpis.closedLast30), context: "Verified or closed", info: "Actions verified or closed in the last 30 days." },
+    {
+      label: "Fixed (30 days)",
+      value: String(kpis.closedLast30),
+      context: "Verified or closed",
+      info: "Actions verified or closed in the last 30 days.",
+      target: { stage: "fixed" },
+    },
     {
       label: "Avg days to fix",
       value: kpis.avgDaysToClose == null ? "N/A" : String(kpis.avgDaysToClose),
       context: kpis.avgDaysToClose == null ? "No fixed actions yet" : "From raised to fixed",
       info: "Average days from when an action was raised to when it was verified or closed.",
+      target: { stage: "fixed" },
     },
     {
       label: "Critical & high open",
       value: String(kpis.criticalHighOpen),
       context: "Root cause required",
       info: "Open critical and high priority actions. These need a root cause and preventive action.",
+      target: { stage: "active", priority: "critical_high" },
     },
-    { label: "Escalated", value: String(kpis.escalated), context: "Sent to a manager or admin", info: "Overdue actions escalated to the owner's manager." },
+    {
+      label: "Escalated",
+      value: String(kpis.escalated),
+      context: "Sent to a manager or admin",
+      info: "Overdue actions escalated to the owner's manager.",
+      target: { stage: "escalated" },
+    },
   ];
 
   return (
@@ -464,9 +604,16 @@ export function AiActionsSlaSection({ actions, loading }: { actions: LifecycleAc
         title="Corrective actions & SLA"
         description="Actions raised by the AI audits in these filters — assign, fix, approve, close."
         action={
-          <Button asChild variant="outline" size="sm">
-            <Link to="/corrective-actions">Open corrective actions</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/escalation-settings">SLA settings</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/corrective-actions" search={{ source: "ai" }}>
+                Open corrective actions
+              </Link>
+            </Button>
+          </div>
         }
       />
       {loading ? (
@@ -482,15 +629,62 @@ export function AiActionsSlaSection({ actions, loading }: { actions: LifecycleAc
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {cards.map((card, i) => (
-              <CaKpiCard key={card.label} {...card} accent={(["purple", "blue", "pink", "green", "cyan", "pink", "green", "grey"] as AislixAccent[])[i] ?? "grey"} />
-            ))}
+            {cards.map(({ target, ...card }, i) => {
+              const accent = CA_ACCENTS[i] ?? "grey";
+              const body = <CaKpiCard {...card} accent={accent} />;
+              return target === "sla" ? (
+                <Link
+                  key={card.label}
+                  to="/escalation-settings"
+                  className={CLICKABLE}
+                  aria-label={`${card.label}: ${card.value}. Open SLA settings`}
+                >
+                  {body}
+                </Link>
+              ) : (
+                <Link
+                  key={card.label}
+                  to="/corrective-actions"
+                  search={{ source: "ai", ...target }}
+                  className={CLICKABLE}
+                  aria-label={`${card.label}: ${card.value}. Open these actions`}
+                >
+                  {body}
+                </Link>
+              );
+            })}
           </div>
+          <StoreVarianceMatrix
+            rows={byStore.rows}
+            totals={byStore.totals}
+            description="What went wrong in each store — planogram, quantity, location, brand, price, promotion. Click a number to open those actions."
+            onSelect={(storeId, type) =>
+              openActions({ store: storeId ?? undefined, variance: type ?? undefined })
+            }
+          />
           <div className="grid gap-4 lg:grid-cols-2">
-            <PipelineChart counts={pipeline} />
-            <AgingChart buckets={aging} />
-            <StoreChart rows={stores} />
-            <OwnerWorkloadTable rows={workload} />
+            <Link to="/corrective-actions" search={{ source: "ai" }} className={CLICKABLE} aria-label="Open all AI actions">
+              <PipelineChart counts={pipeline} />
+            </Link>
+            <Link
+              to="/corrective-actions"
+              search={{ source: "ai", stage: "active" }}
+              className={CLICKABLE}
+              aria-label="Open actions still open"
+            >
+              <AgingChart buckets={aging} />
+            </Link>
+            <Link
+              to="/corrective-actions"
+              search={{ source: "ai", stage: "active" }}
+              className={CLICKABLE}
+              aria-label="Open actions by store"
+            >
+              <StoreChart rows={stores} />
+            </Link>
+            <Link to="/corrective-actions" search={{ source: "ai" }} className={CLICKABLE} aria-label="Open actions by owner">
+              <OwnerWorkloadTable rows={workload} />
+            </Link>
           </div>
         </>
       )}

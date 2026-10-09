@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Columns3, Rows3, Search, Wrench } from "lucide-react";
+import { Columns3, Rows3, Search, Wrench, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { MpBadge } from "@/components/design-system/MpBadge";
 import { MpCard } from "@/components/design-system/MpCard";
@@ -47,12 +47,37 @@ import {
   pipelineCounts,
   recheckResults,
   weeklyFlow,
+  actionVarianceType,
+  variancesByStore,
+  VARIANCE_TYPES,
 } from "@/lib/corrective-action-insights";
-import { fetchLifecycleActions, runActionEscalations } from "@/lib/corrective-action-lifecycle";
+import {
+  fetchLifecycleActions,
+  runActionEscalations,
+  type LifecycleAction,
+} from "@/lib/corrective-action-lifecycle";
+import { StoreVarianceMatrix } from "@/components/corrective-actions/StoreVarianceMatrix";
 import { useGlobalFilters } from "@/lib/global-filters";
 import { cn } from "@/lib/utils";
 
+export type CorrectiveActionsSearch = {
+  source?: string;
+  stage?: string;
+  priority?: string;
+  variance?: string;
+  store?: string;
+};
+
+const searchParam = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v : undefined);
+
 export const Route = createFileRoute("/corrective-actions")({
+  validateSearch: (s: Record<string, unknown>): CorrectiveActionsSearch => ({
+    source: searchParam(s.source),
+    stage: searchParam(s.stage),
+    priority: searchParam(s.priority),
+    variance: searchParam(s.variance),
+    store: searchParam(s.store),
+  }),
   head: () => ({
     meta: [
       { title: "Corrective actions — Close shelf gaps | Aislix" },
@@ -90,6 +115,32 @@ const PAGE_SIZE = 50;
 /** Semantic accents, with no same accent next to each other across or down the 4-column grid. */
 const KPI_ACCENTS: AislixAccent[] = ["purple", "blue", "pink", "green", "cyan", "pink", "green", "grey"];
 
+/** Status shortcuts that dashboard links use, on top of the lifecycle stages. */
+const EXTRA_STAGES = [
+  { value: "overdue", label: "Overdue" },
+  { value: "active", label: "Open or in progress" },
+  { value: "fixed", label: "Fixed (verified or closed)" },
+  { value: "escalated", label: "Escalated" },
+];
+
+function matchesStage(row: LifecycleAction, stage: string): boolean {
+  const s = actionStage(row.status);
+  switch (stage) {
+    case "all":
+      return true;
+    case "overdue":
+      return isActionLate(row);
+    case "active":
+      return s === "open" || s === "in_progress";
+    case "fixed":
+      return s === "verified" || s === "closed";
+    case "escalated":
+      return (row.escalation_level ?? 0) > 0;
+    default:
+      return s === stage;
+  }
+}
+
 function FilterSelect({
   value,
   onChange,
@@ -123,11 +174,14 @@ function FilterSelect({
 function CorrectiveActionsMain() {
   const { filters: globalFilters } = useGlobalFilters();
   const queryClient = useQueryClient();
-  const [source, setSource] = useState("all");
-  const [stage, setStage] = useState("all");
-  const [priority, setPriority] = useState("all");
+  const initial = Route.useSearch();
+  const [source, setSource] = useState(initial.source ?? "all");
+  const [stage, setStage] = useState(initial.stage ?? "all");
+  const [priority, setPriority] = useState(initial.priority ?? "all");
   const [owner, setOwner] = useState("all");
   const [type, setType] = useState("all");
+  const [variance, setVariance] = useState(initial.variance ?? "all");
+  const [storeFilter, setStoreFilter] = useState(initial.store ?? "all");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"table" | "board">("table");
   const [visible, setVisible] = useState(PAGE_SIZE);
@@ -159,15 +213,16 @@ function CorrectiveActionsMain() {
     [all],
   );
 
-  const filtered = useMemo(() => {
+  /** Every filter except store and variance type, so the store × variance table keeps its full context. */
+  const beforeStore = useMemo(() => {
     const q = search.trim().toLowerCase();
     return all.filter((row) => {
       if (source !== "all" && row.source !== source) return false;
-      if (priority !== "all" && row.priority !== priority) return false;
+      if (priority === "critical_high" ? row.priority !== "critical" && row.priority !== "high" : priority !== "all" && row.priority !== priority)
+        return false;
       if (owner !== "all" && row.assigned_name !== owner) return false;
       if (type !== "all" && (row.action_type ?? "other") !== type) return false;
-      if (stage === "overdue" && !isActionLate(row)) return false;
-      if (stage !== "all" && stage !== "overdue" && actionStage(row.status) !== stage) return false;
+      if (!matchesStage(row, stage)) return false;
       if (q) {
         const hay = [row.code, row.title, row.suggestion, row.sku, row.store_name, row.assigned_name]
           .filter(Boolean)
@@ -179,7 +234,23 @@ function CorrectiveActionsMain() {
     });
   }, [all, source, priority, owner, type, stage, search]);
 
-  useEffect(() => setVisible(PAGE_SIZE), [source, priority, owner, type, stage, search]);
+  const filtered = useMemo(
+    () =>
+      beforeStore.filter(
+        (row) =>
+          (variance === "all" || actionVarianceType(row) === variance) &&
+          (storeFilter === "all" || (row.store_id ?? "none") === storeFilter),
+      ),
+    [beforeStore, variance, storeFilter],
+  );
+
+  useEffect(() => setVisible(PAGE_SIZE), [source, priority, owner, type, variance, storeFilter, stage, search]);
+
+  const storeName = useMemo(
+    () => (storeFilter === "all" ? null : all.find((r) => (r.store_id ?? "none") === storeFilter)?.store_name ?? "No store"),
+    [all, storeFilter],
+  );
+  const byStore = useMemo(() => variancesByStore(beforeStore), [beforeStore]);
 
   const kpis = useMemo(() => correctiveActionKpis(filtered), [filtered]);
   const pipeline = useMemo(() => pipelineCounts(filtered), [filtered]);
@@ -311,13 +382,14 @@ function CorrectiveActionsMain() {
                 value={stage}
                 onChange={setStage}
                 allLabel="All statuses"
-                options={[...ACTION_STAGES, { value: "overdue", label: "Overdue" }]}
+                options={[...ACTION_STAGES, ...EXTRA_STAGES]}
               />
               <FilterSelect
                 value={priority}
                 onChange={setPriority}
                 allLabel="All priorities"
                 options={[
+                  { value: "critical_high", label: "Critical & high" },
                   { value: "critical", label: "Critical" },
                   { value: "high", label: "High" },
                   { value: "medium", label: "Medium" },
@@ -332,6 +404,24 @@ function CorrectiveActionsMain() {
                 className="w-44"
               />
               <FilterSelect value={type} onChange={setType} allLabel="All types" options={ACTION_TYPES} />
+              <FilterSelect
+                value={variance}
+                onChange={setVariance}
+                allLabel="All variances"
+                options={VARIANCE_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                className="w-48"
+              />
+              {storeName ? (
+                <button
+                  type="button"
+                  onClick={() => setStoreFilter("all")}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 text-sm text-navy hover:bg-[#F4F7F9]"
+                >
+                  Store: {storeName}
+                  <X className="size-3.5 text-mp-muted" aria-hidden />
+                  <span className="sr-only">Clear store filter</span>
+                </button>
+              ) : null}
               <span className="ml-auto text-xs text-mp-muted">
                 {filtered.length} of {all.length} actions
               </span>
@@ -355,8 +445,19 @@ function CorrectiveActionsMain() {
             <RecheckChart rows={rechecks} />
           </div>
 
+          <StoreVarianceMatrix
+            rows={byStore.rows}
+            totals={byStore.totals}
+            onSelect={(storeId, kind) => {
+              setStoreFilter(storeId ?? "all");
+              setVariance(kind ?? "all");
+              document.getElementById("ca-all-actions")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
+
           <MpCard className="overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
+            <div
+              id="ca-all-actions" className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
               <div>
                 <h2 className="font-display text-[15px] font-semibold text-navy">All actions</h2>
                 <p className="mt-0.5 text-[13px] text-mp-muted">Open an action to fix, upload evidence and verify.</p>

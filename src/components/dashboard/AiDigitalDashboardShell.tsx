@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Bar,
@@ -55,6 +55,7 @@ import { AISLIX } from "@/lib/aislix-theme";
 import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
 import { DashboardOverviewPanel } from "@/components/dashboard/DashboardOverviewPanel";
 import { AiActionsSlaSection, AiVarianceSection } from "@/components/dashboard/AiDashboardInsights";
+import { AuditPhotoStrip } from "@/components/dashboard/AuditPhotoStrip";
 import { fetchAiVarianceSummary } from "@/lib/ai-variance-summary";
 import { fetchAiDashboardActions } from "@/lib/ai-dashboard-actions";
 import { SegmentHomePanel } from "@/components/dashboard/SegmentHomePanel";
@@ -100,6 +101,7 @@ import { cn } from "@/lib/utils";
 import { Route as DashboardRoute } from "@/routes/dashboard";
 
 const CHART_COLORS = CHART_SERIES;
+const SHOW_ALL_METRICS_KEY = "aislix.dashboard.metrics";
 
 /** Wide cards span both columns of the metric grid. */
 const SPAN2_CARD_IDS = new Set([
@@ -509,7 +511,24 @@ export function AiDigitalDashboardShell() {
   const [layoutSaving, setLayoutSaving] = useState(false);
   const [customMetrics, setCustomMetrics] = useState<DashboardCustomMetricsPrefs>({ items: [] });
   const [customOpen, setCustomOpen] = useState(false);
-  const [showAllMetrics, setShowAllMetrics] = useState(false);
+  const [showAllMetrics, setShowAllMetricsState] = useState(true);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(SHOW_ALL_METRICS_KEY) === "hidden") setShowAllMetricsState(false);
+    } catch {
+      /* storage unavailable: default to showing every metric */
+    }
+  }, []);
+  const setShowAllMetrics = (update: (v: boolean) => boolean) =>
+    setShowAllMetricsState((prev) => {
+      const next = update(prev);
+      try {
+        window.localStorage.setItem(SHOW_ALL_METRICS_KEY, next ? "shown" : "hidden");
+      } catch {
+        /* private mode: keep the choice for this visit only */
+      }
+      return next;
+    });
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const filterKey = global?.filters
@@ -683,6 +702,7 @@ export function AiDigitalDashboardShell() {
         userEmail: demoPreview.userEmail,
       }),
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
   const digitalQuery = useQuery({
     queryKey: ["dashboard-digital-metrics-v2", filterKey, demoPreview.previewDemo],
@@ -692,6 +712,7 @@ export function AiDigitalDashboardShell() {
         userEmail: demoPreview.userEmail,
       }),
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
     // Don't compete with AI dashboard on first paint — load digital when that tab is open
     // (or after AI settles so Ask Aislix can still see digital signals quickly).
     enabled: tab !== "ai" || (!opsQuery.isPending && Boolean(opsQuery.data)),
@@ -706,6 +727,7 @@ export function AiDigitalDashboardShell() {
         userEmail: demoPreview.userEmail,
       }),
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
     enabled: tab === "ai",
   });
   const aiActionsQuery = useQuery({
@@ -716,6 +738,7 @@ export function AiDigitalDashboardShell() {
         userEmail: demoPreview.userEmail,
       }),
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
     enabled: tab === "ai",
   });
 
@@ -1024,18 +1047,10 @@ export function AiDigitalDashboardShell() {
                     {data.lastReport.nextAction}
                   </li>
                 </ul>
-                {data.lastReport.imageUrls.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {data.lastReport.imageUrls.slice(0, 3).map((url) => (
-                      <img
-                        key={url}
-                        src={url}
-                        alt=""
-                        className="h-20 w-full rounded-lg border border-[#D9E2E8] object-cover"
-                      />
-                    ))}
-                  </div>
-                ) : null}
+                <AuditPhotoStrip
+                  urls={data.lastReport.imageUrls}
+                  title={`${data.lastReport.auditName} · ${data.lastReport.storeName}`}
+                />
               </div>
             ) : (
               <p className="mt-3 text-sm text-[#667085]">
@@ -1673,7 +1688,7 @@ export function AiDigitalDashboardShell() {
               aria-expanded={showAllMetrics}
               className="inline-flex items-center gap-1 rounded-lg py-1 text-sm font-medium text-[#04203F] hover:underline"
             >
-              {showAllMetrics ? "Show fewer metrics" : `Show all metrics (${extra.length})`}
+              {showAllMetrics ? `Hide ${extra.length} more metrics` : `Show all metrics (${extra.length})`}
               <ChevronDown
                 className={cn("size-4 transition-transform", showAllMetrics && "rotate-180")}
                 aria-hidden
@@ -1758,6 +1773,13 @@ export function AiDigitalDashboardShell() {
       </div>
 
       {tab === "ai" ? <WorkspaceFilterBar extended /> : filtersOpen ? <WorkspaceFilterBar /> : null}
+      {tab === "ai" &&
+      (opsQuery.isPlaceholderData || varianceQuery.isPlaceholderData || aiActionsQuery.isPlaceholderData) ? (
+        <p className="-mt-2 flex items-center gap-2 text-xs text-[#667085]" aria-live="polite">
+          <span className="size-1.5 animate-pulse rounded-full bg-[#7DB7D6]" aria-hidden />
+          Updating for these filters…
+        </p>
+      ) : null}
 
       {tab === "overview" ? (
         <div className="flex flex-col gap-6">

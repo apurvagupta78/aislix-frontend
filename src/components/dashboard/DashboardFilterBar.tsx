@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Calendar,
@@ -523,15 +523,33 @@ function SkuSearch({
   onChange: (next: DashboardFilterState) => void;
   className?: string;
 }) {
+  const applied = filters.skuId ?? "";
+  const [text, setText] = useState(applied);
+  const latest = useRef({ filters, onChange });
+  latest.current = { filters, onChange };
+
+  useEffect(() => setText(applied), [applied]);
+
+  useEffect(() => {
+    if (text.trim() === applied.trim()) return;
+    const t = window.setTimeout(() => {
+      latest.current.onChange({ ...latest.current.filters, skuId: text.trim() });
+    }, 500);
+    return () => window.clearTimeout(t);
+  }, [text, applied]);
+
   return (
     <label className={cn("relative block", className)}>
       <Barcode className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
       <Input
         className={cn(CONTROL, "w-full pl-8")}
-        value={filters.skuId ?? ""}
+        value={text}
         placeholder="SKU or product"
         aria-label="SKU or product"
-        onChange={(e) => onChange({ ...filters, skuId: e.target.value })}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onChange({ ...filters, skuId: text.trim() });
+        }}
       />
     </label>
   );

@@ -29,35 +29,47 @@ import {
   scanIdsMatchingSku,
 } from "@/lib/ai-dashboard-scope";
 import { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/demo-shelf-images";
+import { summaryInsights } from "@/lib/ai-audit/executive-summary-insights";
 
 export { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/demo-shelf-images";
 
+/** Most shelf photos one audit can carry; well above what the upload step allows. */
+const MAX_AUDIT_PHOTOS = 20;
+
+/** Signed URLs for the photos the user uploaded — never the AI overlay, PDF or CSV stored beside them. */
 async function signScanEvidenceUrls(scanId: string): Promise<string[]> {
   const imageUrls: string[] = [];
-  const [{ data: images }, { data: evidence }] = await Promise.all([
-    supabase
-      .from("scan_images")
-      .select("storage_path, storage_bucket")
-      .eq("scan_id", scanId)
-      .order("created_at", { ascending: true })
-      .limit(3),
-    supabase
+  const { data: images } = await supabase
+    .from("scan_images")
+    .select("storage_path, storage_bucket, kind, mime_type")
+    .eq("scan_id", scanId)
+    .order("created_at", { ascending: true })
+    .limit(MAX_AUDIT_PHOTOS * 2);
+
+  let rows = (images ?? [])
+    .filter((img) => {
+      const kind = (img.kind as string | null) ?? "original";
+      const mime = (img.mime_type as string | null) ?? "image/";
+      return kind === "original" && mime.startsWith("image/");
+    })
+    .map((img) => ({
+      path: img.storage_path as string | null,
+      bucket: (img.storage_bucket as string | null) || "scan-images",
+    }));
+  if (!rows.length) {
+    const { data: evidence } = await supabase
       .from("audit_evidence")
       .select("storage_path")
       .eq("scan_id", scanId)
-      .limit(3),
-  ]);
-
-  const rows = [
-    ...(images ?? []).map((img) => ({
-      path: img.storage_path as string | null,
-      bucket: (img.storage_bucket as string | null) || "scan-images",
-    })),
-    ...(evidence ?? []).map((img) => ({
-      path: img.storage_path as string | null,
-      bucket: "scan-images",
-    })),
-  ].filter((row) => Boolean(row.path)).slice(0, 3);
+      .limit(MAX_AUDIT_PHOTOS);
+    rows = (evidence ?? [])
+      .filter((e) => /\.(jpe?g|png|webp|heic|gif)$/i.test(String(e.storage_path ?? "")))
+      .map((e) => ({ path: e.storage_path as string | null, bucket: "scan-images" }));
+  }
+  const seen = new Set<string>();
+  rows = rows
+    .filter((row) => row.path && !seen.has(row.path) && seen.add(row.path))
+    .slice(0, MAX_AUDIT_PHOTOS);
 
   const signed = await Promise.all(
     rows.map(async (row) => {
@@ -281,29 +293,6 @@ function metricNum(metrics: unknown, key: string): number | null {
   const direct = root[key];
   if (direct != null && Number.isFinite(Number(direct))) return Number(direct);
   return null;
-}
-
-function parseInsights(executiveSummary: unknown): {
-  good: string;
-  attention: string;
-  nextAction: string;
-} {
-  const fallback = {
-    good: "Shelf execution captured for this audit.",
-    attention: "Review findings and planogram gaps in the full report.",
-    nextAction: "Open the audit and assign corrective actions where needed.",
-  };
-  if (typeof executiveSummary !== "string" || !executiveSummary.trim()) return fallback;
-  const text = executiveSummary.trim();
-  const sentences = text
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return {
-    good: sentences[0] ?? fallback.good,
-    attention: sentences[1] ?? fallback.attention,
-    nextAction: sentences[2] ?? fallback.nextAction,
-  };
 }
 
 /** Extract product-level visible units from metrics when present (no facings proxy). */
@@ -837,7 +826,7 @@ export async function fetchOpsAiDashboard(
     const findingsCount = findingsRes.count ?? 0;
     const imageUrls =
       imageUrlsRaw.length || !experience.labeledDemo ? imageUrlsRaw : [...DEMO_SHELF_FALLBACK_IMAGES];
-    const insights = parseInsights(result?.executive_summary);
+    const insights = summaryInsights(result?.executive_summary);
     const conf = metricNum(result?.metrics, "average_confidence");
     return {
       scanId,
@@ -1072,7 +1061,7 @@ export async function fetchAuditAnalysisReport(
     imageUrls = [...DEMO_SHELF_FALLBACK_IMAGES];
   }
 
-  const insights = parseInsights(result?.executive_summary);
+  const insights = summaryInsights(result?.executive_summary);
   const conf = metricNum(result?.metrics, "average_confidence");
 
   return {
