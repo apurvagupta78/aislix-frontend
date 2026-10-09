@@ -1839,18 +1839,6 @@ export function AiDigitalDashboardShell() {
                 }
               />
 
-              <AiLensPanel
-                scope={scopeSelection}
-                onScopeChange={(next) => { setScopeSelection(next); setLensSelection((prev) => ({ ...prev, value: ALL_VALUES })); }}
-                scopeGroups={lensView?.scopeGroups ?? []}
-                selection={lensSelection}
-                onChange={setLensSelection}
-                groups={lensView?.groups ?? []}
-                audits={lensView?.variances.audits ?? 0}
-                auditLimit={varianceQuery.data?.auditLimit ?? 50}
-                loading={varianceQuery.isPending}
-              />
-
               {renderMetricGrid(
                 renderAiCard,
                 <>
@@ -1867,6 +1855,18 @@ export function AiDigitalDashboardShell() {
                   />
                 </>,
               )}
+
+              <AiLensPanel
+                scope={scopeSelection}
+                onScopeChange={(next) => { setScopeSelection(next); setLensSelection((prev) => ({ ...prev, value: ALL_VALUES })); }}
+                scopeGroups={lensView?.scopeGroups ?? []}
+                selection={lensSelection}
+                onChange={setLensSelection}
+                groups={lensView?.groups ?? []}
+                audits={lensView?.variances.audits ?? 0}
+                auditLimit={varianceQuery.data?.auditLimit ?? 50}
+                loading={varianceQuery.isPending}
+              />
 
               <AiVarianceSection summary={lensView?.variances} loading={varianceQuery.isPending} />
 
