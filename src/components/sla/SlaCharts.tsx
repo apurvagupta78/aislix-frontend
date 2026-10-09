@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Clock } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Clock, Info } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartUnavailable, CA_PINK_BAR } from "@/components/corrective-actions/CaCharts";
@@ -818,16 +818,23 @@ export function AuditChecksGrid({
   return (
     <div className={cn("grid gap-3 sm:grid-cols-2", shown.length === 5 ? "xl:grid-cols-5" : "xl:grid-cols-4")}>
       {shown.map((c) => (
-        <button
+        <Button
           key={c.key}
           type="button"
           onClick={() => onSelect(c.key)}
-          className="rounded-lg border border-line bg-white p-4 text-left transition-colors hover:bg-[#F4F7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+          variant="ghost"
+          className="block h-auto cursor-pointer whitespace-normal rounded-lg border border-line bg-card p-4 text-left transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
         >
+          <div className="flex items-start justify-between gap-2">
           <p className="flex items-center gap-2 text-sm text-mp-muted">
             <span className="size-1.5 shrink-0 rounded-full" style={{ background: c.dot }} aria-hidden />
             {c.title}
           </p>
+          <span className="flex shrink-0 items-center gap-1.5">
+            <Info className="size-3.5 text-mp-muted" aria-label={c.context} />
+            <ChevronRight className="size-4 text-navy" aria-hidden />
+          </span>
+          </div>
           <p className="mt-2 font-display text-2xl font-semibold tabular-nums leading-none text-navy">{c.value}</p>
           <p className="mt-1.5 text-xs text-mp-muted">{c.context}</p>
           <div className="mt-3 flex items-center gap-2">
@@ -836,7 +843,7 @@ export function AuditChecksGrid({
               {c.bar.pct == null ? "N/A" : `${c.bar.pct}% ${c.bar.label}`}
             </span>
           </div>
-        </button>
+        </Button>
       ))}
     </div>
   );

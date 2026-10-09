@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bot, ClipboardCheck, Info } from "lucide-react";
+import { Bot, ChevronRight, ClipboardCheck, Info } from "lucide-react";
 
 import { ACCENT_TINT, AISLIX_PALETTE, type AislixAccent } from "@/lib/ai-audit/kpi-palette";
 import {
@@ -34,23 +34,26 @@ export function CaKpiCard({
   context,
   info,
   accent,
+  actionable = false,
 }: {
   label: string;
   value: string;
   context: string;
   info: string;
   accent: AislixAccent;
+  actionable?: boolean;
 }) {
   const dot = accent === "pink" ? CA_PINK_BAR : accent === "grey" ? AISLIX_PALETTE.border : AISLIX_PALETTE[accent];
   return (
-    <div className="rounded-lg border bg-white p-4" style={{ borderColor: AISLIX_PALETTE.border }}>
+    <div className="rounded-lg border border-line bg-card p-4">
       <div className="flex items-start justify-between gap-2">
         <p className="flex items-center gap-2 text-sm text-mp-muted">
           <span className="size-1.5 shrink-0 rounded-full" style={{ background: dot }} aria-hidden />
           {label}
         </p>
-        <span title={info} aria-label={info} className="text-mp-muted">
-          <Info className="size-3.5" />
+        <span className="flex shrink-0 items-center gap-1.5">
+          <span title={info} aria-label={info} className="text-mp-muted"><Info className="size-3.5" /></span>
+          {actionable ? <ChevronRight className="size-4 text-navy" aria-hidden /> : null}
         </span>
       </div>
       <p className="mt-2 font-display text-2xl font-semibold tabular-nums leading-none text-navy">{value}</p>
