@@ -36,7 +36,6 @@ import { Route as DigitalAuditRouteImport } from './routes/digital-audit'
 import { Route as DisplayCheckRouteImport } from './routes/display-check'
 import { Route as DistributorsRouteImport } from './routes/distributors'
 import { Route as EscalationSettingsRouteImport } from './routes/escalation-settings'
-import { Route as SlaRouteImport } from './routes/sla'
 import { Route as ExceptionsRouteImport } from './routes/exceptions'
 import { Route as ExpiryControlRouteImport } from './routes/expiry-control'
 import { Route as FeaturesRouteImport } from './routes/features'
@@ -77,6 +76,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SkuIntelligenceRouteImport } from './routes/sku-intelligence'
+import { Route as SlaRouteImport } from './routes/sla'
 import { Route as StoreMasterRouteImport } from './routes/store-master'
 import { Route as SupermarketsRouteImport } from './routes/supermarkets'
 import { Route as TeamRouteImport } from './routes/team'
@@ -272,11 +272,6 @@ const DistributorsRoute = DistributorsRouteImport.update({
 const EscalationSettingsRoute = EscalationSettingsRouteImport.update({
   id: '/escalation-settings',
   path: '/escalation-settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SlaRoute = SlaRouteImport.update({
-  id: '/sla',
-  path: '/sla',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExceptionsRoute = ExceptionsRouteImport.update({
@@ -477,6 +472,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SkuIntelligenceRoute = SkuIntelligenceRouteImport.update({
   id: '/sku-intelligence',
   path: '/sku-intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SlaRoute = SlaRouteImport.update({
+  id: '/sla',
+  path: '/sla',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StoreMasterRoute = StoreMasterRouteImport.update({
@@ -828,7 +828,6 @@ export interface FileRoutesByFullPath {
   '/display-check': typeof DisplayCheckRoute
   '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
-  '/sla': typeof SlaRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
   '/expiry-control': typeof ExpiryControlRouteWithChildren
   '/features': typeof FeaturesRoute
@@ -869,6 +868,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sku-intelligence': typeof SkuIntelligenceRoute
+  '/sla': typeof SlaRoute
   '/store-master': typeof StoreMasterRoute
   '/supermarkets': typeof SupermarketsRoute
   '/team': typeof TeamRoute
@@ -959,7 +959,6 @@ export interface FileRoutesByTo {
   '/display-check': typeof DisplayCheckRoute
   '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
-  '/sla': typeof SlaRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
   '/expiry-control': typeof ExpiryControlRouteWithChildren
   '/features': typeof FeaturesRoute
@@ -1000,6 +999,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sku-intelligence': typeof SkuIntelligenceRoute
+  '/sla': typeof SlaRoute
   '/store-master': typeof StoreMasterRoute
   '/supermarkets': typeof SupermarketsRoute
   '/team': typeof TeamRoute
@@ -1091,7 +1091,6 @@ export interface FileRoutesById {
   '/display-check': typeof DisplayCheckRoute
   '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
-  '/sla': typeof SlaRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
   '/expiry-control': typeof ExpiryControlRouteWithChildren
   '/features': typeof FeaturesRoute
@@ -1132,6 +1131,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sku-intelligence': typeof SkuIntelligenceRoute
+  '/sla': typeof SlaRoute
   '/store-master': typeof StoreMasterRoute
   '/supermarkets': typeof SupermarketsRoute
   '/team': typeof TeamRoute
@@ -1224,7 +1224,6 @@ export interface FileRouteTypes {
     | '/display-check'
     | '/distributors'
     | '/escalation-settings'
-    | '/sla'
     | '/exceptions'
     | '/expiry-control'
     | '/features'
@@ -1265,6 +1264,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/sku-intelligence'
+    | '/sla'
     | '/store-master'
     | '/supermarkets'
     | '/team'
@@ -1355,7 +1355,6 @@ export interface FileRouteTypes {
     | '/display-check'
     | '/distributors'
     | '/escalation-settings'
-    | '/sla'
     | '/exceptions'
     | '/expiry-control'
     | '/features'
@@ -1396,6 +1395,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/sku-intelligence'
+    | '/sla'
     | '/store-master'
     | '/supermarkets'
     | '/team'
@@ -1486,7 +1486,6 @@ export interface FileRouteTypes {
     | '/display-check'
     | '/distributors'
     | '/escalation-settings'
-    | '/sla'
     | '/exceptions'
     | '/expiry-control'
     | '/features'
@@ -1527,6 +1526,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/sku-intelligence'
+    | '/sla'
     | '/store-master'
     | '/supermarkets'
     | '/team'
@@ -1618,7 +1618,6 @@ export interface RootRouteChildren {
   DisplayCheckRoute: typeof DisplayCheckRoute
   DistributorsRoute: typeof DistributorsRoute
   EscalationSettingsRoute: typeof EscalationSettingsRoute
-  SlaRoute: typeof SlaRoute
   ExceptionsRoute: typeof ExceptionsRouteWithChildren
   ExpiryControlRoute: typeof ExpiryControlRouteWithChildren
   FeaturesRoute: typeof FeaturesRoute
@@ -1659,6 +1658,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SkuIntelligenceRoute: typeof SkuIntelligenceRoute
+  SlaRoute: typeof SlaRoute
   StoreMasterRoute: typeof StoreMasterRoute
   SupermarketsRoute: typeof SupermarketsRoute
   TeamRoute: typeof TeamRoute
@@ -1880,13 +1880,6 @@ declare module '@tanstack/react-router' {
       path: '/escalation-settings'
       fullPath: '/escalation-settings'
       preLoaderRoute: typeof EscalationSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sla': {
-      id: '/sla'
-      path: '/sla'
-      fullPath: '/sla'
-      preLoaderRoute: typeof SlaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/exceptions': {
@@ -2167,6 +2160,13 @@ declare module '@tanstack/react-router' {
       path: '/sku-intelligence'
       fullPath: '/sku-intelligence'
       preLoaderRoute: typeof SkuIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sla': {
+      id: '/sla'
+      path: '/sla'
+      fullPath: '/sla'
+      preLoaderRoute: typeof SlaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/store-master': {
@@ -2788,7 +2788,6 @@ const rootRouteChildren: RootRouteChildren = {
   DisplayCheckRoute: DisplayCheckRoute,
   DistributorsRoute: DistributorsRoute,
   EscalationSettingsRoute: EscalationSettingsRoute,
-  SlaRoute: SlaRoute,
   ExceptionsRoute: ExceptionsRouteWithChildren,
   ExpiryControlRoute: ExpiryControlRouteWithChildren,
   FeaturesRoute: FeaturesRoute,
@@ -2829,6 +2828,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SkuIntelligenceRoute: SkuIntelligenceRoute,
+  SlaRoute: SlaRoute,
   StoreMasterRoute: StoreMasterRoute,
   SupermarketsRoute: SupermarketsRoute,
   TeamRoute: TeamRoute,
