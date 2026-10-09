@@ -64,6 +64,9 @@ export type LifecycleAction = {
   escalated_at: string | null;
   submitted_at: string | null;
   store_name: string | null;
+  sla_type: string | null;
+  sla_minutes: number | null;
+  delay_reason: string | null;
 };
 
 export const LIFECYCLE_STATUSES: { value: LifecycleActionStatus; label: string }[] = [
@@ -90,7 +93,12 @@ export function slaRemainingLabel(dueAt: string | null, status: string): string 
   if (["resolved", "closed", "verified"].includes(status)) return "Complete";
   const ms = new Date(dueAt).getTime() - Date.now();
   const hours = Math.abs(ms) / 36e5;
-  const text = hours >= 24 ? `${(hours / 24).toFixed(1)} days` : `${Math.round(hours)} hours`;
+  const text =
+    hours >= 24
+      ? `${(hours / 24).toFixed(1)} days`
+      : hours >= 1
+        ? `${Math.round(hours)} hours`
+        : `${Math.max(1, Math.round(hours * 60))} min`;
   return ms < 0 ? `Overdue by ${text}` : `${text} remaining`;
 }
 
@@ -138,17 +146,6 @@ export function lifecycleActionsKpis(actions: LifecycleAction[]): LifecycleActio
         ? Math.round((closedOnTime.length / Math.max(1, closed.length || withDue.length)) * 1000) / 10
         : null,
   };
-}
-
-async function slaHours(orgId: string, severity: FindingSeverity): Promise<number> {
-  const { data } = await supabase.from("org_sla_defaults").select("*").eq("org_id", orgId).maybeSingle();
-  if (!data) {
-    return severity === "critical" ? 4 : severity === "high" ? 12 : severity === "medium" ? 24 : 72;
-  }
-  if (severity === "critical") return Number(data.critical_hours) || 4;
-  if (severity === "high") return Number(data.high_hours) || 12;
-  if (severity === "medium") return Number(data.medium_hours) || 24;
-  return Number(data.low_hours) || 72;
 }
 
 export async function fetchLifecycleActions(input: {
@@ -217,10 +214,21 @@ export async function fetchLifecycleAction(id: string): Promise<LifecycleAction 
   return mapAction(row, names, storeNames);
 }
 
-/** Marks overdue actions and escalates them (owner's manager, then admins). Safe to call often. */
+/** Sends due-soon and missed SLA alerts, marks overdue actions and escalates them. Safe to call often. */
 export async function runActionEscalations(): Promise<void> {
   const orgId = await requireOrgId();
-  await supabase.rpc("process_corrective_action_escalations", { p_org_id: orgId });
+  const { error } = await supabase.rpc("process_sla_alerts" as never, { p_org_id: orgId } as never);
+  if (error) await supabase.rpc("process_corrective_action_escalations", { p_org_id: orgId });
+}
+
+/** Why the fix missed its SLA deadline; feeds the delay analysis. */
+export async function saveDelayReason(actionId: string, reason: string): Promise<void> {
+  await patchAction(
+    actionId,
+    { delay_reason: reason.trim() || null },
+    "delay_reason_recorded",
+    `Reason for delay: ${reason.trim()}`,
+  );
 }
 
 export async function saveActionPlan(input: {
@@ -354,9 +362,6 @@ export async function createActionFromFinding(input: {
 }): Promise<string> {
   const orgId = await requireOrgId();
   const userId = await requireUserId();
-  const hours = await slaHours(orgId, input.finding.severity);
-  const dueAt =
-    input.dueAt ?? new Date(Date.now() + hours * 36e5).toISOString();
   const title =
     input.title?.trim() ||
     `Investigate ${input.finding.title.toLowerCase()} — ${findingSubjectLabel(input.finding)}`;
@@ -370,14 +375,14 @@ export async function createActionFromFinding(input: {
     .select("id")
     .eq("finding_id", input.finding.id)
     .maybeSingle();
+  // The database sets the SLA type, target and due time unless a due date was picked.
   const fields = {
     title,
     description,
     status: "assigned",
     priority: input.finding.severity,
     assigned_to: input.assignedTo,
-    sla_hours: hours,
-    due_at: dueAt,
+    ...(input.dueAt ? { due_at: input.dueAt } : {}),
     escalation_level: 0,
     escalated_at: null,
   };
@@ -386,7 +391,7 @@ export async function createActionFromFinding(input: {
         .from("corrective_actions")
         .update({ ...fields, updated_at: new Date().toISOString() })
         .eq("id", existing.id)
-        .select("id")
+        .select("id, due_at")
         .single()
     : await supabase
         .from("corrective_actions")
@@ -403,13 +408,18 @@ export async function createActionFromFinding(input: {
           start_at: new Date().toISOString(),
           sku: input.finding.sku,
         })
-        .select("id")
+        .select("id, due_at")
         .single();
   if (error) dbError(error, "Could not create corrective action.");
 
   await supabase
     .from("findings")
-    .update({ status: "assigned", assigned_to: input.assignedTo, due_at: dueAt, updated_at: new Date().toISOString() })
+    .update({
+      status: "assigned",
+      assigned_to: input.assignedTo,
+      due_at: (data.due_at as string | null) ?? input.dueAt ?? null,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", input.finding.id);
 
   await supabase.from("audit_activity_events").insert({
@@ -471,6 +481,8 @@ export async function submitResolution(input: {
   priority?: string;
   rootCause?: string | null;
   preventiveAction?: string | null;
+  /** Required when the fix is submitted after the SLA deadline. */
+  delayReason?: string | null;
 }): Promise<void> {
   if (!input.notes.trim()) throw new Error("Resolution notes are required.");
   if (
@@ -491,6 +503,7 @@ export async function submitResolution(input: {
       resolution_qty: input.qty ?? null,
       resolved_at: now,
       resolved_by: userId,
+      ...(input.delayReason?.trim() ? { delay_reason: input.delayReason.trim() } : {}),
     },
     "resolution_submitted",
     "Resolution submitted for verification",
@@ -642,5 +655,8 @@ function mapAction(
     escalated_at: (row.escalated_at as string) ?? null,
     submitted_at: (row.submitted_at as string) ?? null,
     store_name: row.store_id ? (storeNames.get(row.store_id as string) ?? null) : null,
+    sla_type: (row.sla_type as string) ?? null,
+    sla_minutes: numOrNull(row.sla_minutes),
+    delay_reason: (row.delay_reason as string) ?? null,
   };
 }

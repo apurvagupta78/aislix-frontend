@@ -44,6 +44,7 @@ import {
   rejectResolution,
   runAiRecheck,
   saveActionPlan,
+  saveDelayReason,
   slaRemainingLabel,
   startAction,
   startAiRecheck,
@@ -54,6 +55,14 @@ import {
 import { fetchFinding } from "@/lib/findings";
 import type { SweepCaptureMeta } from "@/lib/guided-capture";
 import { fetchResolutionEvidence, resolutionPhotoUrl, uploadResolutionPhoto } from "@/lib/reaudit";
+import {
+  actualMinutes,
+  formatMinutes,
+  slaOutcome,
+  slaTypeLabel,
+  slaTypeOf,
+  targetMinutes,
+} from "@/lib/sla-insights";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/corrective-actions/$actionId")({
@@ -170,6 +179,8 @@ function ActionDetailPage() {
   const [rootCauseOther, setRootCauseOther] = useState("");
   const [preventive, setPreventive] = useState("");
   const [recheck, setRecheck] = useState<RecheckResult | null>(null);
+  const [delayReason, setDelayReason] = useState("");
+  const [delayOther, setDelayOther] = useState("");
 
   const actionQuery = useQuery({
     queryKey: ["lifecycle-action", actionId],
@@ -216,6 +227,10 @@ function ActionDetailPage() {
   };
 
   const rootCauseValue = rootCause === "Other" ? rootCauseOther.trim() : rootCause;
+  const delayValue = delayReason === "Other" ? delayOther.trim() : delayReason;
+  const pastDeadline = Boolean(action?.due_at && new Date(action.due_at).getTime() < Date.now());
+  const needsDelayReason = pastDeadline && !action?.delay_reason?.trim();
+  const delayMissing = needsDelayReason && !delayValue;
 
   const planMutation = useMutation({
     mutationFn: () => saveActionPlan({ actionId, rootCause: rootCauseValue, preventiveAction: preventive }),
@@ -239,6 +254,7 @@ function ActionDetailPage() {
         priority: action?.priority,
         rootCause: action?.root_cause,
         preventiveAction: action?.preventive_action,
+        delayReason: needsDelayReason ? delayValue : null,
       });
     },
     onSuccess: () => {
@@ -254,6 +270,8 @@ function ActionDetailPage() {
     mutationFn: async () => {
       if (!action) throw new Error("Action not loaded.");
       if (!recheckFiles.length) throw new Error("Add at least one after photo.");
+      if (delayMissing) throw new Error("Pick the reason for the delay first.");
+      if (needsDelayReason) await saveDelayReason(actionId, delayValue);
       setRecheck({ status: "pending" });
       const scanId = await startAiRecheck({
         action,
@@ -370,7 +388,12 @@ function ActionDetailPage() {
               value={
                 action.due_at ? (
                   <>
-                    {new Date(action.due_at).toLocaleDateString()}
+                    {new Date(action.due_at).toLocaleString([], {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                     <span className="block text-xs text-mp-muted">{slaRemainingLabel(action.due_at, action.status)}</span>
                   </>
                 ) : (
@@ -378,7 +401,7 @@ function ActionDetailPage() {
                 )
               }
             />
-            <Fact label="SLA" value={action.sla_hours ? `${action.sla_hours} h` : "N/A"} />
+            <Fact label="SLA" value={<SlaFactValue action={action} />} />
             <Fact label="Verified by" value={verificationMethodLabel(action.verification_method)} />
           </dl>
           <div className="mt-5 border-t border-line pt-4">
@@ -523,6 +546,35 @@ function ActionDetailPage() {
             </p>
           ) : null}
 
+          {open && needsDelayReason ? (
+            <div className="mb-4 rounded-xl border p-4" style={{ borderColor: CA_PINK_BAR, background: AISLIX_PALETTE.card }}>
+              <Label>Reason for delay</Label>
+              <p className="mt-0.5 text-[12px] text-mp-muted">
+                The SLA deadline has passed. Pick why so the SLA dashboard can show where delays come from.
+              </p>
+              <Select value={delayReason} onValueChange={setDelayReason}>
+                <SelectTrigger className="mt-2 h-9 max-w-sm rounded-lg">
+                  <SelectValue placeholder="Why is this late?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROOT_CAUSE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {delayReason === "Other" ? (
+                <Input
+                  className="mt-2 max-w-sm"
+                  placeholder="Describe the delay"
+                  value={delayOther}
+                  onChange={(e) => setDelayOther(e.target.value)}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
           {open && aiVerify ? (
             <div className="rounded-xl border p-4" style={{ borderColor: AISLIX_PALETTE.border, background: AISLIX_PALETTE.card }}>
               <p className="flex items-center gap-2 text-sm font-semibold text-navy">
@@ -558,7 +610,9 @@ function ActionDetailPage() {
                   </span>
                 ) : null}
                 <Button
-                  disabled={recheckMutation.isPending || !recheckFiles.length || (needsPlan && !planDone)}
+                  disabled={
+                    recheckMutation.isPending || !recheckFiles.length || (needsPlan && !planDone) || delayMissing
+                  }
                   onClick={() => recheckMutation.mutate()}
                 >
                   {recheckMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
@@ -607,7 +661,7 @@ function ActionDetailPage() {
                   </div>
                 </div>
                 <Button
-                  disabled={resolveMutation.isPending || !notes.trim() || (needsPlan && !planDone)}
+                  disabled={resolveMutation.isPending || !notes.trim() || (needsPlan && !planDone) || delayMissing}
                   onClick={() => resolveMutation.mutate()}
                 >
                   {resolveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null} Submit for verification
@@ -781,6 +835,37 @@ function ActionDetailPage() {
       </div>
     );
   }
+}
+
+const SLA_OUTCOME_FACT: Partial<Record<ReturnType<typeof slaOutcome>, { label: string; color: string }>> = {
+  met: { label: "Met", color: AISLIX_PALETTE.green },
+  breached: { label: "Breached", color: CA_PINK_BAR },
+  late_open: { label: "Overdue", color: CA_PINK_BAR },
+  awaiting: { label: "Awaiting check", color: AISLIX_PALETTE.blue },
+};
+
+function SlaFactValue({ action }: { action: LifecycleAction }) {
+  const target = targetMinutes(action);
+  const took = actualMinutes(action);
+  const outcome = SLA_OUTCOME_FACT[slaOutcome(action)];
+  return (
+    <>
+      {slaTypeLabel(slaTypeOf(action), true)}
+      <span className="block text-xs text-mp-muted">
+        Target {formatMinutes(target)}
+        {took != null ? ` · took ${formatMinutes(took)}` : ""}
+      </span>
+      {outcome ? (
+        <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-navy">
+          <span className="size-1.5 rounded-full" style={{ background: outcome.color }} />
+          {outcome.label}
+        </span>
+      ) : null}
+      {action.delay_reason ? (
+        <span className="block text-xs text-mp-muted">Delay: {action.delay_reason}</span>
+      ) : null}
+    </>
+  );
 }
 
 function rejectReasonBanner(action: LifecycleAction) {

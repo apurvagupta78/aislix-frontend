@@ -33,11 +33,20 @@ export const Route = createFileRoute("/api/cron/report-schedules")({
         const expected = (secret as { value?: string } | null)?.value ?? "";
         if (!expected || !sameToken(token, expected)) return json({ error: "unauthorized" }, 401);
 
+        let sla: unknown = null;
+        try {
+          const { data, error } = await supabaseAdmin.rpc("process_sla_alerts" as never, { p_org_id: null } as never);
+          if (error) console.error("[report-schedules] SLA alerts failed", error.message);
+          sla = data ?? null;
+        } catch (err) {
+          console.error("[report-schedules] SLA alerts failed", err);
+        }
+
         const { serverAppOrigin } = await import("@/lib/app-origin");
         const { runDueReportSchedules } = await import("@/lib/reports/report-schedule-runner.server");
         try {
           const results = await runDueReportSchedules(supabaseAdmin as never, serverAppOrigin());
-          return json({ processed: results.length, results });
+          return json({ processed: results.length, results, sla });
         } catch (err) {
           console.error("[report-schedules] run failed", err);
           return json({ error: "run_failed" }, 500);

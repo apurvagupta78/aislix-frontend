@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Columns3, Rows3, Search, Wrench, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { MpBadge } from "@/components/design-system/MpBadge";
@@ -51,12 +51,12 @@ import {
   variancesByStore,
   VARIANCE_TYPES,
 } from "@/lib/corrective-action-insights";
-import {
-  fetchLifecycleActions,
-  runActionEscalations,
-  type LifecycleAction,
-} from "@/lib/corrective-action-lifecycle";
+import { runActionEscalations, type LifecycleAction } from "@/lib/corrective-action-lifecycle";
+import { fetchScopedActions } from "@/lib/ai-dashboard-actions";
+import { auditChecks, matchesCheck } from "@/lib/audit-checks";
+import { SLA_TYPES, matchesSlaFilters } from "@/lib/sla-insights";
 import { StoreVarianceMatrix } from "@/components/corrective-actions/StoreVarianceMatrix";
+import { AuditChecksGrid } from "@/components/sla/SlaCharts";
 import { useGlobalFilters } from "@/lib/global-filters";
 import { cn } from "@/lib/utils";
 
@@ -64,8 +64,13 @@ export type CorrectiveActionsSearch = {
   source?: string;
   stage?: string;
   priority?: string;
+  /** A variance type, or a check: extra_facings, pre_post. */
   variance?: string;
   store?: string;
+  /** SLA type. */
+  sla?: string;
+  /** SLA outcome: breached, pending, due_soon, met. */
+  outcome?: string;
 };
 
 const searchParam = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v : undefined);
@@ -77,6 +82,8 @@ export const Route = createFileRoute("/corrective-actions")({
     priority: searchParam(s.priority),
     variance: searchParam(s.variance),
     store: searchParam(s.store),
+    sla: searchParam(s.sla),
+    outcome: searchParam(s.outcome),
   }),
   head: () => ({
     meta: [
@@ -121,6 +128,24 @@ const EXTRA_STAGES = [
   { value: "active", label: "Open or in progress" },
   { value: "fixed", label: "Fixed (verified or closed)" },
   { value: "escalated", label: "Escalated" },
+];
+
+const CHECK_FILTERS = [
+  { value: "extra_facings", label: "Extra facings (not in plan)" },
+  { value: "pre_post", label: "Re-checked (pre vs post)" },
+];
+
+function matchesVariance(row: LifecycleAction, variance: string): boolean {
+  if (variance === "all") return true;
+  if (CHECK_FILTERS.some((c) => c.value === variance)) return matchesCheck(row, variance);
+  return actionVarianceType(row) === variance;
+}
+
+const OUTCOME_FILTERS = [
+  { value: "breached", label: "SLA breached" },
+  { value: "met", label: "SLA met" },
+  { value: "due_soon", label: "Due soon" },
+  { value: "pending", label: "Pending" },
 ];
 
 function matchesStage(row: LifecycleAction, stage: string): boolean {
@@ -182,16 +207,28 @@ function CorrectiveActionsMain() {
   const [type, setType] = useState("all");
   const [variance, setVariance] = useState(initial.variance ?? "all");
   const [storeFilter, setStoreFilter] = useState(initial.store ?? "all");
+  const [slaType, setSlaType] = useState(initial.sla ?? "all");
+  const [outcome, setOutcome] = useState(initial.outcome ?? "all");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"table" | "board">("table");
   const [visible, setVisible] = useState(PAGE_SIZE);
 
+  const scopeKey = {
+    storeId: globalFilters.storeId,
+    country: globalFilters.country,
+    city: globalFilters.city,
+    category: globalFilters.category,
+    teamMemberId: globalFilters.teamMemberId,
+    teamManagerId: globalFilters.teamManagerId,
+    skuId: globalFilters.skuId,
+    datePreset: globalFilters.datePreset,
+    dateFrom: globalFilters.dateFrom,
+    dateTo: globalFilters.dateTo,
+  };
   const actionsQuery = useQuery({
-    queryKey: ["lifecycle-actions", globalFilters.storeId],
-    queryFn: () =>
-      fetchLifecycleActions({
-        storeId: globalFilters.storeId !== "all" ? globalFilters.storeId : undefined,
-      }),
+    queryKey: ["lifecycle-actions", "scoped", scopeKey],
+    queryFn: () => fetchScopedActions(scopeKey, { source: "all" }),
+    placeholderData: keepPreviousData,
     retry: false,
   });
 
@@ -207,7 +244,7 @@ function CorrectiveActionsMain() {
     };
   }, [queryClient]);
 
-  const all = useMemo(() => actionsQuery.data ?? [], [actionsQuery.data]);
+  const all = useMemo(() => actionsQuery.data?.actions ?? [], [actionsQuery.data]);
   const owners = useMemo(
     () => [...new Set(all.map((row) => row.assigned_name).filter(Boolean))].sort(),
     [all],
@@ -223,6 +260,7 @@ function CorrectiveActionsMain() {
       if (owner !== "all" && row.assigned_name !== owner) return false;
       if (type !== "all" && (row.action_type ?? "other") !== type) return false;
       if (!matchesStage(row, stage)) return false;
+      if (!matchesSlaFilters(row, slaType, outcome)) return false;
       if (q) {
         const hay = [row.code, row.title, row.suggestion, row.sku, row.store_name, row.assigned_name]
           .filter(Boolean)
@@ -232,19 +270,32 @@ function CorrectiveActionsMain() {
       }
       return true;
     });
-  }, [all, source, priority, owner, type, stage, search]);
+  }, [all, source, priority, owner, type, stage, slaType, outcome, search]);
 
   const filtered = useMemo(
     () =>
       beforeStore.filter(
         (row) =>
-          (variance === "all" || actionVarianceType(row) === variance) &&
-          (storeFilter === "all" || (row.store_id ?? "none") === storeFilter),
+          matchesVariance(row, variance) && (storeFilter === "all" || (row.store_id ?? "none") === storeFilter),
       ),
     [beforeStore, variance, storeFilter],
   );
 
-  useEffect(() => setVisible(PAGE_SIZE), [source, priority, owner, type, variance, storeFilter, stage, search]);
+  useEffect(
+    () => setVisible(PAGE_SIZE),
+    [source, priority, owner, type, variance, storeFilter, stage, slaType, outcome, search],
+  );
+
+  const checks = useMemo(() => {
+    const storeScoped = storeFilter === "all" ? beforeStore : beforeStore.filter((r) => (r.store_id ?? "none") === storeFilter);
+    const verifications = (actionsQuery.data?.verifications ?? []).filter(
+      (v) => storeFilter === "all" || v.storeId === storeFilter,
+    );
+    return auditChecks(storeScoped, source === "digital" ? [] : verifications);
+  }, [beforeStore, storeFilter, source, actionsQuery.data]);
+
+  const scrollToList = () =>
+    document.getElementById("ca-all-actions")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const storeName = useMemo(
     () => (storeFilter === "all" ? null : all.find((r) => (r.store_id ?? "none") === storeFilter)?.store_name ?? "No store"),
@@ -408,9 +459,17 @@ function CorrectiveActionsMain() {
                 value={variance}
                 onChange={setVariance}
                 allLabel="All variances"
-                options={VARIANCE_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                options={[...VARIANCE_TYPES.map((t) => ({ value: t.value, label: t.label })), ...CHECK_FILTERS]}
                 className="w-48"
               />
+              <FilterSelect
+                value={slaType}
+                onChange={setSlaType}
+                allLabel="All SLA types"
+                options={SLA_TYPES.map((t) => ({ value: t.value, label: t.short }))}
+                className="w-44"
+              />
+              <FilterSelect value={outcome} onChange={setOutcome} allLabel="Any SLA result" options={OUTCOME_FILTERS} />
               {storeName ? (
                 <button
                   type="button"
@@ -434,6 +493,39 @@ function CorrectiveActionsMain() {
             ))}
           </div>
 
+          <section aria-label="Audit checks" className="space-y-2">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-navy">Audit checks</h2>
+                <p className="mt-0.5 text-[13px] text-mp-muted">
+                  Quantity, location and extra facings found by the audits, what has been fixed, and how the shelf
+                  improved after the fix.
+                </p>
+              </div>
+              <Link
+                to="/sla"
+                search={{ source: source === "all" ? undefined : source }}
+                className="text-sm font-semibold text-navy hover:underline"
+              >
+                SLA dashboard
+              </Link>
+            </div>
+            <AuditChecksGrid
+              checks={checks}
+              hideQuantity={source === "digital"}
+              onSelect={(key) => {
+                if (key === "implemented") {
+                  setStage("fixed");
+                  setVariance("all");
+                } else {
+                  setStage("all");
+                  setVariance(key === "quantity" ? "quantity" : key);
+                }
+                scrollToList();
+              }}
+            />
+          </section>
+
           <div className="grid gap-4 lg:grid-cols-2">
             <PipelineChart counts={pipeline} />
             <FlowTrendChart points={flow} />
@@ -451,7 +543,7 @@ function CorrectiveActionsMain() {
             onSelect={(storeId, kind) => {
               setStoreFilter(storeId ?? "all");
               setVariance(kind ?? "all");
-              document.getElementById("ca-all-actions")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              scrollToList();
             }}
           />
 

@@ -36,6 +36,7 @@ import { Route as DigitalAuditRouteImport } from './routes/digital-audit'
 import { Route as DisplayCheckRouteImport } from './routes/display-check'
 import { Route as DistributorsRouteImport } from './routes/distributors'
 import { Route as EscalationSettingsRouteImport } from './routes/escalation-settings'
+import { Route as SlaRouteImport } from './routes/sla'
 import { Route as ExceptionsRouteImport } from './routes/exceptions'
 import { Route as ExpiryControlRouteImport } from './routes/expiry-control'
 import { Route as FeaturesRouteImport } from './routes/features'
@@ -271,6 +272,11 @@ const DistributorsRoute = DistributorsRouteImport.update({
 const EscalationSettingsRoute = EscalationSettingsRouteImport.update({
   id: '/escalation-settings',
   path: '/escalation-settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SlaRoute = SlaRouteImport.update({
+  id: '/sla',
+  path: '/sla',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExceptionsRoute = ExceptionsRouteImport.update({
@@ -822,6 +828,7 @@ export interface FileRoutesByFullPath {
   '/display-check': typeof DisplayCheckRoute
   '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
+  '/sla': typeof SlaRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
   '/expiry-control': typeof ExpiryControlRouteWithChildren
   '/features': typeof FeaturesRoute
@@ -952,6 +959,7 @@ export interface FileRoutesByTo {
   '/display-check': typeof DisplayCheckRoute
   '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
+  '/sla': typeof SlaRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
   '/expiry-control': typeof ExpiryControlRouteWithChildren
   '/features': typeof FeaturesRoute
@@ -1083,6 +1091,7 @@ export interface FileRoutesById {
   '/display-check': typeof DisplayCheckRoute
   '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
+  '/sla': typeof SlaRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
   '/expiry-control': typeof ExpiryControlRouteWithChildren
   '/features': typeof FeaturesRoute
@@ -1215,6 +1224,7 @@ export interface FileRouteTypes {
     | '/display-check'
     | '/distributors'
     | '/escalation-settings'
+    | '/sla'
     | '/exceptions'
     | '/expiry-control'
     | '/features'
@@ -1345,6 +1355,7 @@ export interface FileRouteTypes {
     | '/display-check'
     | '/distributors'
     | '/escalation-settings'
+    | '/sla'
     | '/exceptions'
     | '/expiry-control'
     | '/features'
@@ -1475,6 +1486,7 @@ export interface FileRouteTypes {
     | '/display-check'
     | '/distributors'
     | '/escalation-settings'
+    | '/sla'
     | '/exceptions'
     | '/expiry-control'
     | '/features'
@@ -1606,6 +1618,7 @@ export interface RootRouteChildren {
   DisplayCheckRoute: typeof DisplayCheckRoute
   DistributorsRoute: typeof DistributorsRoute
   EscalationSettingsRoute: typeof EscalationSettingsRoute
+  SlaRoute: typeof SlaRoute
   ExceptionsRoute: typeof ExceptionsRouteWithChildren
   ExpiryControlRoute: typeof ExpiryControlRouteWithChildren
   FeaturesRoute: typeof FeaturesRoute
@@ -1867,6 +1880,13 @@ declare module '@tanstack/react-router' {
       path: '/escalation-settings'
       fullPath: '/escalation-settings'
       preLoaderRoute: typeof EscalationSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sla': {
+      id: '/sla'
+      path: '/sla'
+      fullPath: '/sla'
+      preLoaderRoute: typeof SlaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/exceptions': {
@@ -2768,6 +2788,7 @@ const rootRouteChildren: RootRouteChildren = {
   DisplayCheckRoute: DisplayCheckRoute,
   DistributorsRoute: DistributorsRoute,
   EscalationSettingsRoute: EscalationSettingsRoute,
+  SlaRoute: SlaRoute,
   ExceptionsRoute: ExceptionsRouteWithChildren,
   ExpiryControlRoute: ExpiryControlRouteWithChildren,
   FeaturesRoute: FeaturesRoute,

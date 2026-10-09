@@ -16,6 +16,15 @@ import type { LifecycleAction } from "@/lib/corrective-action-lifecycle";
 import { slaRemainingLabel } from "@/lib/corrective-action-lifecycle";
 import { CA_PINK_BAR, STAGE_COLORS } from "@/components/corrective-actions/CaCharts";
 import { hideModelNames } from "@/lib/ai-display-text";
+import {
+  actualMinutes,
+  formatMinutes,
+  isDueSoon,
+  slaOutcome,
+  slaTypeLabel,
+  slaTypeOf,
+  targetMinutes,
+} from "@/lib/sla-insights";
 import { cn } from "@/lib/utils";
 
 export function CaKpiCard({
@@ -114,10 +123,47 @@ function dueText(action: LifecycleAction): string {
   return slaRemainingLabel(action.due_at, action.status);
 }
 
+const OUTCOME_TEXT: Partial<Record<ReturnType<typeof slaOutcome>, string>> = {
+  met: "Met",
+  breached: "Breached",
+  late_open: "Breached",
+  awaiting: "Awaiting approval",
+};
+
+/** SLA type, target and (for confirmed fixes) the time it actually took. */
+export function SlaCell({ action }: { action: LifecycleAction }) {
+  const outcome = slaOutcome(action);
+  const actual = actualMinutes(action);
+  const soon = isDueSoon(action);
+  const text = soon ? "Due soon" : OUTCOME_TEXT[outcome];
+  const late = outcome === "breached" || outcome === "late_open";
+  return (
+    <div className="text-xs">
+      <p className="text-navy">{slaTypeLabel(slaTypeOf(action), true)}</p>
+      <p className="text-mp-muted">
+        Target {formatMinutes(targetMinutes(action))}
+        {actual != null ? ` · took ${formatMinutes(actual)}` : ""}
+      </p>
+      {text ? (
+        <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-navy">
+          <span
+            className="size-1.5 rounded-full"
+            style={{
+              background: late ? CA_PINK_BAR : outcome === "met" ? AISLIX_PALETTE.green : soon ? AISLIX_PALETTE.blue : AISLIX_PALETTE.border,
+            }}
+            aria-hidden
+          />
+          {text}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function CaTable({ rows }: { rows: LifecycleAction[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[60rem] text-sm">
+      <table className="w-full min-w-[68rem] text-sm">
         <thead className="text-xs text-mp-muted" style={{ background: AISLIX_PALETTE.page }}>
           <tr>
             <th className="px-4 py-2.5 text-left font-medium">Action</th>
@@ -126,6 +172,7 @@ export function CaTable({ rows }: { rows: LifecycleAction[] }) {
             <th className="px-3 py-2.5 text-left font-medium">Owner</th>
             <th className="px-3 py-2.5 text-left font-medium">Priority</th>
             <th className="px-3 py-2.5 text-left font-medium">Due</th>
+            <th className="px-3 py-2.5 text-left font-medium">SLA</th>
             <th className="px-3 py-2.5 text-left font-medium">Status</th>
           </tr>
         </thead>
@@ -161,6 +208,9 @@ export function CaTable({ rows }: { rows: LifecycleAction[] }) {
                     {dueText(row)}
                   </span>
                   {escalation ? <p className="mt-0.5 text-[11px] text-mp-muted">{escalation}</p> : null}
+                </td>
+                <td className="px-3 py-3">
+                  <SlaCell action={row} />
                 </td>
                 <td className="px-3 py-3">
                   <StagePill action={row} />

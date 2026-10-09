@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { SlaTargetsCard } from "@/components/sla/SlaTargetsCard";
 import { ErrorState, Skeleton } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import { isOrgManager } from "@/lib/assignments";
@@ -61,15 +62,20 @@ function EscalationSettingsPage() {
   });
 
   return (
-    <AppShell title="SLA & Escalation" description="Default response times by severity and who is notified when an SLA is missed.">
+    <AppShell title="SLA & Escalation" description="Target times per SLA type and store, and who is notified when an SLA is missed.">
       {managerQuery.data === false ? (
         <ErrorState title="Managers only" description="Only workspace managers can configure SLA and escalation." />
       ) : slaQuery.isPending ? (
         <Skeleton className="h-64" />
       ) : (
         <div className="space-y-8">
+          <SlaTargetsCard />
+
           <section className="rounded-2xl border border-border bg-card p-5">
-            <h2 className="text-sm font-semibold">SLA hours by severity</h2>
+            <h2 className="text-sm font-semibold">Escalation hours by severity</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Used to time the second escalation, and as the target for actions without an SLA type.
+            </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-4">
               {(["critical", "high", "medium", "low"] as const).map((key) => (
                 <div key={key}>

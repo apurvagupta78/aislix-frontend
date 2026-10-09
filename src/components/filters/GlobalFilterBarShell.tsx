@@ -95,16 +95,19 @@ export function WorkspaceFiltersToggle({
 }
 
 /** List pages: a single "Filters" button that expands to the full filter bar. */
-function CollapsedWorkspaceFilters({ className }: { className?: string }) {
+function CollapsedWorkspaceFilters({ className, extended }: { className?: string; extended?: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
     <div className={className}>
       <WorkspaceFiltersToggle open={open} onToggle={() => setOpen((v) => !v)} />
-      {open ? <WorkspaceFilterBar className="mt-3" /> : null}
+      {open ? <WorkspaceFilterBar className="mt-3" extended={extended} /> : null}
     </div>
   );
 }
+
+/** Pages whose data honours the team and SKU filters too. */
+const EXTENDED_FILTER_PATHS = new Set(["/corrective-actions", "/sla"]);
 
 export function GlobalFilterBarShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -114,5 +117,7 @@ export function GlobalFilterBarShell() {
 
   if (!pathShowsGlobalFilterBarInShell(pathname)) return null;
 
-  return <CollapsedWorkspaceFilters className="mb-6" />;
+  return (
+    <CollapsedWorkspaceFilters className="mb-6" extended={EXTENDED_FILTER_PATHS.has(pathname.replace(/\/+$/, ""))} />
+  );
 }

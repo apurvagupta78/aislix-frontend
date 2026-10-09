@@ -54,10 +54,11 @@ import {
 import { AISLIX } from "@/lib/aislix-theme";
 import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
 import { DashboardOverviewPanel } from "@/components/dashboard/DashboardOverviewPanel";
-import { AiActionsSlaSection, AiVarianceSection } from "@/components/dashboard/AiDashboardInsights";
+import { AiVarianceSection } from "@/components/dashboard/AiDashboardInsights";
+import { SlaActionsSummary } from "@/components/sla/SlaActionsSummary";
 import { AuditPhotoStrip } from "@/components/dashboard/AuditPhotoStrip";
 import { fetchAiVarianceSummary } from "@/lib/ai-variance-summary";
-import { fetchAiDashboardActions } from "@/lib/ai-dashboard-actions";
+import { fetchScopedActions } from "@/lib/ai-dashboard-actions";
 import { SegmentHomePanel } from "@/components/dashboard/SegmentHomePanel";
 import {
   fetchNotificationPreferences,
@@ -731,15 +732,30 @@ export function AiDigitalDashboardShell() {
     enabled: tab === "ai",
   });
   const aiActionsQuery = useQuery({
-    queryKey: ["dashboard-ai-actions-v1", insightFilters, demoPreview.previewDemo],
+    queryKey: ["dashboard-sla-actions-v1", "ai", insightFilters, demoPreview.previewDemo],
     queryFn: () =>
-      fetchAiDashboardActions(insightFilters, {
+      fetchScopedActions(insightFilters, {
+        source: "ai",
+        demo: true,
         previewDemo: demoPreview.previewDemo,
         userEmail: demoPreview.userEmail,
       }),
     staleTime: 60_000,
     placeholderData: keepPreviousData,
     enabled: tab === "ai",
+  });
+  const digitalActionsQuery = useQuery({
+    queryKey: ["dashboard-sla-actions-v1", "digital", insightFilters, demoPreview.previewDemo],
+    queryFn: () =>
+      fetchScopedActions(insightFilters, {
+        source: "digital",
+        demo: true,
+        previewDemo: demoPreview.previewDemo,
+        userEmail: demoPreview.userEmail,
+      }),
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+    enabled: tab === "digital",
   });
 
   const data = opsQuery.data;
@@ -1748,7 +1764,7 @@ export function AiDigitalDashboardShell() {
           ))}
         </div>
         <div className="mb-1.5 flex items-center gap-1.5">
-          {tab !== "ai" ? (
+          {tab === "overview" ? (
             <WorkspaceFiltersToggle
               open={filtersOpen}
               onToggle={() => setFiltersOpen((v) => !v)}
@@ -1772,9 +1788,14 @@ export function AiDigitalDashboardShell() {
         </div>
       </div>
 
-      {tab === "ai" ? <WorkspaceFilterBar extended /> : filtersOpen ? <WorkspaceFilterBar /> : null}
-      {tab === "ai" &&
-      (opsQuery.isPlaceholderData || varianceQuery.isPlaceholderData || aiActionsQuery.isPlaceholderData) ? (
+      {tab === "ai" || tab === "digital" ? (
+        <WorkspaceFilterBar extended />
+      ) : filtersOpen ? (
+        <WorkspaceFilterBar />
+      ) : null}
+      {(tab === "ai" &&
+        (opsQuery.isPlaceholderData || varianceQuery.isPlaceholderData || aiActionsQuery.isPlaceholderData)) ||
+      (tab === "digital" && (digitalQuery.isPlaceholderData || digitalActionsQuery.isPlaceholderData)) ? (
         <p className="-mt-2 flex items-center gap-2 text-xs text-[#667085]" aria-live="polite">
           <span className="size-1.5 animate-pulse rounded-full bg-[#7DB7D6]" aria-hidden />
           Updating for these filters…
@@ -1869,7 +1890,7 @@ export function AiDigitalDashboardShell() {
               {renderMetricGrid(renderAiCard)}
 
               <AiVarianceSection summary={varianceQuery.data} loading={varianceQuery.isPending} />
-              <AiActionsSlaSection actions={aiActionsQuery.data} loading={aiActionsQuery.isPending} />
+              <SlaActionsSummary source="ai" data={aiActionsQuery.data} loading={aiActionsQuery.isPending} />
 
               <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
                 <div className="p-4">
@@ -2046,6 +2067,12 @@ export function AiDigitalDashboardShell() {
               />
 
               {renderMetricGrid(renderDigitalCard)}
+
+              <SlaActionsSummary
+                source="digital"
+                data={digitalActionsQuery.data}
+                loading={digitalActionsQuery.isPending}
+              />
 
               <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
                 <div className="p-4">

@@ -72,6 +72,9 @@ function action(over: Partial<LifecycleAction>): LifecycleAction {
     escalated_at: null,
     submitted_at: null,
     store_name: "Store 1",
+    sla_type: null,
+    sla_minutes: null,
+    delay_reason: null,
     ...over,
   };
 }

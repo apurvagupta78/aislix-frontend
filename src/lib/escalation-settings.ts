@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId } from "@/lib/db/context";
 import type { FindingSeverity } from "@/lib/findings";
+import { SLA_TYPES, type SlaType } from "@/lib/sla-insights";
 
 export type SlaDefaults = {
   org_id: string;
@@ -67,6 +68,69 @@ export async function saveSlaDefaults(input: Omit<SlaDefaults, "org_id">): Promi
     updated_at: new Date().toISOString(),
   });
   if (error) dbError(error, "Could not save SLA defaults.");
+}
+
+/** Target per SLA type; `store_id` null is the workspace default, a store id overrides it. */
+export type SlaPolicy = { store_id: string | null; sla_type: SlaType; target_minutes: number };
+
+export async function fetchSlaPolicies(): Promise<SlaPolicy[]> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("org_sla_policies" as never)
+    .select("store_id, sla_type, target_minutes")
+    .eq("org_id", orgId);
+  if (error) {
+    if (error.code === "42P01") return [];
+    dbError(error, "Could not load SLA targets.");
+  }
+  return ((data ?? []) as unknown as SlaPolicy[]).map((p) => ({
+    store_id: p.store_id ?? null,
+    sla_type: p.sla_type,
+    target_minutes: Number(p.target_minutes),
+  }));
+}
+
+/** Workspace or store target, falling back to the built-in default. */
+export function effectiveSlaTarget(policies: SlaPolicy[], slaType: SlaType, storeId: string | null = null): number {
+  const store = storeId ? policies.find((p) => p.store_id === storeId && p.sla_type === slaType) : undefined;
+  const org = policies.find((p) => p.store_id == null && p.sla_type === slaType);
+  return (store ?? org)?.target_minutes ?? SLA_TYPES.find((t) => t.value === slaType)!.defaultMinutes;
+}
+
+export async function saveSlaPolicy(policy: SlaPolicy): Promise<void> {
+  const orgId = await requireOrgId();
+  const minutes = Math.round(policy.target_minutes);
+  if (!Number.isFinite(minutes) || minutes < 1 || minutes > 43200) {
+    throw new Error("SLA targets must be between 1 minute and 30 days.");
+  }
+  const { error } = await supabase.from("org_sla_policies" as never).upsert(
+    {
+      org_id: orgId,
+      store_id: policy.store_id,
+      sla_type: policy.sla_type,
+      target_minutes: minutes,
+      updated_at: new Date().toISOString(),
+    } as never,
+    { onConflict: "org_id,scope_key,sla_type" },
+  );
+  if (error) dbError(error, "Could not save the SLA target.");
+}
+
+export async function fetchOrgStores(): Promise<{ id: string; name: string }[]> {
+  const orgId = await requireOrgId();
+  const { data } = await supabase.from("stores").select("id, name").eq("org_id", orgId).order("name");
+  return (data ?? []).map((s) => ({ id: s.id as string, name: (s.name as string) || "Store" }));
+}
+
+export async function deleteSlaPolicy(storeId: string, slaType: SlaType): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase
+    .from("org_sla_policies" as never)
+    .delete()
+    .eq("org_id", orgId)
+    .eq("store_id", storeId)
+    .eq("sla_type", slaType);
+  if (error) dbError(error, "Could not remove the store SLA target.");
 }
 
 export async function fetchEscalationRules(): Promise<EscalationRule[]> {

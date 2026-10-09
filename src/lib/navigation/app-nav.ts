@@ -66,6 +66,7 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     items: [
       { kind: "leaf", label: "Findings", to: "/findings" },
       { kind: "leaf", label: "Corrective actions", to: "/corrective-actions" },
+      { kind: "leaf", label: "SLA dashboard", to: "/sla" },
       { kind: "leaf", label: "SLA & escalations", to: "/escalation-settings", managerOnly: true },
       { kind: "leaf", label: "Exception queue", to: "/exceptions", managerOnly: true },
     ],

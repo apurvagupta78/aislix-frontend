@@ -184,7 +184,7 @@ export async function fetchScopedControlTowerDataset(input: {
     })
     .map((f) => ({ ...f, store_name: (f.store_id && storeNames[f.store_id]) || f.store_name || "Store" }));
 
-  const actions = ((actionsRows ?? []) as LifecycleAction[]).filter((a) => {
+  const actions = ((actionsRows ?? []) as unknown as LifecycleAction[]).filter((a) => {
     if (a.store_id && !storeAllow.has(a.store_id)) return false;
     return true;
   });
