@@ -86,7 +86,7 @@ function ChartCard({
     </MpCard>
   );
   return onClick ? (
-    <Button variant="ghost" onClick={onClick} aria-label={`Open ${title.toLowerCase()}`} className="block h-auto w-full cursor-pointer whitespace-normal p-0 text-left hover:bg-transparent [&>*]:transition-colors hover:[&>*]:bg-canvas">
+    <Button variant="ghost" onClick={onClick} aria-label={`Open ${title.toLowerCase()}`} className="block h-full w-full cursor-pointer whitespace-normal p-0 text-left hover:bg-transparent [&>*]:h-full [&>*]:transition-colors hover:[&>*]:bg-canvas">
       {card}
     </Button>
   ) : card;
