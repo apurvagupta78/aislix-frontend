@@ -2,7 +2,13 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { CaKpiCard } from "@/components/corrective-actions/CaParts";
-import { ChartUnavailable } from "@/components/corrective-actions/CaCharts";
+import {
+  ChartUnavailable,
+  PipelineChart,
+  RecheckChart,
+  StoreChart,
+  TypeChart,
+} from "@/components/corrective-actions/CaCharts";
 import { StoreVarianceMatrix } from "@/components/corrective-actions/StoreVarianceMatrix";
 import { MpCard } from "@/components/design-system/MpCard";
 import {
@@ -12,15 +18,24 @@ import {
   OpenActionsList,
   SlaAlertsPanel,
   SlaGroupTable,
+  SlaStatusChart,
   SlaTypeTargetChart,
   type AuditCheckKey,
+  type SlaStatusKey,
 } from "@/components/sla/SlaCharts";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AislixAccent } from "@/lib/ai-audit/kpi-palette";
 import type { ScopedActions } from "@/lib/ai-dashboard-actions";
 import { auditChecks } from "@/lib/audit-checks";
-import { correctiveActionKpis, variancesByStore } from "@/lib/corrective-action-insights";
+import {
+  actionsByType,
+  correctiveActionKpis,
+  openActionsByStore,
+  pipelineCounts,
+  recheckResults,
+  variancesByStore,
+} from "@/lib/corrective-action-insights";
 import {
   SLA_TYPES,
   delayReasons,
@@ -105,6 +120,10 @@ export function CorrectiveActionsSummary({ data, loading, source }: SectionProps
   const kpis = useMemo(() => correctiveActionKpis(rows), [rows]);
   const checks = useMemo(() => auditChecks(rows, data?.verifications ?? []), [rows, data]);
   const byStoreVariance = useMemo(() => variancesByStore(rows), [rows]);
+  const pipeline = useMemo(() => pipelineCounts(rows), [rows]);
+  const types = useMemo(() => actionsByType(rows), [rows]);
+  const stores = useMemo(() => openActionsByStore(rows, 6), [rows]);
+  const rechecks = useMemo(() => recheckResults(rows, 6), [rows]);
 
   const openActions = (search: CorrectiveActionsSearch) =>
     void navigate({ to: "/corrective-actions", search: { source, ...search } });
@@ -170,7 +189,13 @@ export function CorrectiveActionsSummary({ data, loading, source }: SectionProps
               onSelect={(key) => openActions(CHECK_SEARCH[key])}
             />
           </div>
-          <OpenActionsList actions={rows} limit={6} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <PipelineChart counts={pipeline} />
+            <TypeChart rows={types} />
+            <StoreChart rows={stores} />
+            {source === "ai" ? <RecheckChart rows={rechecks} /> : <OpenActionsList actions={rows} limit={5} />}
+          </div>
+          {source === "ai" ? <OpenActionsList actions={rows} limit={6} /> : null}
           <StoreVarianceMatrix
             rows={byStoreVariance.rows}
             totals={byStoreVariance.totals}
@@ -205,6 +230,15 @@ function SlaTypeChips({ value, onChange }: { value: string; onChange: (v: string
     </div>
   );
 }
+
+const STATUS_SEARCH: Record<SlaStatusKey, CorrectiveActionsSearch> = {
+  met: { outcome: "met" },
+  breached: { outcome: "breached" },
+  late_open: { stage: "overdue" },
+  due_soon: { outcome: "due_soon" },
+  on_track: { stage: "active" },
+  awaiting: { stage: "submitted" },
+};
 
 /** No same accent side by side or stacked, in the 4- and 2-column layouts. */
 const SLA_ACCENTS: AislixAccent[] = ["green", "blue", "pink", "cyan", "purple", "pink", "grey", "green"];
@@ -324,6 +358,7 @@ export function SlaSummarySection({ data, loading, source }: SectionProps) {
       ) : (
         <>
           <KpiGrid cards={cards} accents={SLA_ACCENTS} />
+          <SlaStatusChart summary={sla} onSelect={(key) => openActions(STATUS_SEARCH[key])} />
           <div className="grid gap-4 lg:grid-cols-2">
             <SlaTypeTargetChart rows={byType} onSelect={(type) => setSlaType(type)} />
             <SlaAlertsPanel alerts={alerts} limit={5} />

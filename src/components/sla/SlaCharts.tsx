@@ -5,7 +5,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 
 import { ChartUnavailable, CA_PINK_BAR } from "@/components/corrective-actions/CaCharts";
 import { MpCard, MpCardHeader } from "@/components/design-system/MpCard";
-import { AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
+import { ACCENT_TINT, AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
 import type { AuditChecks } from "@/lib/audit-checks";
 import { hideModelNames } from "@/lib/ai-display-text";
 import { actionStage } from "@/lib/corrective-action-catalog";
@@ -16,6 +16,7 @@ import {
   type SlaAction,
   type SlaAlert,
   type SlaGroupRow,
+  type SlaSummary,
   type SlaTypeRow,
   type WeeklyCompliancePoint,
 } from "@/lib/sla-insights";
@@ -68,6 +69,90 @@ function SlaCard({
       <MpCardHeader title={title} description={question} action={action} />
       <div className="px-4 pb-4 pt-3 md:px-5">{children}</div>
     </MpCard>
+  );
+}
+
+/** The SLA-coloured progress bar used on cards and tables. */
+function MiniBar({ pct, color, className }: { pct: number; color: string; className?: string }) {
+  return (
+    <div className={cn("h-1.5 overflow-hidden rounded-full bg-[#F4F7F9]", className)}>
+      <div
+        className="h-full rounded-full transition-[width] duration-300"
+        style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: color }}
+      />
+    </div>
+  );
+}
+
+export type SlaStatusKey = "met" | "breached" | "late_open" | "due_soon" | "on_track" | "awaiting";
+
+const SLA_STATUS: Array<{ key: SlaStatusKey; label: string; color: string }> = [
+  { key: "met", label: "Fixed on time", color: AISLIX_PALETTE.green },
+  { key: "breached", label: "Fixed late", color: CA_PINK_BAR },
+  { key: "late_open", label: "Overdue, not fixed", color: "#ECBDCC" },
+  { key: "due_soon", label: "Due soon", color: AISLIX_PALETTE.cyan },
+  { key: "on_track", label: "Open, on track", color: AISLIX_PALETTE.blue },
+  { key: "awaiting", label: "Awaiting check", color: AISLIX_PALETTE.purple },
+];
+
+/** Where every action stands against its deadline. */
+export function SlaStatusChart({
+  summary,
+  onSelect,
+}: {
+  summary: Pick<SlaSummary, "met" | "breached" | "lateOpen" | "open" | "awaiting" | "dueSoon">;
+  onSelect?: (key: SlaStatusKey) => void;
+}) {
+  const counts: Record<SlaStatusKey, number> = {
+    met: summary.met,
+    breached: summary.breached,
+    late_open: summary.lateOpen,
+    due_soon: summary.dueSoon,
+    on_track: Math.max(0, summary.open - summary.dueSoon),
+    awaiting: summary.awaiting,
+  };
+  const total = SLA_STATUS.reduce((s, x) => s + counts[x.key], 0);
+  return (
+    <SlaCard title="SLA status" question="Where does every action stand against its deadline?">
+      {total === 0 ? (
+        <ChartUnavailable reason="No actions with a deadline match these filters." />
+      ) : (
+        <div>
+          <div className="flex h-9 w-full overflow-hidden rounded-lg border" style={{ borderColor: AISLIX_PALETTE.border }}>
+            {SLA_STATUS.map((s) =>
+              counts[s.key] > 0 ? (
+                <div
+                  key={s.key}
+                  title={`${s.label}: ${counts[s.key]} action${counts[s.key] === 1 ? "" : "s"}`}
+                  className="h-full transition-[width] duration-300"
+                  style={{ width: `${(counts[s.key] / total) * 100}%`, background: s.color }}
+                />
+              ) : null,
+            )}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {SLA_STATUS.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => onSelect?.(s.key)}
+                className={cn(
+                  "flex items-center justify-between rounded-lg border px-3 py-2 text-left",
+                  onSelect ? CLICKABLE_ROW : "",
+                )}
+                style={{ borderColor: AISLIX_PALETTE.border }}
+              >
+                <span className="inline-flex items-center gap-2 text-xs text-mp-muted">
+                  <span className="size-2.5 rounded-full" style={{ background: s.color }} />
+                  {s.label}
+                </span>
+                <span className="text-sm font-semibold tabular-nums text-navy">{counts[s.key]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </SlaCard>
   );
 }
 
@@ -130,7 +215,7 @@ export function SlaTypeTargetChart({
                             className="h-2 rounded-full transition-[width] duration-300"
                             style={{
                               width: `${(r.medianActualMin / max) * 100}%`,
-                              background: late ? CA_PINK_BAR : AISLIX_PALETTE.purple,
+                              background: late ? CA_PINK_BAR : AISLIX_PALETTE.green,
                             }}
                           />
                         ) : null}
@@ -287,7 +372,14 @@ export function SlaGroupTable({
                     {r.label}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <CompliancePill pct={r.compliancePct} />
+                    <span className="inline-flex items-center justify-end gap-2">
+                      <MiniBar
+                        pct={r.compliancePct ?? 0}
+                        color={complianceDot(r.compliancePct)}
+                        className="hidden w-14 sm:block"
+                      />
+                      <CompliancePill pct={r.compliancePct} />
+                    </span>
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-navy">{r.breaches}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-navy">{r.pending}</td>
@@ -356,8 +448,8 @@ export function SlaAlertsPanel({ alerts, limit = 8 }: { alerts: SlaAlert[]; limi
                 <span
                   className="shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold text-navy"
                   style={{
-                    borderColor: a.kind === "missed" ? CA_PINK_BAR : AISLIX_PALETTE.blue,
-                    background: AISLIX_PALETTE.card,
+                    borderColor: a.kind === "missed" ? CA_PINK_BAR : AISLIX_PALETTE.cyan,
+                    background: a.kind === "missed" ? ACCENT_TINT.pink : ACCENT_TINT.cyan,
                   }}
                 >
                   {leftText(a.minutesLeft)}
@@ -487,7 +579,16 @@ export function AuditChecksGrid({
 }) {
   const { quantity, location, extraFacings, implemented, prePost } = checks;
   const onTimeJudged = implemented.onTime + implemented.late;
-  const cards: Array<{ key: AuditCheckKey; title: string; value: string; context: string; dot: string }> = [
+  const share = (part: number, whole: number) => (whole ? Math.round((part / whole) * 100) : null);
+  const cards: Array<{
+    key: AuditCheckKey;
+    title: string;
+    value: string;
+    context: string;
+    dot: string;
+    /** Progress shown under the value; null = nothing to measure yet. */
+    bar: { pct: number | null; label: string };
+  }> = [
     {
       key: "quantity",
       title: "AI vs actual quantity",
@@ -496,6 +597,7 @@ export function AuditChecksGrid({
         ? `verified counts differ from AI${quantity.avgGap != null ? ` · avg gap ${quantity.avgGap}` : ""}`
         : "No human-verified counts yet",
       dot: AISLIX_PALETTE.purple,
+      bar: { pct: share(quantity.checked - quantity.differ, quantity.checked), label: "match" },
     },
     {
       key: "location",
@@ -503,6 +605,7 @@ export function AuditChecksGrid({
       value: String(location.total),
       context: location.total ? `${location.open} not fixed yet` : "No location issues",
       dot: AISLIX_PALETTE.blue,
+      bar: { pct: share(location.total - location.open, location.total), label: "fixed" },
     },
     {
       key: "extra_facings",
@@ -510,6 +613,7 @@ export function AuditChecksGrid({
       value: String(extraFacings.total),
       context: extraFacings.total ? `${extraFacings.open} not fixed yet` : "Nothing outside the plan",
       dot: CA_PINK_BAR,
+      bar: { pct: share(extraFacings.total - extraFacings.open, extraFacings.total), label: "fixed" },
     },
     {
       key: "implemented",
@@ -519,6 +623,7 @@ export function AuditChecksGrid({
         ? `${Math.round((implemented.onTime / onTimeJudged) * 100)}% on time · ${implemented.pending} pending`
         : `${implemented.pending} pending`,
       dot: AISLIX_PALETTE.green,
+      bar: { pct: share(implemented.done, implemented.total), label: "done" },
     },
     {
       key: "pre_post",
@@ -531,6 +636,7 @@ export function AuditChecksGrid({
         ? `${prePost.improvedPct}% of ${prePost.compared} re-checked shelves improved`
         : "No re-check audits yet",
       dot: AISLIX_PALETTE.cyan,
+      bar: { pct: prePost.improvedPct, label: "improved" },
     },
   ];
   const shown = hideQuantity ? cards.filter((c) => c.key !== "quantity") : cards;
@@ -549,6 +655,12 @@ export function AuditChecksGrid({
           </p>
           <p className="mt-2 font-display text-2xl font-semibold tabular-nums leading-none text-navy">{c.value}</p>
           <p className="mt-1.5 text-xs text-mp-muted">{c.context}</p>
+          <div className="mt-3 flex items-center gap-2">
+            <MiniBar pct={c.bar.pct ?? 0} color={c.dot} className="flex-1" />
+            <span className="shrink-0 text-[11px] tabular-nums text-mp-muted">
+              {c.bar.pct == null ? "N/A" : `${c.bar.pct}% ${c.bar.label}`}
+            </span>
+          </div>
         </button>
       ))}
     </div>
