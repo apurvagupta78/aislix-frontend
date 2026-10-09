@@ -85,15 +85,16 @@ function KpiGrid({ cards, accents }: { cards: KpiCardDef[]; accents: AislixAccen
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map(({ go, ...card }, i) => (
-        <button
+        <Button
           key={card.label}
           type="button"
           onClick={go}
-          className="block rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy [&>*]:transition-colors hover:[&>*]:bg-[#F4F7F9]"
+          variant="ghost"
+          className="block h-auto w-full cursor-pointer whitespace-normal rounded-xl p-0 text-left hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy [&>*]:transition-colors hover:[&>*]:bg-canvas"
           aria-label={`${card.label}: ${card.value}`}
         >
-          <CaKpiCard {...card} accent={accents[i] ?? "grey"} />
-        </button>
+          <CaKpiCard {...card} accent={accents[i] ?? "grey"} actionable />
+        </Button>
       ))}
     </div>
   );
@@ -190,8 +191,8 @@ export function CorrectiveActionsSummary({ data, loading, source }: SectionProps
             />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <PipelineChart counts={pipeline} />
-            <TypeChart rows={types} />
+            <PipelineChart counts={pipeline} onClick={() => openActions({})} />
+            <TypeChart rows={types} onClick={() => openActions({})} />
             <StoreChart rows={stores} />
             {source === "ai" ? <RecheckChart rows={rechecks} /> : null}
           </div>

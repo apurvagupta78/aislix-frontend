@@ -15,6 +15,10 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — Aislix" },
+      { property: "og:title", content: "Dashboard — Aislix" },
+      { property: "og:description", content: "Store, city and country audit intelligence, corrective actions and SLA performance." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content: "AI Audits and Digital Audits operational dashboard with deterministic KPIs.",

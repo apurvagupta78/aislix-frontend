@@ -43,7 +43,8 @@ import type { VarianceDimension, VarianceRecord, VarianceSummary } from "@/lib/a
 import {
   ALL_VALUES,
   LENS_TOPIC,
-  LENSES,
+  SCOPE_LENSES,
+  TOPIC_LENSES,
   lensDef,
   type LensGroup,
   type LensId,
@@ -571,6 +572,8 @@ function lensSortValue(g: LensGroup, key: LensSortKey): string | number {
 /** Facings share colour per view: product views purple, place views blue, value views cyan. */
 const LENS_SHARE_COLOR: Record<LensId, string> = {
   store: AISLIX_PALETTE.blue,
+  city: AISLIX_PALETTE.blue,
+  country: AISLIX_PALETTE.blue,
   category: AISLIX_PALETTE.blue,
   location: AISLIX_PALETTE.blue,
   price: AISLIX_PALETTE.cyan,
@@ -585,6 +588,9 @@ const LENS_SHARE_COLOR: Record<LensId, string> = {
  * product share, promotion, facings) and optionally one value; every metric below follows it.
  */
 export function AiLensPanel({
+  scope,
+  onScopeChange,
+  scopeGroups,
   selection,
   onChange,
   groups,
@@ -592,12 +598,34 @@ export function AiLensPanel({
   auditLimit,
   loading,
 }: {
+  scope: LensSelection;
+  onScopeChange: (next: LensSelection) => void;
+  scopeGroups: LensGroup[];
   selection: LensSelection;
   onChange: (next: LensSelection) => void;
   groups: LensGroup[];
   audits: number;
   auditLimit: number;
   loading: boolean;
+}) {
+  return (
+    <section aria-label="View metrics by">
+      <MpCard>
+        <MpCardHeader title="View metrics by" description={`Latest ${auditLimit} AI audits in your filters${audits ? ` · ${audits} audits` : ""}.`} />
+        <LensViewPanel selection={scope} onChange={onScopeChange} groups={scopeGroups} loading={loading} geographic />
+        <LensViewPanel selection={selection} onChange={onChange} groups={groups} loading={loading} />
+      </MpCard>
+    </section>
+  );
+}
+
+function LensViewPanel({ selection, onChange, groups, loading, geographic = false
+}: {
+  selection: LensSelection;
+  onChange: (next: LensSelection) => void;
+  groups: LensGroup[];
+  loading: boolean;
+  geographic?: boolean;
 }) {
   const [sort, setSort] = useState<{ key: LensSortKey; dir: "asc" | "desc" }>({ key: "issues", dir: "desc" });
   const [visible, setVisible] = useState(PAGE);
@@ -645,11 +673,10 @@ export function AiLensPanel({
   };
 
   return (
-    <section aria-label="View metrics by">
-      <MpCard>
+    <section aria-label={geographic ? "Geographic scope" : "Topic view"}>
+      <div>
         <MpCardHeader
-          title="View metrics by"
-          description={`Every metric, variance and action below follows this choice — from the latest ${auditLimit} AI audits in your filters${audits ? ` (${audits} audit${audits === 1 ? "" : "s"})` : ""}.`}
+          title={geographic ? "Scope" : "View"}
           action={
             selection.value !== ALL_VALUES ? (
               <Button type="button" variant="outline" size="sm" onClick={() => onChange({ lens: selection.lens, value: ALL_VALUES })}>
@@ -666,11 +693,11 @@ export function AiLensPanel({
               setVisible(PAGE);
               setSort({ key: "issues", dir: "desc" });
             }}
-            options={LENSES.map((l) => ({ id: l.id, label: l.label }))}
-            label="View metrics by"
+            options={(geographic ? SCOPE_LENSES : TOPIC_LENSES).map((l) => ({ id: l.id, label: l.label }))}
+            label={geographic ? "Geographic scope" : "Topic view"}
           />
           <select
-            className="h-9 min-w-[200px] max-w-full rounded-lg border border-line bg-white px-2.5 text-sm text-navy"
+            className="h-9 min-w-[200px] max-w-full rounded-lg border border-line bg-card px-2.5 text-sm text-navy"
             value={selection.value}
             onChange={(e) => onChange({ lens: selection.lens, value: e.target.value })}
             aria-label={`${def.label} value`}
@@ -708,7 +735,7 @@ export function AiLensPanel({
                 <h3 className="text-sm font-semibold text-navy">Issues by {def.label.replace(" share", "").toLowerCase()}</h3>
                 <p className="mb-3 mt-0.5 text-xs text-mp-muted">{def.question}</p>
                 {issueBars.length ? (
-                  <MpRankBars data={issueBars} />
+                  <MpRankBars data={issueBars} onSelect={(index) => { const group = groups.filter((g) => g.issues > 0).sort((a, b) => b.issues - a.issues)[index]; if (group) pick(group.value); }} />
                 ) : (
                   <ChartUnavailable reason={`No ${issueWord} found in these audits.`} />
                 )}
@@ -719,7 +746,7 @@ export function AiLensPanel({
                 </h3>
                 <p className="mb-3 mt-0.5 text-xs text-mp-muted">How much of the shelf each one holds.</p>
                 {shareBars.length ? (
-                  <MpRankBars data={shareBars} max={Math.max(...shareBars.map((b) => b.value), 1)} />
+                  <MpRankBars data={shareBars} max={Math.max(...shareBars.map((b) => b.value), 1)} onSelect={(index) => { const group = groups.filter((g) => (g.sharePct ?? 0) > 0).sort((a, b) => (b.sharePct ?? 0) - (a.sharePct ?? 0))[index]; if (group) pick(group.value); }} />
                 ) : (
                   <ChartUnavailable reason="Data unavailable — no facings read for this view." />
                 )}
@@ -807,7 +834,7 @@ export function AiLensPanel({
             </div>
           </>
         )}
-      </MpCard>
+      </div>
     </section>
   );
 }

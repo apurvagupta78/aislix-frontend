@@ -10,7 +10,7 @@ vi.mock("@/lib/ai-audit/astra-response", async (importOriginal) => ({
 
 import type { AstraPlanogramProduct } from "@/lib/ai-audit/astra-response";
 import type { LifecycleAction } from "@/lib/corrective-action-lifecycle";
-import { teamUserIds } from "@/lib/ai-dashboard-scope";
+import { matchesGeographyBucket, teamUserIds } from "@/lib/ai-dashboard-scope";
 import { filterAiActions } from "@/lib/ai-dashboard-actions";
 import { slaCompliance } from "@/lib/corrective-action-insights";
 import { selectVariances, summariseVariances, type VarianceScanInput } from "@/lib/ai-variance-summary";
@@ -26,6 +26,21 @@ describe("teamUserIds", () => {
     ];
     expect([...teamUserIds(members, "lead")].sort()).toEqual(["auditor", "lead", "sup"]);
     expect([...teamUserIds(members, "sup")].sort()).toEqual(["auditor", "sup"]);
+  });
+});
+
+describe("geographic buckets", () => {
+  it("No city includes null and blank city, not a named city", () => {
+    expect([null, "", "  ", "Delhi"].filter((city) => matchesGeographyBucket(city, "No city", "No city"))).toEqual([null, "", "  "]);
+  });
+  it("No country includes null and blank country, not a named country", () => {
+    expect([null, "", "  ", "India"].filter((country) => matchesGeographyBucket(country, "No country", "No country"))).toEqual([null, "", "  "]);
+  });
+  it("real geography retains equality matching", () => {
+    expect(matchesGeographyBucket("Delhi", "Delhi", "No city")).toBe(true);
+    expect(matchesGeographyBucket("Mumbai", "Delhi", "No city")).toBe(false);
+    expect(matchesGeographyBucket("India", "India", "No country")).toBe(true);
+    expect(matchesGeographyBucket("UK", "India", "No country")).toBe(false);
   });
 });
 
@@ -183,6 +198,7 @@ function scan(id: string, store: string, products: AstraPlanogramProduct[]): Var
     date: "2026-10-08T10:00:00Z",
     store,
     city: "Delhi",
+    country: "India",
     team: "Asha's team",
     category: null,
     metrics: {
@@ -251,6 +267,20 @@ describe("View by selection", () => {
     scan("s2", "Store B", [planned({})]),
   ];
   const summary = summariseVariances(scans);
+
+  it("View by Category inside one city returns only that city's rows", () => {
+    const twoCities = summariseVariances([
+      { ...scan("delhi", "Delhi store", [planned({ actual_facings: 4, facing_variance: -2 })]), city: "Delhi" },
+      { ...scan("mumbai", "Mumbai store", [planned({ actual_facings: 3, facing_variance: -3 })]), city: "Mumbai" },
+    ]);
+    const view = selectVariances(twoCities, [], { lens: "category", value: "all" }, { lens: "city", value: "Delhi" });
+    expect(view.audits).toBe(1);
+    expect(view.facts.map((f) => f.scanId)).toEqual(["delhi"]);
+    expect(view.records.map((r) => r.scanId)).toEqual(["delhi"]);
+    expect(lensGroups("category", view.facts, view.records, [])).toEqual([
+      expect.objectContaining({ value: "Snacks", audits: 1, facings: 4, issues: 1, sharePct: 100 }),
+    ]);
+  });
 
   it("View by Location shows location issues only, in every store", () => {
     const view = selectVariances(summary, [], { lens: "location", value: "all" });

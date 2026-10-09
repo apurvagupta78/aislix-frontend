@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { ChevronRight, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Bar,
   BarChart,
@@ -64,18 +66,30 @@ function ChartCard({
   question,
   children,
   className,
+  onClick,
 }: {
   title: string;
   question: string;
   children: ReactNode;
   className?: string;
+  onClick?: () => void;
 }) {
-  return (
+  const card = (
     <MpCard className={className}>
-      <MpCardHeader title={title} description={question} />
+      <MpCardHeader title={title} description={question} action={onClick ? (
+        <span className="flex items-center gap-1.5">
+          <Info className="size-3.5 text-mp-muted" aria-label={question} />
+          <ChevronRight className="size-4 text-navy" aria-hidden />
+        </span>
+      ) : undefined} />
       <div className="px-4 pb-4 pt-3 md:px-5">{children}</div>
     </MpCard>
   );
+  return onClick ? (
+    <Button variant="ghost" onClick={onClick} aria-label={`Open ${title.toLowerCase()}`} className="block h-full w-full cursor-pointer whitespace-normal p-0 text-left hover:bg-transparent [&>*]:h-full [&>*]:transition-colors hover:[&>*]:bg-canvas">
+      {card}
+    </Button>
+  ) : card;
 }
 
 export function ChartUnavailable({ reason }: { reason: string }) {
@@ -90,11 +104,11 @@ export function ChartUnavailable({ reason }: { reason: string }) {
   );
 }
 
-export function PipelineChart({ counts }: { counts: Record<PipelineSegment, number> }) {
+export function PipelineChart({ counts, onClick }: { counts: Record<PipelineSegment, number>; onClick?: () => void }) {
   const order: PipelineSegment[] = ["overdue", "open", "in_progress", "submitted", "verified", "closed"];
   const total = order.reduce((sum, key) => sum + counts[key], 0);
   return (
-    <ChartCard title="Action pipeline" question="Where is every action right now?">
+    <ChartCard title="Action pipeline" question="Where is every action right now?" onClick={onClick}>
       {total === 0 ? (
         <ChartUnavailable reason="No corrective actions match these filters." />
       ) : (
@@ -157,9 +171,9 @@ export function FlowTrendChart({ points }: { points: WeeklyFlowPoint[] }) {
   );
 }
 
-export function TypeChart({ rows }: { rows: TypeCount[] }) {
+export function TypeChart({ rows, onClick }: { rows: TypeCount[]; onClick?: () => void }) {
   return (
-    <ChartCard title="Actions by type" question="What kind of problems keep coming up?">
+    <ChartCard title="Actions by type" question="What kind of problems keep coming up?" onClick={onClick}>
       {!rows.length ? (
         <ChartUnavailable reason="No actions match these filters." />
       ) : (
