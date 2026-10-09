@@ -334,7 +334,7 @@ function RowEditor({
             disabled={saving || invalid || !changes.length}
             onClick={() => onSave(changes)}
           >
-            {saving ? <Loader2 className="size-3.5 animate-spin" /> : `Save ${changes.length || ""} verification${changes.length === 1 ? "" : "s"}`}
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : changes.length ? `Save ${changes.length} verification${changes.length === 1 ? "" : "s"}` : "Save verifications"}
           </Button>
         </div>
       ) : null}
