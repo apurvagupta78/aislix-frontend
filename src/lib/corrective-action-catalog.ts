@@ -35,13 +35,36 @@ export function actionTypeLabel(value: string | null | undefined): string {
 }
 
 /** What needs correcting. Mirrors public.ca_issue_category in the database. */
-export type IssueCategory = "location" | "quantity" | "facing" | "branding" | "other";
+export type IssueCategory =
+  | "location"
+  | "facing"
+  | "branding"
+  | "planogram"
+  | "hygiene"
+  | "quality"
+  | "damaged"
+  | "expired"
+  | "rotten"
+  | "less_quantity"
+  | "more_quantity"
+  | "remove_item"
+  | "refill_item"
+  | "other";
 
 export const ISSUE_CATEGORIES: { value: IssueCategory; label: string }[] = [
   { value: "location", label: "Location issue" },
-  { value: "quantity", label: "Quantity issue" },
   { value: "facing", label: "Product facing issue" },
   { value: "branding", label: "Branding issue" },
+  { value: "planogram", label: "Planogram compliance" },
+  { value: "hygiene", label: "Hygiene" },
+  { value: "quality", label: "Quality" },
+  { value: "damaged", label: "Damaged" },
+  { value: "expired", label: "Expired" },
+  { value: "rotten", label: "Rotten" },
+  { value: "less_quantity", label: "Less quantity" },
+  { value: "more_quantity", label: "More quantity" },
+  { value: "remove_item", label: "Remove the item" },
+  { value: "refill_item", label: "Refill the item" },
   { value: "other", label: "Other" },
 ];
 
@@ -55,21 +78,34 @@ export function issueCategoryOf(a: {
   issue_type?: string | null;
   action_type?: string | null;
   title?: string | null;
+  suggestion?: string | null;
 }): IssueCategory {
   if (ISSUE_CATEGORIES.some((c) => c.value === a.issue_category)) return a.issue_category as IssueCategory;
   const t = (a.issue_type ?? "").toLowerCase();
-  const h = (a.title ?? "").toLowerCase();
+  const h = `${a.title ?? ""} ${a.suggestion ?? ""}`.toLowerCase();
   const act = (a.action_type ?? "").toLowerCase();
   if (/facing/.test(t)) return "facing";
-  if (/placement|location|wrong_category|unexpected|misplac|planogram_violation|wrong_aisle/.test(t)) return "location";
-  if (/qty|quantity|shortage|excess|missing|out_of_stock|oos|low_stock|empty|gap/.test(t)) return "quantity";
+  if (/rotten|spoil|mould|mold/.test(t)) return "rotten";
+  if (/expir/.test(t)) return "expired";
+  if (/damage/.test(t)) return "damaged";
+  if (/hygien|dirty|unclean|spill/.test(t)) return "hygiene";
+  if (/quality/.test(t)) return "quality";
+  if (/placement|location|wrong_category|unexpected|misplac|wrong_aisle/.test(t)) return "location";
+  if (/planogram/.test(t)) return "planogram";
+  if (/excess|overstock|surplus/.test(t)) return "more_quantity";
+  if (/qty|quantity|shortage|missing|out_of_stock|oos|low_stock|empty|gap|refill|replenish/.test(t)) {
+    return /extra|excess|overstock|too many/.test(h) ? "more_quantity" : "less_quantity";
+  }
   if (/brand|display|wrong_product|variant|promo/.test(t)) return "branding";
-  if (/damage|expir|pric/.test(t)) return "other";
+  if (/pric/.test(t)) return "other";
   if (/facing/.test(h)) return "facing";
   if (/location|placement|aisle|misplaced/.test(h)) return "location";
-  if (act === "availability" || act === "inventory") return "quantity";
+  if (/expir/.test(h)) return "expired";
+  if (/damage/.test(h)) return "damaged";
+  if (act === "hygiene") return "hygiene";
+  if (act === "availability" || act === "inventory") return "less_quantity";
   if (act === "display") return "branding";
-  if (act === "planogram") return "location";
+  if (act === "planogram") return "planogram";
   return "other";
 }
 

@@ -577,3 +577,59 @@
 .group:hover .group-hover\:text-destructive {
   color: var(--aislix-primary);
 }
+
+/*
+ * AI audit results: soft pastel cards and KPI tiles. Siblings cycle purple → blue → pink →
+ * green → cyan so neighbours never share a colour. Cards that hold KPI tiles stay white so the
+ * tiles carry the colour.
+ */
+.ai-tinted {
+  --ai-purple: #f1edfa;
+  --ai-purple-edge: #d9cff0;
+  --ai-blue: #eaf4f9;
+  --ai-blue-edge: #c9e1ee;
+  --ai-pink: #ffeaf1;
+  --ai-pink-edge: #f6cfdc;
+  --ai-green: #e8f8ef;
+  --ai-green-edge: #bdebd2;
+  --ai-cyan: #e9f5fb;
+  --ai-cyan-edge: #c6e4f3;
+}
+.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 1) {
+  --ai-fill: var(--ai-purple);
+  --ai-edge: var(--ai-purple-edge);
+}
+.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 2) {
+  --ai-fill: var(--ai-blue);
+  --ai-edge: var(--ai-blue-edge);
+}
+.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 3) {
+  --ai-fill: var(--ai-pink);
+  --ai-edge: var(--ai-pink-edge);
+}
+.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 4) {
+  --ai-fill: var(--ai-green);
+  --ai-edge: var(--ai-green-edge);
+}
+.ai-tinted :is([data-ai-card], [data-ai-tile], [data-mp-tile]):nth-child(5n + 5) {
+  --ai-fill: var(--ai-cyan);
+  --ai-edge: var(--ai-cyan-edge);
+}
+.ai-tinted [data-ai-card] {
+  background: var(--ai-fill);
+  border-color: var(--ai-edge);
+}
+.ai-tinted [data-ai-card] > [data-ai-card-header] {
+  border-color: var(--ai-edge);
+}
+.ai-tinted [data-ai-card]:has([data-ai-tile], [data-mp-tile]) {
+  background: #ffffff;
+  border-color: #d9e2e8;
+}
+.ai-tinted [data-ai-card]:has([data-ai-tile], [data-mp-tile]) > [data-ai-card-header] {
+  border-color: #d9e2e8;
+}
+.ai-tinted :is([data-ai-tile], [data-mp-tile]) {
+  background: var(--ai-fill) !important;
+  border-color: var(--ai-edge) !important;
+}

@@ -30,19 +30,14 @@ export function AiAuditResultsPage({ data, imageUrl }: Props) {
 
   const luna = <LunaAnalysisCard analysis={lunaAnalysisFromMetrics(data.metrics)} className="mb-4" />;
 
-  if (ctx.viewKind === "planogram") {
-    return (
-      <>
-        {luna}
-        <AiAuditPlanogramView data={data} ctx={ctx} imageUrl={imageUrl} />
-      </>
-    );
-  }
-
   return (
-    <>
+    <div className="ai-tinted">
       {luna}
-      <AiAuditShelfOnlyView data={data} ctx={ctx} imageUrl={imageUrl} />
-    </>
+      {ctx.viewKind === "planogram" ? (
+        <AiAuditPlanogramView data={data} ctx={ctx} imageUrl={imageUrl} />
+      ) : (
+        <AiAuditShelfOnlyView data={data} ctx={ctx} imageUrl={imageUrl} />
+      )}
+    </div>
   );
 }

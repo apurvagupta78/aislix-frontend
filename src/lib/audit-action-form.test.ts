@@ -54,10 +54,22 @@ describe("issueCategoryOf", () => {
 
   it("maps older AI actions the same way as the database", () => {
     expect(issueCategoryOf({ issue_type: "unexpected", title: "23 facing(s) belong elsewhere" })).toBe("location");
-    expect(issueCategoryOf({ issue_type: "qty_mismatch" })).toBe("quantity");
-    expect(issueCategoryOf({ issue_type: "inventory_shortage" })).toBe("quantity");
+    expect(issueCategoryOf({ issue_type: "qty_mismatch", suggestion: "Replenish Lays — 2 unit(s) required." })).toBe(
+      "less_quantity",
+    );
+    expect(
+      issueCategoryOf({ issue_type: "qty_mismatch", suggestion: "Remove 6 extra facing(s) of Lays Tomato Tango." }),
+    ).toBe("more_quantity");
+    expect(issueCategoryOf({ issue_type: "inventory_shortage" })).toBe("less_quantity");
+    expect(issueCategoryOf({ issue_type: "inventory_excess" })).toBe("more_quantity");
+    expect(issueCategoryOf({ issue_type: "missing", action_type: "availability" })).toBe("less_quantity");
     expect(issueCategoryOf({ issue_type: "wrong_product" })).toBe("branding");
-    expect(issueCategoryOf({ issue_type: "damaged_product", action_type: "inventory" })).toBe("other");
+    expect(issueCategoryOf({ issue_type: "damaged_product", action_type: "inventory" })).toBe("damaged");
+    expect(issueCategoryOf({ issue_type: "planogram_violation" })).toBe("planogram");
     expect(issueCategoryOf({ issue_type: "facings_short" })).toBe("facing");
+  });
+
+  it("re-classifies the retired Quantity issue", () => {
+    expect(issueCategoryOf({ issue_category: "quantity", issue_type: "manual_quantity" })).toBe("less_quantity");
   });
 });

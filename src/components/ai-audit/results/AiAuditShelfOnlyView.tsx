@@ -12,7 +12,6 @@ import {
 } from "@/components/ai-audit/results/AiAuditMetricTable";
 import {
   AiAuditCard,
-  AiEvidencePanel,
   AiExecutiveSummary,
   AiMetricStat,
   AiResultsHero,
@@ -173,7 +172,7 @@ function brandRowsFromProducts(
     }));
 }
 
-export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
+export function AiAuditShelfOnlyView({ data, ctx }: Props) {
   if (ctx.analysis.mode !== "shelf_only") return null;
   const analysis = ctx.analysis;
   const s = analysis.summary;
@@ -862,7 +861,6 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         </AiAuditCard>
       ) : null}
 
-      <AiEvidencePanel imageUrl={imageUrl} />
       <AiAstraOutputSections result={data} extras={ctx.extras} />
     </div>
   );

@@ -34,12 +34,14 @@ export function AiAuditCard({
 
   return (
     <section
+      data-ai-card=""
       className={cn(
         "overflow-hidden rounded-2xl border border-border bg-card",
         className,
       )}
     >
       <div
+        data-ai-card-header=""
         className={cn(
           "flex flex-wrap items-start justify-between gap-2 border-b border-border px-4 py-3",
           headerClassName,
@@ -86,7 +88,7 @@ export function AiMetricStat({
 }) {
   void bg;
   return (
-    <div className="rounded-xl border border-border bg-white px-3 py-3">
+    <div data-ai-tile="" className="rounded-xl border border-border bg-white px-3 py-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">{label}</p>
         {status ? (
@@ -272,23 +274,6 @@ export function AiExecutiveSummary({
             </p>
           );
         })}
-      </div>
-    </AiAuditCard>
-  );
-}
-
-/** Shows the original shelf photo the AI analysed, as audit evidence. */
-export function AiEvidencePanel({ imageUrl }: { imageUrl: string | null | undefined }) {
-  if (!imageUrl) return null;
-  return (
-    <AiAuditCard title="Shelf photo" description="Original image used for this analysis.">
-      <div className="overflow-hidden rounded-xl border border-border bg-muted">
-        <img
-          src={imageUrl}
-          alt="Shelf photo evidence"
-          className="mx-auto max-h-[480px] w-full object-contain"
-          loading="lazy"
-        />
       </div>
     </AiAuditCard>
   );

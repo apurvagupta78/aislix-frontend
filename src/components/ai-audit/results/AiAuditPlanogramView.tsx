@@ -17,7 +17,6 @@ import {
 } from "@/components/ai-audit/results/AiAuditMetricTable";
 import {
   AiAuditCard,
-  AiEvidencePanel,
   AiExecutiveSummary,
   AiMetricStat,
   AiResultsHero,
@@ -919,8 +918,6 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
           />
         </AiAuditCard>
       ) : null}
-
-      <AiEvidencePanel imageUrl={imageUrl} />
 
       <AiAstraOutputSections result={data} extras={ctx.extras} />
     </div>

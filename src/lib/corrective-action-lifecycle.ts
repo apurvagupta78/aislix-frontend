@@ -695,6 +695,7 @@ function mapAction(
       issue_type: row.issue_type as string | null,
       action_type: row.action_type as string | null,
       title: row.title as string | null,
+      suggestion: row.suggestion as string | null,
     }),
     issue_detail: (row.issue_detail as string) ?? null,
     raised_manually: Boolean(row.raised_manually),

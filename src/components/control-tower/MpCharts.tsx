@@ -247,6 +247,7 @@ export function MpTileGrid({
       {tiles.map((tile) => (
         <div
           key={tile.label}
+          data-mp-tile=""
           className={cn(
             "rounded-lg border px-2.5 py-2",
             tile.bg ? "border-black/5" : tileTone[tile.tone],
