@@ -8,10 +8,12 @@ import { MpCard, MpCardHeader } from "@/components/design-system/MpCard";
 import { AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
 import type { AuditChecks } from "@/lib/audit-checks";
 import { hideModelNames } from "@/lib/ai-display-text";
+import { actionStage } from "@/lib/corrective-action-catalog";
 import {
   formatMinutes,
   slaTypeLabel,
   type DelayReasonRow,
+  type SlaAction,
   type SlaAlert,
   type SlaGroupRow,
   type SlaTypeRow,
@@ -367,6 +369,66 @@ export function SlaAlertsPanel({ alerts, limit = 8 }: { alerts: SlaAlert[]; limi
       )}
       {alerts.length > limit ? (
         <p className="mt-2 text-xs text-mp-muted">+{alerts.length - limit} more in the action list.</p>
+      ) : null}
+    </SlaCard>
+  );
+}
+
+const PRIORITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+
+/** What needs fixing, who owns it and when it is due: open actions, most urgent first. */
+export function OpenActionsList({ actions, limit = 6 }: { actions: SlaAction[]; limit?: number }) {
+  const open = actions
+    .filter((a) => {
+      const s = actionStage(a.status);
+      return s === "open" || s === "in_progress";
+    })
+    .sort(
+      (x, y) =>
+        (PRIORITY_RANK[x.priority] ?? 4) - (PRIORITY_RANK[y.priority] ?? 4) ||
+        (x.due_at ? new Date(x.due_at).getTime() : Infinity) - (y.due_at ? new Date(y.due_at).getTime() : Infinity),
+    );
+  return (
+    <SlaCard
+      title="What needs fixing"
+      question="What is wrong, who is responsible, and when is it due?"
+      action={<span className="text-xs text-mp-muted">{open.length} open</span>}
+    >
+      {!open.length ? (
+        <ChartUnavailable reason="No open corrective actions in these filters." />
+      ) : (
+        <ul className="-mx-2 divide-y divide-[#EEF1F4]">
+          {open.slice(0, limit).map((a) => (
+            <li key={a.id}>
+              <Link
+                to="/corrective-actions/$actionId"
+                params={{ actionId: a.id }}
+                className="flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-[#F4F7F9]"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-navy">{hideModelNames(a.title)}</span>
+                  <span className="block text-xs text-mp-muted">
+                    {a.code ?? "Action"} · {a.store_name ?? "No store"} · {a.assigned_name || "Unassigned"}
+                  </span>
+                </span>
+                <span className="shrink-0 text-right text-xs text-navy">
+                  {a.due_at
+                    ? new Date(a.due_at).toLocaleString([], {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "No due date"}
+                  <span className="block capitalize text-mp-muted">{a.priority}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open.length > limit ? (
+        <p className="mt-2 text-xs text-mp-muted">+{open.length - limit} more in the action list.</p>
       ) : null}
     </SlaCard>
   );

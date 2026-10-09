@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { CaKpiCard } from "@/components/corrective-actions/CaParts";
@@ -7,7 +7,9 @@ import { StoreVarianceMatrix } from "@/components/corrective-actions/StoreVarian
 import { MpCard } from "@/components/design-system/MpCard";
 import {
   AuditChecksGrid,
+  ComplianceTrendChart,
   DelayReasonsChart,
+  OpenActionsList,
   SlaAlertsPanel,
   SlaGroupTable,
   SlaTypeTargetChart,
@@ -25,15 +27,22 @@ import {
   formatMinutes,
   matchesSlaFilters,
   slaAlerts,
+  slaByOwner,
   slaByStore,
   slaByType,
   slaSummary,
+  weeklyCompliance,
 } from "@/lib/sla-insights";
 import type { CorrectiveActionsSearch } from "@/routes/corrective-actions";
 import { cn } from "@/lib/utils";
 
-/** PURPLE → BLUE → PINK → GREEN → CYAN; no same accent side by side or stacked in the 4-column grid. */
-const ACCENTS: AislixAccent[] = ["purple", "blue", "pink", "green", "cyan", "pink", "green", "grey"];
+type SectionProps = {
+  data: ScopedActions | undefined;
+  loading: boolean;
+  source: "ai" | "digital";
+};
+
+type KpiCardDef = { label: string; value: string; context: string; info: string; go: () => void };
 
 const CHECK_SEARCH: Record<AuditCheckKey, CorrectiveActionsSearch> = {
   quantity: { variance: "quantity" },
@@ -42,6 +51,137 @@ const CHECK_SEARCH: Record<AuditCheckKey, CorrectiveActionsSearch> = {
   implemented: { stage: "fixed" },
   pre_post: { variance: "pre_post" },
 };
+
+const sourceText = (source: "ai" | "digital") => (source === "ai" ? "AI audits" : "Digital audits");
+
+function SectionHeader({ title, question, actions }: { title: string; question: string; actions: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 className="font-display text-lg font-semibold text-navy">{title}</h2>
+        <p className="mt-0.5 text-[13px] text-mp-muted">{question}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">{actions}</div>
+    </div>
+  );
+}
+
+function KpiGrid({ cards, accents }: { cards: KpiCardDef[]; accents: AislixAccent[] }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {cards.map(({ go, ...card }, i) => (
+        <button
+          key={card.label}
+          type="button"
+          onClick={go}
+          className="block rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy [&>*]:transition-colors hover:[&>*]:bg-[#F4F7F9]"
+          aria-label={`${card.label}: ${card.value}`}
+        >
+          <CaKpiCard {...card} accent={accents[i] ?? "grey"} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SectionSkeleton({ count }: { count: number }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} className="h-[104px] rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Corrective actions: what the audits found wrong on the shelf (the five checks), who is fixing it,
+ * and whether the fix improved the shelf. Follows the dashboard filters.
+ */
+export function CorrectiveActionsSummary({ data, loading, source }: SectionProps) {
+  const navigate = useNavigate();
+  const label = sourceText(source).toLowerCase();
+  const rows = useMemo(() => data?.actions ?? [], [data]);
+  const kpis = useMemo(() => correctiveActionKpis(rows), [rows]);
+  const checks = useMemo(() => auditChecks(rows, data?.verifications ?? []), [rows, data]);
+  const byStoreVariance = useMemo(() => variancesByStore(rows), [rows]);
+
+  const openActions = (search: CorrectiveActionsSearch) =>
+    void navigate({ to: "/corrective-actions", search: { source, ...search } });
+
+  const cards: KpiCardDef[] = [
+    {
+      label: "Open actions",
+      value: String(kpis.open),
+      context: "Open or in progress",
+      info: "Corrective actions from these audits that the store team still has to fix.",
+      go: () => openActions({ stage: "active" }),
+    },
+    {
+      label: "Awaiting verification",
+      value: String(kpis.submitted),
+      context: "Fix submitted, not yet confirmed",
+      info: "The store team submitted a fix; a manager or AI re-check still has to confirm it.",
+      go: () => openActions({ stage: "submitted" }),
+    },
+    {
+      label: "Critical & high open",
+      value: String(kpis.criticalHighOpen),
+      context: "Most urgent fixes",
+      info: "Open actions with critical or high priority.",
+      go: () => openActions({ stage: "active", priority: "critical_high" }),
+    },
+    {
+      label: "Fixed (30 days)",
+      value: String(kpis.closedLast30),
+      context: kpis.recheckPassRate == null ? "Verified or closed" : `${kpis.recheckPassRate}% passed AI re-check`,
+      info: "Actions verified or closed in the last 30 days.",
+      go: () => openActions({ stage: "fixed" }),
+    },
+  ];
+
+  return (
+    <section className="space-y-3" aria-label="Corrective actions">
+      <SectionHeader
+        title="Corrective actions"
+        question={`What did ${label} find wrong on the shelf, who is fixing it, and did the fix improve the shelf?`}
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link to="/corrective-actions" search={{ source }}>
+              Corrective actions
+            </Link>
+          </Button>
+        }
+      />
+      {loading ? (
+        <SectionSkeleton count={4} />
+      ) : !rows.length ? (
+        <MpCard className="p-4">
+          <ChartUnavailable reason={`No corrective actions from ${label} match these filters.`} />
+        </MpCard>
+      ) : (
+        <>
+          <KpiGrid cards={cards} accents={["purple", "blue", "pink", "green"]} />
+          <div>
+            <h3 className="mb-2 text-sm font-semibold text-navy">Audit checks</h3>
+            <AuditChecksGrid
+              checks={checks}
+              hideQuantity={source === "digital"}
+              onSelect={(key) => openActions(CHECK_SEARCH[key])}
+            />
+          </div>
+          <OpenActionsList actions={rows} limit={6} />
+          <StoreVarianceMatrix
+            rows={byStoreVariance.rows}
+            totals={byStoreVariance.totals}
+            description="What went wrong in each store — planogram, quantity, location, brand, price, promotion. Click a number to open those actions."
+            onSelect={(storeId, type) => openActions({ store: storeId ?? undefined, variance: type ?? undefined })}
+          />
+        </>
+      )}
+    </section>
+  );
+}
 
 function SlaTypeChips({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const options = [{ value: "all", short: "All SLAs" }, ...SLA_TYPES];
@@ -66,22 +206,17 @@ function SlaTypeChips({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
+/** No same accent side by side or stacked, in the 4- and 2-column layouts. */
+const SLA_ACCENTS: AislixAccent[] = ["green", "blue", "pink", "cyan", "purple", "pink", "grey", "green"];
+
 /**
- * Corrective actions and SLA for the audits in the dashboard filters (date, store, city, team,
- * category, SKU). Every card opens the SLA page or the action list with the same filters.
+ * SLA: are the fixes done within the target time (replenishment, expiry & damaged, issue resolution,
+ * corrective action), where are the delays, and who needs a nudge. Follows the dashboard filters.
  */
-export function SlaActionsSummary({
-  data,
-  loading,
-  source,
-}: {
-  data: ScopedActions | undefined;
-  loading: boolean;
-  source: "ai" | "digital";
-}) {
+export function SlaSummarySection({ data, loading, source }: SectionProps) {
   const [slaType, setSlaType] = useState("all");
   const navigate = useNavigate();
-  const sourceLabel = source === "ai" ? "AI audits" : "Digital audits";
+  const label = sourceText(source).toLowerCase();
 
   const all = useMemo(() => data?.actions ?? [], [data]);
   const rows = useMemo(() => all.filter((a) => matchesSlaFilters(a, slaType, "all")), [all, slaType]);
@@ -90,39 +225,30 @@ export function SlaActionsSummary({
   const byType = useMemo(() => slaByType(all), [all]);
   const reasons = useMemo(() => delayReasons(rows), [rows]);
   const stores = useMemo(() => slaByStore(rows), [rows]);
+  const owners = useMemo(() => slaByOwner(rows), [rows]);
   const alerts = useMemo(() => slaAlerts(rows), [rows]);
-  const checks = useMemo(() => auditChecks(rows, data?.verifications ?? []), [rows, data]);
-  const byStoreVariance = useMemo(() => variancesByStore(rows), [rows]);
+  const trend = useMemo(() => weeklyCompliance(rows), [rows]);
 
-  const base: CorrectiveActionsSearch = { source, ...(slaType !== "all" ? { sla: slaType } : {}) };
+  const typeSearch = slaType !== "all" ? { sla: slaType } : {};
   const openActions = (search: CorrectiveActionsSearch) =>
-    void navigate({ to: "/corrective-actions", search: { ...base, ...search } });
-  const openSla = (extra: { sla?: string } = {}) =>
-    void navigate({ to: "/sla", search: { source, ...(slaType !== "all" ? { sla: slaType } : {}), ...extra } });
+    void navigate({ to: "/corrective-actions", search: { source, ...typeSearch, ...search } });
+  const openSla = () => void navigate({ to: "/sla", search: { source, ...typeSearch } });
 
-  const cards: Array<{
-    label: string;
-    value: string;
-    context: string;
-    info: string;
-    go: () => void;
-  }> = [
+  const cards: KpiCardDef[] = [
     {
       label: "SLA compliance",
       value: sla.compliancePct == null ? "N/A" : `${sla.compliancePct}%`,
       context:
-        sla.compliancePct == null
-          ? "No deadlines reached yet"
-          : `${sla.met} on time of ${sla.met + sla.breaches} due`,
+        sla.compliancePct == null ? "No deadlines reached yet" : `${sla.met} on time of ${sla.met + sla.breaches} due`,
       info: "Fixes confirmed on time, out of every action that was fixed or is past its deadline.",
-      go: () => openSla(),
+      go: openSla,
     },
     {
       label: "Actual vs target",
       value: sla.medianActualMin == null ? "N/A" : formatMinutes(sla.medianActualMin),
       context: `Target ${formatMinutes(sla.medianTargetMin)} · median time to fix`,
       info: "Median time from when the action was raised to when the fix was submitted, for confirmed fixes.",
-      go: () => openSla(),
+      go: openSla,
     },
     {
       label: "SLA breaches",
@@ -153,106 +279,73 @@ export function SlaActionsSummary({
       go: () => openActions({ stage: "overdue" }),
     },
     {
-      label: "Fixed (30 days)",
-      value: String(kpis.closedLast30),
-      context: "Verified or closed",
-      info: "Actions verified or closed in the last 30 days.",
-      go: () => openActions({ stage: "fixed" }),
-    },
-    {
       label: "Escalated",
       value: String(kpis.escalated),
       context: "Sent to a manager or admin",
       info: "Overdue actions escalated to the owner's manager, then to admins.",
       go: () => openActions({ stage: "escalated" }),
     },
+    {
+      label: "Fixed on time",
+      value: String(sla.met),
+      context: "Confirmed before the deadline",
+      info: "Fixes submitted before the SLA deadline and confirmed by a manager or AI re-check.",
+      go: () => openActions({ outcome: "met" }),
+    },
   ];
 
   return (
-    <section className="space-y-3" aria-label="Corrective actions and SLA">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg font-semibold text-navy">Corrective actions & SLA</h2>
-          <p className="mt-0.5 text-[13px] text-mp-muted">
-            Are fixes from {sourceLabel.toLowerCase()} in these filters done on time, where are the delays, and what needs
-            action?
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/escalation-settings">SLA settings</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/corrective-actions" search={{ source }}>
-              Corrective actions
-            </Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link to="/sla" search={{ source }}>
-              SLA dashboard
-            </Link>
-          </Button>
-        </div>
-      </div>
+    <section className="space-y-3" aria-label="SLA">
+      <SectionHeader
+        title="SLA"
+        question={`Are fixes from ${label} done on time, where are the delays, and what action is needed?`}
+        actions={
+          <>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/escalation-settings">SLA settings</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/sla" search={{ source }}>
+                SLA dashboard
+              </Link>
+            </Button>
+          </>
+        }
+      />
       <SlaTypeChips value={slaType} onChange={setSlaType} />
-
       {loading ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-[104px] rounded-xl" />
-          ))}
-        </div>
+        <SectionSkeleton count={8} />
       ) : !rows.length ? (
         <MpCard className="p-4">
           <ChartUnavailable
-            reason={`No corrective actions from ${sourceLabel.toLowerCase()} match these filters${slaType !== "all" ? " and SLA type" : ""}.`}
+            reason={`No actions with an SLA from ${label} match these filters${slaType !== "all" ? " and SLA type" : ""}.`}
           />
         </MpCard>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {cards.map(({ go, ...card }, i) => (
-              <button
-                key={card.label}
-                type="button"
-                onClick={go}
-                className="block rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy [&>*]:transition-colors hover:[&>*]:bg-[#F4F7F9]"
-                aria-label={`${card.label}: ${card.value}`}
-              >
-                <CaKpiCard {...card} accent={ACCENTS[i] ?? "grey"} />
-              </button>
-            ))}
-          </div>
-
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-navy">Audit checks</h3>
-            <AuditChecksGrid
-              checks={checks}
-              hideQuantity={source === "digital"}
-              onSelect={(key) => openActions(CHECK_SEARCH[key])}
-            />
-          </div>
-
+          <KpiGrid cards={cards} accents={SLA_ACCENTS} />
           <div className="grid gap-4 lg:grid-cols-2">
             <SlaTypeTargetChart rows={byType} onSelect={(type) => setSlaType(type)} />
             <SlaAlertsPanel alerts={alerts} limit={5} />
             <SlaGroupTable
-              title="Stores with the most breaches"
-              question="Where are deadlines being missed?"
+              title="Store performance"
+              question="Which stores meet their SLA targets and which are falling behind?"
               nameLabel="Store"
               rows={stores}
               limit={5}
               onSelect={(r) => openActions({ store: r.key, outcome: "breached" })}
             />
-            <DelayReasonsChart rows={reasons} limit={3} onSelect={() => openSla()} />
+            <SlaGroupTable
+              title="Employee performance"
+              question="Who completes assigned tasks on time?"
+              nameLabel="Employee"
+              rows={owners}
+              limit={5}
+              onSelect={openSla}
+            />
+            <DelayReasonsChart rows={reasons} limit={4} onSelect={openSla} />
+            <ComplianceTrendChart points={trend} />
           </div>
-
-          <StoreVarianceMatrix
-            rows={byStoreVariance.rows}
-            totals={byStoreVariance.totals}
-            description="What went wrong in each store — planogram, quantity, location, brand, price, promotion. Click a number to open those actions."
-            onSelect={(storeId, type) => openActions({ store: storeId ?? undefined, variance: type ?? undefined })}
-          />
         </>
       )}
     </section>

@@ -55,7 +55,7 @@ import { AISLIX } from "@/lib/aislix-theme";
 import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
 import { DashboardOverviewPanel } from "@/components/dashboard/DashboardOverviewPanel";
 import { AiVarianceSection } from "@/components/dashboard/AiDashboardInsights";
-import { SlaActionsSummary } from "@/components/sla/SlaActionsSummary";
+import { CorrectiveActionsSummary, SlaSummarySection } from "@/components/sla/SlaActionsSummary";
 import { AuditPhotoStrip } from "@/components/dashboard/AuditPhotoStrip";
 import { fetchAiVarianceSummary } from "@/lib/ai-variance-summary";
 import { fetchScopedActions } from "@/lib/ai-dashboard-actions";
@@ -1657,7 +1657,11 @@ export function AiDigitalDashboardShell() {
     return isCustomCardId(id) ? renderCustomCard(id, accent) : null;
   };
 
-  const renderMetricGrid = (render: (id: string, accent: string) => React.ReactNode) => {
+  /** `afterLastAudit` sits right below the last-completed-audit panel (or above the cards when it is hidden). */
+  const renderMetricGrid = (
+    render: (id: string, accent: string) => React.ReactNode,
+    afterLastAudit?: React.ReactNode,
+  ) => {
     let accentIndex = 0;
     const cards: { id: string; title: string; body: React.ReactNode }[] = [];
     for (const id of visibleIds) {
@@ -1693,9 +1697,16 @@ export function AiDigitalDashboardShell() {
       </div>
     );
 
+    const lastPanelId = tabKey === "ai" ? "panel_last_audit" : "panel_last_digital";
+    const splitAt = afterLastAudit ? primary.findIndex((c) => c.id === lastPanelId) + 1 : 0;
+    const head = primary.slice(0, splitAt);
+    const rest = primary.slice(splitAt);
+
     return (
       <div className="space-y-3">
-        {primary.length ? grid(primary) : null}
+        {head.length ? grid(head) : null}
+        {afterLastAudit ? <div className="space-y-6 py-3">{afterLastAudit}</div> : null}
+        {rest.length ? grid(rest) : null}
         {extra.length ? (
           <>
             <button
@@ -1887,10 +1898,19 @@ export function AiDigitalDashboardShell() {
                 }
               />
 
-              {renderMetricGrid(renderAiCard)}
+              {renderMetricGrid(
+                renderAiCard,
+                <>
+                  <CorrectiveActionsSummary
+                    source="ai"
+                    data={aiActionsQuery.data}
+                    loading={aiActionsQuery.isPending}
+                  />
+                  <SlaSummarySection source="ai" data={aiActionsQuery.data} loading={aiActionsQuery.isPending} />
+                </>,
+              )}
 
               <AiVarianceSection summary={varianceQuery.data} loading={varianceQuery.isPending} />
-              <SlaActionsSummary source="ai" data={aiActionsQuery.data} loading={aiActionsQuery.isPending} />
 
               <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
                 <div className="p-4">
@@ -2066,13 +2086,21 @@ export function AiDigitalDashboardShell() {
                 }
               />
 
-              {renderMetricGrid(renderDigitalCard)}
-
-              <SlaActionsSummary
-                source="digital"
-                data={digitalActionsQuery.data}
-                loading={digitalActionsQuery.isPending}
-              />
+              {renderMetricGrid(
+                renderDigitalCard,
+                <>
+                  <CorrectiveActionsSummary
+                    source="digital"
+                    data={digitalActionsQuery.data}
+                    loading={digitalActionsQuery.isPending}
+                  />
+                  <SlaSummarySection
+                    source="digital"
+                    data={digitalActionsQuery.data}
+                    loading={digitalActionsQuery.isPending}
+                  />
+                </>,
+              )}
 
               <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
                 <div className="p-4">
