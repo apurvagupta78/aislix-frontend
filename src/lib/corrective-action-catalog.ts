@@ -34,6 +34,45 @@ export function actionTypeLabel(value: string | null | undefined): string {
   return ACTION_TYPES.find((t) => t.value === value)?.label ?? "Other";
 }
 
+/** What needs correcting. Mirrors public.ca_issue_category in the database. */
+export type IssueCategory = "location" | "quantity" | "facing" | "branding" | "other";
+
+export const ISSUE_CATEGORIES: { value: IssueCategory; label: string }[] = [
+  { value: "location", label: "Location issue" },
+  { value: "quantity", label: "Quantity issue" },
+  { value: "facing", label: "Product facing issue" },
+  { value: "branding", label: "Branding issue" },
+  { value: "other", label: "Other" },
+];
+
+export function issueCategoryLabel(value: string | null | undefined): string {
+  return ISSUE_CATEGORIES.find((c) => c.value === value)?.label ?? "Other";
+}
+
+/** Saved issue type, or the same classification the database uses for older rows. */
+export function issueCategoryOf(a: {
+  issue_category?: string | null;
+  issue_type?: string | null;
+  action_type?: string | null;
+  title?: string | null;
+}): IssueCategory {
+  if (ISSUE_CATEGORIES.some((c) => c.value === a.issue_category)) return a.issue_category as IssueCategory;
+  const t = (a.issue_type ?? "").toLowerCase();
+  const h = (a.title ?? "").toLowerCase();
+  const act = (a.action_type ?? "").toLowerCase();
+  if (/facing/.test(t)) return "facing";
+  if (/placement|location|wrong_category|unexpected|misplac|planogram_violation|wrong_aisle/.test(t)) return "location";
+  if (/qty|quantity|shortage|excess|missing|out_of_stock|oos|low_stock|empty|gap/.test(t)) return "quantity";
+  if (/brand|display|wrong_product|variant|promo/.test(t)) return "branding";
+  if (/damage|expir|pric/.test(t)) return "other";
+  if (/facing/.test(h)) return "facing";
+  if (/location|placement|aisle|misplaced/.test(h)) return "location";
+  if (act === "availability" || act === "inventory") return "quantity";
+  if (act === "display") return "branding";
+  if (act === "planogram") return "location";
+  return "other";
+}
+
 export type ActionSource = "ai" | "digital";
 
 export const ACTION_SOURCES: { value: ActionSource; label: string }[] = [

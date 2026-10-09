@@ -75,6 +75,9 @@ function action(over: Partial<LifecycleAction>): LifecycleAction {
     sla_type: null,
     sla_minutes: null,
     delay_reason: null,
+    issue_category: "quantity",
+    issue_detail: null,
+    raised_manually: false,
     ...over,
   };
 }

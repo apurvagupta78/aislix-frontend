@@ -60,6 +60,7 @@ export type SlaAction = {
   source: "ai" | "digital";
   action_type: string | null;
   issue_type?: string | null;
+  issue_category?: string | null;
   sla_type: string | null;
   sla_minutes: number | null;
   created_at: string;

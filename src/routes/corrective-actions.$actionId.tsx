@@ -30,10 +30,10 @@ import { fetchAssignableMembers, isOrgManager } from "@/lib/assignments";
 import {
   ROOT_CAUSE_OPTIONS,
   actionStage,
-  actionTypeLabel,
   escalationLabel,
   evidenceLabel,
   isUnreviewedAction,
+  issueCategoryLabel,
   requiresRootCause,
   verificationMethodLabel,
 } from "@/lib/corrective-action-catalog";
@@ -402,7 +402,17 @@ function ActionDetailPage() {
             <p className="mt-1 text-sm text-mp-muted">{hideModelNames(action.suggestion)}</p>
           ) : null}
           <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <Fact label="Type" value={actionTypeLabel(action.action_type)} />
+            <Fact
+              label="Issue"
+              value={
+                <>
+                  {issueCategoryLabel(action.issue_category)}
+                  {action.issue_detail ? (
+                    <span className="block text-xs text-mp-muted">{action.issue_detail}</span>
+                  ) : null}
+                </>
+              }
+            />
             <Fact label="Store" value={action.store_name ?? "No store"} />
             <Fact label="Owner" value={action.assigned_name} />
             <Fact

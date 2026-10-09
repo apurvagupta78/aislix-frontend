@@ -100,7 +100,8 @@ describe("corrective action insights", () => {
   });
 
   it("groups by type, store, source and age", () => {
-    expect(actionsByType(rows)[0]).toMatchObject({ type: "availability", open: 3, done: 1 });
+    expect(actionsByType(rows)[0]).toMatchObject({ type: "quantity", label: "Quantity issue", open: 4, done: 1 });
+    expect(actionsByType([action({ issue_category: "branding" })])[0]).toMatchObject({ type: "branding", open: 1 });
     expect(openActionsByStore(rows, 8, NOW)).toEqual([
       { store: "Bandra", onTime: 2, overdue: 0 },
       { store: "Andheri", onTime: 0, overdue: 1 },

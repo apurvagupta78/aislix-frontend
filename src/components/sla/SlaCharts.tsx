@@ -8,7 +8,8 @@ import { MpCard, MpCardHeader } from "@/components/design-system/MpCard";
 import { ACCENT_TINT, AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
 import type { AuditChecks } from "@/lib/audit-checks";
 import { hideModelNames } from "@/lib/ai-display-text";
-import { actionStage } from "@/lib/corrective-action-catalog";
+import { actionStage, issueCategoryLabel, issueCategoryOf } from "@/lib/corrective-action-catalog";
+import { slaRemainingLabel } from "@/lib/corrective-action-lifecycle";
 import {
   formatMinutes,
   slaTypeLabel,
@@ -500,7 +501,8 @@ export function OpenActionsList({ actions, limit = 6 }: { actions: SlaAction[]; 
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-navy">{hideModelNames(a.title)}</span>
                   <span className="block text-xs text-mp-muted">
-                    {a.code ?? "Action"} · {a.store_name ?? "No store"} · {a.assigned_name || "Unassigned"}
+                    {issueCategoryLabel(issueCategoryOf(a))} · {a.code ?? "Action"} · {a.store_name ?? "No store"} ·{" "}
+                    {a.assigned_name || "Unassigned"}
                   </span>
                 </span>
                 <span className="shrink-0 text-right text-xs text-navy">
@@ -512,7 +514,9 @@ export function OpenActionsList({ actions, limit = 6 }: { actions: SlaAction[]; 
                         minute: "2-digit",
                       })
                     : "No due date"}
-                  <span className="block capitalize text-mp-muted">{a.priority}</span>
+                  <span className="block text-mp-muted">
+                    {a.due_at ? slaRemainingLabel(a.due_at, a.status) : a.priority}
+                  </span>
                 </span>
               </Link>
             </li>

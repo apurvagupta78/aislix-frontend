@@ -29,7 +29,9 @@ import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
 import { AiAuditResultsPage } from "@/components/ai-audit/AiAuditResultsPage";
-import { AiAuditSubmitPanel } from "@/components/ai-audit/AiAuditSubmitPanel";
+import { AuditActionsForm, type AuditActionProduct } from "@/components/scan-results/AuditActionsForm";
+import { buildVerificationRows } from "@/lib/ai-audit/verification-rows";
+import { submitAiAudit } from "@/lib/assignment-emails.functions";
 import { AiFieldVerificationPanel } from "@/components/ai-audit/AiFieldVerificationPanel";
 import { astraAnalysisFromScanResult } from "@/lib/ai-audit/astra-response";
 import { ReportActionsFooter } from "@/components/scan-results/ReportActionsFooter";
@@ -270,6 +272,26 @@ function Results() {
       })),
     [display],
   );
+  const aiActionProducts = useMemo<AuditActionProduct[]>(() => {
+    if (verificationAnalysis) {
+      const rows = buildVerificationRows(verificationAnalysis, verificationInventory);
+      if (rows.length) return rows.map((r) => ({ key: r.rowKey, name: r.label, sku: r.sku ?? null }));
+    }
+    return (display?.inventory ?? []).map((row) => ({
+      key: row.id,
+      name: [row.brand, row.product, row.variant].filter(Boolean).join(" ") || "Product",
+      sku: null,
+    }));
+  }, [verificationAnalysis, verificationInventory, display]);
+  const digitalActionProducts = useMemo<AuditActionProduct[]>(
+    () =>
+      (digitalQuery.data?.lines ?? []).map((line) => ({
+        key: line.id,
+        name: line.product_name || line.sku || line.item_code || "Product",
+        sku: line.sku ?? line.item_code ?? null,
+      })),
+    [digitalQuery.data],
+  );
   const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
 
   const goToScan = (id?: string | null) => {
@@ -438,6 +460,15 @@ function Results() {
                 </div>
               ) : null}
 
+              {isDigitalAudit ? (
+                <AuditActionsForm
+                  key={data!.scan_id}
+                  scanId={data!.scan_id}
+                  products={digitalActionProducts}
+                  className="mb-4"
+                />
+              ) : null}
+
               {display && (
                 <div className="flex min-h-0 flex-col">
                   {useSimpleAiView ? (
@@ -455,10 +486,15 @@ function Results() {
                               canEdit={!assignmentQuery.data?.submitted}
                             />
                           ) : null}
-                          <AiAuditSubmitPanel
+                          <AuditActionsForm
+                            key={scan!}
                             scanId={scan!}
-                            assignmentId={assignmentId}
-                            alreadySubmitted={Boolean(assignmentQuery.data?.submitted)}
+                            products={aiActionProducts}
+                            auditSubmitted={Boolean(assignmentQuery.data?.submitted)}
+                            submitAudit={(notes) =>
+                              submitAiAudit({ data: { scanId: scan!, assignmentId, notes } })
+                            }
+                            className="mt-6"
                           />
                         </>
                       ) : null}

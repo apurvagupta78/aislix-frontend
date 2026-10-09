@@ -10,7 +10,9 @@ import { notifyMember } from "@/lib/notifications.functions";
 import {
   UNREVIEWED_STATUS_FILTER,
   isUnreviewedAction,
+  issueCategoryOf,
   requiresRootCause,
+  type IssueCategory,
 } from "@/lib/corrective-action-catalog";
 
 export type LifecycleActionStatus =
@@ -73,6 +75,10 @@ export type LifecycleAction = {
   sla_type: string | null;
   sla_minutes: number | null;
   delay_reason: string | null;
+  issue_category: IssueCategory;
+  issue_detail: string | null;
+  /** Picked by a person on the audit results, not proposed by the AI. */
+  raised_manually: boolean;
 };
 
 export const LIFECYCLE_STATUSES: { value: LifecycleActionStatus; label: string }[] = [
@@ -684,5 +690,13 @@ function mapAction(
     sla_type: (row.sla_type as string) ?? null,
     sla_minutes: numOrNull(row.sla_minutes),
     delay_reason: (row.delay_reason as string) ?? null,
+    issue_category: issueCategoryOf({
+      issue_category: row.issue_category as string | null,
+      issue_type: row.issue_type as string | null,
+      action_type: row.action_type as string | null,
+      title: row.title as string | null,
+    }),
+    issue_detail: (row.issue_detail as string) ?? null,
+    raised_manually: Boolean(row.raised_manually),
   };
 }

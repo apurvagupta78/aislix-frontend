@@ -33,9 +33,10 @@ import type { AislixAccent } from "@/lib/ai-audit/kpi-palette";
 import {
   ACTION_SOURCES,
   ACTION_STAGES,
-  ACTION_TYPES,
+  ISSUE_CATEGORIES,
   actionStage,
   isActionLate,
+  issueCategoryOf,
 } from "@/lib/corrective-action-catalog";
 import {
   actionsBySource,
@@ -258,7 +259,7 @@ function CorrectiveActionsMain() {
       if (priority === "critical_high" ? row.priority !== "critical" && row.priority !== "high" : priority !== "all" && row.priority !== priority)
         return false;
       if (owner !== "all" && row.assigned_name !== owner) return false;
-      if (type !== "all" && (row.action_type ?? "other") !== type) return false;
+      if (type !== "all" && issueCategoryOf(row) !== type) return false;
       if (!matchesStage(row, stage)) return false;
       if (!matchesSlaFilters(row, slaType, outcome)) return false;
       if (q) {
@@ -454,7 +455,7 @@ function CorrectiveActionsMain() {
                 options={owners.map((o) => ({ value: o, label: o }))}
                 className="w-44"
               />
-              <FilterSelect value={type} onChange={setType} allLabel="All types" options={ACTION_TYPES} />
+              <FilterSelect value={type} onChange={setType} allLabel="All issue types" options={ISSUE_CATEGORIES} />
               <FilterSelect
                 value={variance}
                 onChange={setVariance}

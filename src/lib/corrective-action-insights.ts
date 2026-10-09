@@ -1,8 +1,8 @@
 import {
-  ACTION_TYPES,
   actionStage,
-  actionTypeLabel,
   isActionLate,
+  issueCategoryLabel,
+  issueCategoryOf,
   type ActionStage,
 } from "@/lib/corrective-action-catalog";
 
@@ -12,6 +12,7 @@ export type InsightAction = {
   priority: string;
   source: "ai" | "digital";
   action_type: string | null;
+  issue_category?: string | null;
   created_at: string;
   closed_at: string | null;
   verified_at: string | null;
@@ -194,8 +195,8 @@ export type TypeCount = { type: string; label: string; open: number; done: numbe
 export function actionsByType(actions: InsightAction[]): TypeCount[] {
   const map = new Map<string, TypeCount>();
   for (const a of actions) {
-    const key = ACTION_TYPES.some((t) => t.value === a.action_type) ? (a.action_type as string) : "other";
-    const row = map.get(key) ?? { type: key, label: actionTypeLabel(key), open: 0, done: 0 };
+    const key = issueCategoryOf(a);
+    const row = map.get(key) ?? { type: key, label: issueCategoryLabel(key), open: 0, done: 0 };
     const stage = actionStage(a.status);
     if (stage === "closed" || stage === "verified") row.done += 1;
     else row.open += 1;

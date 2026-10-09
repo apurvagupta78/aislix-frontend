@@ -7,8 +7,8 @@ import {
   actionSourceLabel,
   actionStage,
   actionStageLabel,
-  actionTypeLabel,
   escalationLabel,
+  issueCategoryLabel,
   isActionLate,
   isUnreviewedAction,
   type ActionStage,
@@ -180,7 +180,7 @@ export function CaTable({ rows }: { rows: LifecycleAction[] }) {
         <thead className="text-xs text-mp-muted" style={{ background: AISLIX_PALETTE.page }}>
           <tr>
             <th className="px-4 py-2.5 text-left font-medium">Action</th>
-            <th className="px-3 py-2.5 text-left font-medium">Type</th>
+            <th className="px-3 py-2.5 text-left font-medium">Issue</th>
             <th className="px-3 py-2.5 text-left font-medium">Store</th>
             <th className="px-3 py-2.5 text-left font-medium">Owner</th>
             <th className="px-3 py-2.5 text-left font-medium">Priority</th>
@@ -210,7 +210,7 @@ export function CaTable({ rows }: { rows: LifecycleAction[] }) {
                     <SourcePill source={row.source} />
                   </p>
                 </td>
-                <td className="px-3 py-3 text-navy">{actionTypeLabel(row.action_type)}</td>
+                <td className="px-3 py-3 text-navy">{issueCategoryLabel(row.issue_category)}</td>
                 <td className="px-3 py-3 text-navy">{row.store_name ?? <span className="text-mp-muted">No store</span>}</td>
                 <td className="px-3 py-3 text-navy">{row.assigned_name}</td>
                 <td className="px-3 py-3">
@@ -276,7 +276,7 @@ export function CaBoard({ rows }: { rows: LifecycleAction[] }) {
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm font-semibold text-navy">{hideModelNames(row.title ?? "")}</p>
                     <p className="mt-1 text-[11px] text-mp-muted">
-                      {actionTypeLabel(row.action_type)} · {row.store_name ?? "No store"}
+                      {issueCategoryLabel(row.issue_category)} · {row.store_name ?? "No store"}
                     </p>
                     <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
                       <span className="truncate text-navy">{row.assigned_name}</span>
