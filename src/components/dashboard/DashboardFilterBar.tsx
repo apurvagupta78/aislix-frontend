@@ -273,7 +273,7 @@ function DateControl({
 
   return (
     <>
-      <DatePresetSelect filters={filters} onChange={onChange} />
+      <DatePresetSelect filters={filters} onChange={onChange} className="w-auto" />
       {filters.datePreset === "custom" ? (
         <div className="flex gap-2">
           <Input
@@ -299,9 +299,11 @@ function DateControl({
 function DatePresetSelect({
   filters,
   onChange,
+  className,
 }: {
   filters: DashboardFilterState;
   onChange: (next: DashboardFilterState) => void;
+  className?: string;
 }) {
   return (
     <Select
@@ -314,7 +316,7 @@ function DatePresetSelect({
           })
         }
       >
-        <SelectTrigger className={cn(CONTROL, "min-w-[118px] gap-1.5")} aria-label="Date">
+        <SelectTrigger className={cn(CONTROL, "min-w-[118px] gap-1.5", className)} aria-label="Date">
           <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
           <SelectValue placeholder="All time" />
         </SelectTrigger>

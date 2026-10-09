@@ -261,7 +261,12 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
               ) : (
                 <div style={{ height: Math.max(180, groups.length * 36 + 48) }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={groups} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
+                    <BarChart
+                      data={groups}
+                      layout="vertical"
+                      barSize={20}
+                      margin={{ top: 0, right: 16, left: 8, bottom: 0 }}
+                    >
                       <CartesianGrid stroke={AISLIX_PALETTE.border} strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" allowDecimals={false} tick={axisTick} tickLine={false} axisLine={false} />
                       <YAxis
