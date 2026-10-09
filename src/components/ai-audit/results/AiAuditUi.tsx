@@ -143,8 +143,8 @@ function parseExecutiveSummary(raw: string): SummaryBlock[] {
 
   const lines = normalized
     .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
+    .map((l) => l.replace(/(?:overall\s+)?execution risk:\s*[A-Z_]+\.?/gi, "").trim())
+    .filter((l) => l && !/^([•\-*]|\d+[.)])$/.test(l));
   const blocks: SummaryBlock[] = [];
   let bullets: string[] = [];
 
@@ -196,6 +196,10 @@ function parseExecutiveSummary(raw: string): SummaryBlock[] {
     blocks.push({ kind: "paragraph", text: line });
   }
   flushBullets();
+  for (let i = blocks.length - 1; i >= 0; i -= 1) {
+    const next = blocks[i + 1];
+    if (blocks[i]?.kind === "heading" && (!next || next.kind === "heading")) blocks.splice(i, 1);
+  }
 
   if (blocks.length === 1 && blocks[0]?.kind === "paragraph") {
     const text = blocks[0].text;
