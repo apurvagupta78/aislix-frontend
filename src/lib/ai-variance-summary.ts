@@ -123,6 +123,7 @@ export type VarianceScanInput = {
   date: string;
   store: string;
   city: string;
+  country: string;
   team: string;
   category: string | null;
   metrics: Record<string, unknown> | null;
@@ -241,6 +242,7 @@ export function summariseVariances(
       date: scan.date,
       store: scan.store,
       city: scan.city,
+      country: scan.country,
       team: scan.team,
       category: scan.category?.trim() || "Uncategorised",
     });
@@ -258,6 +260,8 @@ export function summariseVariances(
       const facets = rowFacets({
         row,
         store: scan.store,
+        city: scan.city,
+        country: scan.country,
         category: rowCategory,
         value: (key) => human(key) ?? row.ai[key],
         result: (key) => fieldResult(row, key, human(key)),
@@ -331,6 +335,7 @@ export function selectVariances(
   summary: VarianceSummary,
   issues: AuditorIssue[],
   sel: LensSelection,
+  scope?: LensSelection,
 ): VarianceSummary {
   const auditor: VarianceRecord[] = issues.map((i) => ({
     scanId: i.scanId,
@@ -352,14 +357,19 @@ export function selectVariances(
     origin: "auditor",
     facets: i.facets,
   }));
-  const keep = (x: { facets: LensFacets; field: string }) => fieldInTopic(sel.lens, x.field) && matchesValue(x.facets, sel);
+  const inScope = (facets: LensFacets) => !scope || matchesValue(facets, scope);
+  const keep = (x: { facets: LensFacets; field: string }) => fieldInTopic(sel.lens, x.field) && matchesValue(x.facets, sel) && inScope(x.facets);
   const topic = LENS_TOPIC[sel.lens];
-  const facts = summary.facts.filter((f) => matchesValue(f.facets, sel));
+  const facts = summary.facts.filter((f) => matchesValue(f.facets, sel) && inScope(f.facets));
+  const scans = summary.scans.filter((scan) =>
+    (!scope || scope.value === "all" || scan[scope.lens as "store" | "city" | "country"] === scope.value) &&
+    (sel.value === "all" || facts.some((f) => f.scanId === scan.scanId)),
+  );
   return rollup(
     {
-      audits: sel.value === "all" ? summary.audits : new Set(facts.map((f) => f.scanId)).size,
+      audits: scans.length,
       auditLimit: summary.auditLimit,
-      scans: summary.scans,
+      scans,
       facts,
     },
     summary.checks.filter(keep),
@@ -434,8 +444,8 @@ export async function fetchAiVarianceSummary(
     supabase.from("detected_products").select("id, scan_id, name, brand, variant, facings").in("scan_id", scanIds).limit(5000),
     listScanFieldVerificationsForScans(scanIds),
     storeIds.length
-      ? supabase.from("stores").select("id, name, city").in("id", storeIds)
-      : Promise.resolve({ data: [] as { id: string; name: string; city: string | null }[] }),
+      ? supabase.from("stores").select("id, name, city, country").in("id", storeIds)
+      : Promise.resolve({ data: [] as { id: string; name: string; city: string | null; country: string | null }[] }),
     loadReporting(orgId),
   ]);
 
@@ -476,6 +486,7 @@ export async function fetchAiVarianceSummary(
       date: ((s.processing_completed_at ?? s.created_at) as string) ?? "",
       store: store?.name ?? "No store",
       city: store?.city?.trim() || "No city",
+      country: store?.country?.trim() || "No country",
       team: teamOf(auditors[i] ?? null),
       category: (s.category as string | null) ?? null,
       metrics: metricsByScan.get(s.id as string) ?? null,

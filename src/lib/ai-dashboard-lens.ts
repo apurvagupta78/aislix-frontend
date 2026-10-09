@@ -16,7 +16,8 @@ import {
 } from "@/lib/corrective-action-catalog";
 import type { LifecycleAction } from "@/lib/corrective-action-lifecycle";
 
-export type LensId = "store" | "category" | "location" | "price" | "brand" | "product" | "promotion" | "facings";
+export type ScopeLensId = "store" | "city" | "country";
+export type LensId = ScopeLensId | "category" | "location" | "price" | "brand" | "product" | "promotion" | "facings";
 export type LensFacets = Record<LensId, string>;
 export type LensSelection = { lens: LensId; value: string };
 
@@ -24,6 +25,8 @@ export const ALL_VALUES = "all";
 
 export const LENSES: ReadonlyArray<{ id: LensId; label: string; plural: string; question: string }> = [
   { id: "store", label: "Store", plural: "stores", question: "Which stores have the most issues?" },
+  { id: "city", label: "City", plural: "cities", question: "Which cities have the most issues?" },
+  { id: "country", label: "Country", plural: "countries", question: "Which countries have the most issues?" },
   { id: "category", label: "Category", plural: "categories", question: "Which categories have the most issues?" },
   { id: "location", label: "Location", plural: "locations", question: "Where are products placed wrongly?" },
   { id: "price", label: "Price", plural: "price results", question: "Do shelf prices match the plan?" },
@@ -34,12 +37,17 @@ export const LENSES: ReadonlyArray<{ id: LensId; label: string; plural: string; 
 ];
 
 export function lensDef(id: LensId) {
-  return LENSES.find((l) => l.id === id) ?? LENSES[0]!;
+  return LENSES.find((l) => l.id === id) ?? { id: "store", label: "Store", plural: "stores", question: "Which stores have the most issues?" };
 }
+
+export const SCOPE_LENSES = LENSES.filter((l) => l.id === "store" || l.id === "city" || l.id === "country");
+export const TOPIC_LENSES = LENSES.filter((l) => l.id !== "store" && l.id !== "city" && l.id !== "country");
 
 /** Issues that belong to a lens. null = every issue counts. */
 export const LENS_TOPIC: Record<LensId, { fields: VerificationFieldKey[]; categories: IssueCategory[] } | null> = {
   store: null,
+  city: null,
+  country: null,
   category: null,
   product: null,
   location: { fields: ["location"], categories: ["location"] },
@@ -86,6 +94,8 @@ export const UNKNOWN_BRAND = "Unknown brand";
 export function rowFacets(input: {
   row: VerificationRow;
   store: string;
+  city: string;
+  country: string;
   category: string;
   value: (key: VerificationFieldKey) => FieldValue;
   result: (key: VerificationFieldKey) => FieldResult;
@@ -108,6 +118,8 @@ export function rowFacets(input: {
   }
   return {
     store: input.store,
+    city: input.city.trim() || "No city",
+    country: input.country.trim() || "No country",
     category: input.category,
     location: text(value("location")) ?? text(row.expected.location) ?? NO_LOCATION,
     price,
@@ -161,6 +173,7 @@ export type LensScan = {
   date: string;
   store: string;
   city: string;
+  country: string;
   team: string;
   category: string;
 };
@@ -196,9 +209,11 @@ export function linkActions(actions: LifecycleAction[], facts: ShelfFact[], scan
           .sort((a, b) => b.product.length - a.product.length)[0] ??
         null;
       if (fact) return { action, facets: fact.facets, fact };
-      const scan = action.scan_id ? scanById.get(action.scan_id) : undefined;
+      const scan = (action.scan_id ? scanById.get(action.scan_id) : undefined) ?? scans.find((s) => s.storeId != null && s.storeId === action.store_id);
       const facets: LensFacets = {
         store: scan?.store ?? action.store_name ?? "No store",
+        city: scan?.city ?? "No city",
+        country: scan?.country ?? "No country",
         category: scan?.category ?? UNLINKED,
         location: UNLINKED,
         price: UNLINKED,
@@ -211,12 +226,12 @@ export function linkActions(actions: LifecycleAction[], facts: ShelfFact[], scan
     });
 }
 
-export function filterLinkedActions(linked: LinkedAction[], sel: LensSelection): LifecycleAction[] {
+export function filterLinkedActions(linked: LinkedAction[], sel: LensSelection, scope?: LensSelection): LifecycleAction[] {
   return linked
     .filter(({ action, facets }) => {
       const topic = LENS_TOPIC[sel.lens];
       if (topic && !(topic.categories as string[]).includes(issueCategoryOf(action))) return false;
-      return matchesValue(facets, sel);
+      return matchesValue(facets, sel) && (!scope || matchesValue(facets, scope));
     })
     .map((l) => l.action);
 }

@@ -715,13 +715,17 @@ export function AiDigitalDashboardShell() {
     enabled: tab === "ai",
   });
 
-  const [lensSelection, setLensSelection] = useState<LensSelection>({ lens: "store", value: ALL_VALUES });
+  const [scopeSelection, setScopeSelection] = useState<LensSelection>({ lens: "store", value: ALL_VALUES });
+  const [lensSelection, setLensSelection] = useState<LensSelection>({ lens: "category", value: ALL_VALUES });
   /** Picking one store also scopes the audit-level cards (compliance, confidence, completion). */
   const lensStoreId = useMemo(() => {
-    if (lensSelection.lens !== "store" || lensSelection.value === ALL_VALUES) return null;
-    return varianceQuery.data?.scans.find((s) => s.store === lensSelection.value)?.storeId ?? null;
-  }, [lensSelection, varianceQuery.data]);
-  const opsFilterKey = lensStoreId ? { ...filterKey, storeId: lensStoreId } : filterKey;
+    if (scopeSelection.lens !== "store" || scopeSelection.value === ALL_VALUES) return null;
+    return varianceQuery.data?.scans.find((s) => s.store === scopeSelection.value)?.storeId ?? null;
+  }, [scopeSelection, varianceQuery.data]);
+  const opsFilterKey = tab !== "ai" || scopeSelection.value === ALL_VALUES ? filterKey
+    : scopeSelection.lens === "city" ? { ...filterKey, city: scopeSelection.value }
+    : scopeSelection.lens === "country" ? { ...filterKey, country: scopeSelection.value }
+    : lensStoreId ? { ...filterKey, storeId: lensStoreId } : filterKey;
 
   const opsQuery = useQuery({
     queryKey: ["dashboard-ops-ai-v6", opsFilterKey, demoPreview.previewDemo],
@@ -784,17 +788,20 @@ export function AiDigitalDashboardShell() {
     const linked = linkActions(aiActionsQuery.data?.actions ?? [], summary.facts, summary.scans);
     const issues = auditorIssues(linked, summary.scans);
     const all: LensSelection = { lens: lensSelection.lens, value: ALL_VALUES };
-    const everyIssue = selectVariances(summary, issues, all).records;
-    const facts = summary.facts.filter((f) => matchesValue(f.facets, lensSelection));
+    const scoped = selectVariances(summary, issues, { lens: "store", value: ALL_VALUES }, scopeSelection);
+    const everyIssue = selectVariances(summary, issues, all, scopeSelection).records;
+    const facts = scoped.facts.filter((f) => matchesValue(f.facets, lensSelection));
+    const scopedLinked = linked.filter((item) => matchesValue(item.facets, scopeSelection));
     return {
-      groups: lensGroups(lensSelection.lens, summary.facts, everyIssue, linked),
-      variances: selectVariances(summary, issues, lensSelection),
+      scopeGroups: lensGroups(scopeSelection.lens, summary.facts, selectVariances(summary, issues, { lens: "store", value: ALL_VALUES }).records, linked),
+      groups: lensGroups(lensSelection.lens, scoped.facts, everyIssue, scopedLinked),
+      variances: selectVariances(summary, issues, lensSelection, scopeSelection),
       actions: aiActionsQuery.data
-        ? { ...aiActionsQuery.data, actions: filterLinkedActions(linked, lensSelection) }
+        ? { ...aiActionsQuery.data, actions: filterLinkedActions(linked, lensSelection, scopeSelection) }
         : undefined,
-      shelf: lensSelection.value === ALL_VALUES ? null : shelfMetrics(facts),
+      shelf: lensSelection.value === ALL_VALUES && scopeSelection.value === ALL_VALUES ? null : shelfMetrics(facts),
     };
-  }, [varianceQuery.data, aiActionsQuery.data, lensSelection]);
+  }, [varianceQuery.data, aiActionsQuery.data, lensSelection, scopeSelection]);
   /** Product-level cards follow the View by choice once one value is picked. */
   const shelf = lensView?.shelf ?? null;
 
@@ -1847,6 +1854,9 @@ export function AiDigitalDashboardShell() {
                     loading={aiActionsQuery.isPending}
                   />
                   <AiLensPanel
+                    scope={scopeSelection}
+                    onScopeChange={(next) => { setScopeSelection(next); setLensSelection((prev) => ({ ...prev, value: ALL_VALUES })); }}
+                    scopeGroups={lensView?.scopeGroups ?? []}
                     selection={lensSelection}
                     onChange={setLensSelection}
                     groups={lensView?.groups ?? []}

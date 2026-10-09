@@ -23,6 +23,7 @@
     light pink and black. The result must feel elegant and modern SaaS, never lavender or purple.
 
 ## Implementation
+- [x] Current request: resting chevrons on shared action/SLA cards and separate AI geographic scope with topic views; regression tests and signed-in AI interaction verification (Digital account has no actions to exercise)
 - [x] Architecture and route/workflow inventory
 - [x] Foundation: tokens, Sora/Manrope, status colours, touch targets, shared primitives
 - [x] Shell: grouped navigation, header, section eyebrow + next-step line, mobile behaviour

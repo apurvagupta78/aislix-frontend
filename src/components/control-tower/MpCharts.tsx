@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export interface MpBarDatum {
   label: string;
@@ -149,12 +150,14 @@ export function MpDonut({
   );
 }
 
-export function MpRankBars({ data, max, unit = "" }: { data: MpBarDatum[]; max?: number; unit?: string }) {
+export function MpRankBars({ data, max, unit = "", onSelect }: { data: MpBarDatum[]; max?: number; unit?: string; onSelect?: (index: number) => void }) {
   const ceiling = max ?? Math.max(...data.map((item) => item.value), 1);
   return (
     <ul className="space-y-3">
-      {data.map((item) => (
+      {data.map((item, index) => (
         <li key={item.label}>
+          <Button asChild variant="ghost" className={cn("block h-auto w-full whitespace-normal p-0 text-left", onSelect ? "cursor-pointer hover:bg-canvas" : "pointer-events-none hover:bg-transparent")} onClick={onSelect ? () => onSelect(index) : undefined}>
+          <div role={onSelect ? "button" : undefined} tabIndex={onSelect ? 0 : undefined} aria-label={onSelect ? `Select ${item.label}` : undefined} onKeyDown={onSelect ? (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(index); } } : undefined}>
           <div className="mb-1 flex items-baseline justify-between gap-3 text-[13px]">
             <span className="truncate text-navy">{item.label}</span>
             <span className="font-semibold tabular-nums text-navy">
@@ -171,6 +174,8 @@ export function MpRankBars({ data, max, unit = "" }: { data: MpBarDatum[]; max?:
               }}
             />
           </div>
+          </div>
+          </Button>
         </li>
       ))}
     </ul>
