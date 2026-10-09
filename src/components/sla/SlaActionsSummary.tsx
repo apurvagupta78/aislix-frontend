@@ -254,9 +254,11 @@ function placeLabel(value: string | null | undefined, pending: boolean): string 
 function TopSlaTable({
   actions,
   onOpen,
+  source,
 }: {
   actions: ReturnType<typeof topOpenDeadlines<LifecycleAction>>;
   onOpen: () => void;
+  source: "ai" | "digital";
 }) {
   const storeIds = [...new Set(actions.map((a) => a.store_id).filter((id): id is string => Boolean(id)))].sort();
   const scanIds = [...new Set(actions.map((a) => a.scan_id).filter((id): id is string => Boolean(id)))].sort();
@@ -346,6 +348,11 @@ function TopSlaTable({
           </table>
         </div>
       )}
+      <div className="flex justify-end px-4 py-3 md:px-5">
+        <Link to="/sla" search={{ source }} className="text-sm font-medium text-[#04203F] hover:underline">
+          View all
+        </Link>
+      </div>
     </MpCard>
   );
 }
@@ -471,6 +478,7 @@ export function SlaSummarySection({ data, loading, source }: SectionProps) {
       ) : (
         <TopSlaTable
           actions={deadlines}
+          source={source}
           onOpen={() => void navigate({ to: "/sla", search: { source } })}
         />
       )}
