@@ -19,6 +19,7 @@ import { ScanResultsHeaderBar } from "@/components/scan/ScanResultsHeaderBar";
 import { isDemoOralCareContext } from "@/lib/demo-oral-care-planogram";
 import { EmptyState, ErrorState } from "@/components/States";
 import { FixRescanVerifyPanel } from "@/components/scan-results/FixRescanVerifyPanel";
+import { ProposedFixesPanel } from "@/components/scan-results/ProposedFixesPanel";
 import { AuditGovernanceTabs } from "@/components/audit-governance/AuditGovernanceTabs";
 import { DigitalAuditColumnsResults } from "@/components/audit-governance/DigitalAuditColumnsResults";
 import { fetchDigitalColumnsAudit } from "@/lib/new-audit/digital-columns";
@@ -370,6 +371,7 @@ function Results() {
           ) : ready ? (
             <>
               <ResultsErrorBoundary scanId={data!.scan_id}>
+              <ProposedFixesPanel scanId={data!.scan_id} className="mb-4" />
               {isDigitalAudit && assignmentId && !digitalColumnsAudit ? (
                 <FixRescanVerifyPanel
                   assignmentId={assignmentId}

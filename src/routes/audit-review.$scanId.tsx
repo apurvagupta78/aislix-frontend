@@ -29,6 +29,7 @@ import {
 import { fetchAiAssistedFlags } from "@/lib/ai-assisted-audit";
 import { fetchAssignableMembers, isOrgManager } from "@/lib/assignments";
 import { AuditLifecyclePanel } from "@/components/audit/AuditLifecyclePanel";
+import { ProposedFixesPanel } from "@/components/scan-results/ProposedFixesPanel";
 import { requestReaudit } from "@/lib/reaudit";
 import { syncFindingsForScan } from "@/lib/findings";
 import { supabase } from "@/integrations/supabase/client";
@@ -241,6 +242,7 @@ function AuditReviewPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <div className="space-y-4">
+          <ProposedFixesPanel scanId={scanId} />
           <div className="flex flex-wrap gap-2">
             <CollectionMethodBadge mode="digital" />
             <WorkflowBadge status={session.submission_status} />

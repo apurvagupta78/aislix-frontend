@@ -12,6 +12,7 @@ import { clampFiltersToScope, storeIdsForQuery } from "@/lib/ask-aislix/context"
 import type { ControlTowerDemoPayload } from "@/lib/control-tower/types";
 import type { Finding } from "@/lib/findings";
 import type { LifecycleAction } from "@/lib/corrective-action-lifecycle";
+import { UNREVIEWED_STATUS_FILTER } from "@/lib/corrective-action-catalog";
 
 function scopeLabel(scopeValues: unknown, key: string, pluralKey: string): string {
   if (!scopeValues || typeof scopeValues !== "object") return "";
@@ -87,6 +88,7 @@ export async function fetchScopedControlTowerDataset(input: {
     .from("corrective_actions")
     .select("*")
     .eq("org_id", scope.orgId)
+    .not("status", "in", UNREVIEWED_STATUS_FILTER)
     .limit(2000);
 
   if (storeIds.length === 1) {

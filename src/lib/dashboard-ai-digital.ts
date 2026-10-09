@@ -923,6 +923,7 @@ export async function fetchDigitalDashboardMetrics(
         .from("corrective_actions")
         .select("id, scan_id")
         .eq("org_id", orgId)
+        .not("status", "in", "(proposed,dismissed)")
         .in("scan_id", lastTenScanIds);
       for (const c of casForScans ?? []) {
         const sid = c.scan_id as string;
@@ -1031,6 +1032,7 @@ export async function fetchDigitalDashboardMetrics(
       .from("corrective_actions")
       .select("id, status, due_at, closed_at, resolved_at")
       .eq("org_id", orgId)
+      .not("status", "in", "(proposed,dismissed)")
       .limit(800);
     if (!scope.isOrgAdmin && !experience.labeledDemo) {
       if (scope.effectiveStoreIds.length) {

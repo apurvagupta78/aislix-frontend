@@ -469,7 +469,7 @@ export async function getAuditsAggregate(ctx: AuditToolContext, args: Record<str
           .from("corrective_actions")
           .select("id", { count: "exact", head: true })
           .eq("org_id", ctx.scope.orgId)
-          .neq("status", "Closed")
+          .not("status", "in", "(closed,Closed,proposed,dismissed)")
           .gte("created_at", dateFrom)
           .lte("created_at", `${dateTo}T23:59:59.999Z`),
       ]);

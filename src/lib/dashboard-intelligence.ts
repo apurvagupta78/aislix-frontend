@@ -1201,7 +1201,8 @@ export async function fetchWorkspaceDashboard(
   let actionsQuery = supabase
     .from("corrective_actions")
     .select("id, status, issue_type, suggestion, created_at, comparison_id")
-    .eq("org_id", orgId);
+    .eq("org_id", orgId)
+    .not("status", "in", "(proposed,dismissed)");
   if (!scope.isOrgAdmin) {
     const ids = scope.effectiveStoreIds.map((id) => `"${id}"`).join(",");
     actionsQuery = actionsQuery.or(`store_id.in.(${ids}),store_id.is.null`);

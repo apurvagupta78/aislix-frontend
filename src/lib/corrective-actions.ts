@@ -64,6 +64,7 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
     .from("corrective_actions")
     .select(SELECT)
     .eq("org_id", orgId)
+    .not("status", "in", "(proposed,dismissed)")
     .order("created_at", { ascending: false });
   // Prefer direct store_id clamp when populated; null store_id rows are filtered via comparisons below.
   if (!scope.isOrgAdmin) {

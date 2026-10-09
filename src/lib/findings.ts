@@ -35,7 +35,8 @@ export type FindingStatus =
   | "pending_verification"
   | "resolved"
   | "rejected"
-  | "closed";
+  | "closed"
+  | "dismissed";
 export type AuditOrigin = "digital" | "ai" | "ai_assisted";
 export type ConfirmationState = "ai_suggested" | "human_confirmed";
 
@@ -120,6 +121,7 @@ export const FINDING_STATUSES: { value: FindingStatus; label: string }[] = [
   { value: "resolved", label: "Resolved" },
   { value: "rejected", label: "Rejected" },
   { value: "closed", label: "Closed" },
+  { value: "dismissed", label: "Dismissed at review" },
 ];
 
 export const AUDIT_ORIGIN_LABEL: Record<AuditOrigin, string> = {

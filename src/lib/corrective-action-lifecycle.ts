@@ -7,9 +7,15 @@ import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import type { Finding, FindingSeverity } from "@/lib/findings";
 import { collapseRepeatedWords, findingSubjectLabel } from "@/lib/finding-subject";
 import { notifyMember } from "@/lib/notifications.functions";
-import { requiresRootCause } from "@/lib/corrective-action-catalog";
+import {
+  UNREVIEWED_STATUS_FILTER,
+  isUnreviewedAction,
+  requiresRootCause,
+} from "@/lib/corrective-action-catalog";
 
 export type LifecycleActionStatus =
+  | "proposed"
+  | "dismissed"
   | "open"
   | "assigned"
   | "in_progress"
@@ -79,6 +85,8 @@ export const LIFECYCLE_STATUSES: { value: LifecycleActionStatus; label: string }
   { value: "rejected", label: "Rejected" },
   { value: "overdue", label: "Overdue" },
   { value: "closed", label: "Closed" },
+  { value: "proposed", label: "Waiting for review" },
+  { value: "dismissed", label: "Rejected at review" },
 ];
 
 export function actionPriorityClass(priority: string): string {
@@ -162,6 +170,7 @@ export async function fetchLifecycleActions(input: {
   if (input.scanId) query = query.eq("scan_id", input.scanId);
   if (input.storeId && input.storeId !== "all") query = query.eq("store_id", input.storeId);
   if (input.status && input.status !== "all") query = query.eq("status", input.status);
+  else query = query.not("status", "in", UNREVIEWED_STATUS_FILTER);
   const { data, error } = await query;
   if (error) {
     if (error.code === "42703" || error.code === "42P01") return [];
@@ -370,11 +379,28 @@ export async function createActionFromFinding(input: {
     `Investigate and reconcile ${Math.abs(input.finding.variance_units ?? 0)}-unit variance.`;
 
   // Every finding already gets an action automatically; assigning updates that one.
-  const { data: existing } = await supabase
+  const { data: existingRow } = await supabase
     .from("corrective_actions")
-    .select("id")
+    .select("id, status, sla_minutes")
     .eq("finding_id", input.finding.id)
     .maybeSingle();
+  const existing = existingRow as unknown as
+    | { id: string; status: string; sla_minutes: number | null }
+    | null;
+  // Assigning a proposed fix approves it: the SLA clock starts now.
+  const now = new Date();
+  const approvesProposal = Boolean(existing && isUnreviewedAction(String(existing.status)));
+  const approval = approvesProposal
+    ? {
+        created_at: now.toISOString(),
+        start_at: now.toISOString(),
+        reviewed_at: now.toISOString(),
+        reviewed_by: userId,
+        ...(input.dueAt
+          ? {}
+          : { due_at: new Date(now.getTime() + Number(existing?.sla_minutes ?? 2880) * 60_000).toISOString() }),
+      }
+    : {};
   // The database sets the SLA type, target and due time unless a due date was picked.
   const fields = {
     title,
@@ -389,7 +415,7 @@ export async function createActionFromFinding(input: {
   const { data, error } = existing
     ? await supabase
         .from("corrective_actions")
-        .update({ ...fields, updated_at: new Date().toISOString() })
+        .update({ ...fields, ...approval, updated_at: now.toISOString() } as never)
         .eq("id", existing.id)
         .select("id, due_at")
         .single()

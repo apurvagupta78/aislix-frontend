@@ -1657,6 +1657,23 @@ export function AiDigitalDashboardShell() {
     return isCustomCardId(id) ? renderCustomCard(id, accent) : null;
   };
 
+  const filtersUpdating =
+    (tab === "ai" &&
+      (opsQuery.isPlaceholderData || varianceQuery.isPlaceholderData || aiActionsQuery.isPlaceholderData)) ||
+    (tab === "digital" && (digitalQuery.isPlaceholderData || digitalActionsQuery.isPlaceholderData));
+  /** Sits above Corrective actions & SLA but still filters the whole dashboard. */
+  const sectionFilters = (
+    <div className="space-y-2">
+      <WorkspaceFilterBar extended />
+      {filtersUpdating ? (
+        <p className="flex items-center gap-2 text-xs text-[#667085]" aria-live="polite">
+          <span className="size-1.5 animate-pulse rounded-full bg-[#7DB7D6]" aria-hidden />
+          Updating for these filters…
+        </p>
+      ) : null}
+    </div>
+  );
+
   /** `afterLastAudit` sits right below the last-completed-audit panel (or above the cards when it is hidden). */
   const renderMetricGrid = (
     render: (id: string, accent: string) => React.ReactNode,
@@ -1799,19 +1816,7 @@ export function AiDigitalDashboardShell() {
         </div>
       </div>
 
-      {tab === "ai" || tab === "digital" ? (
-        <WorkspaceFilterBar extended />
-      ) : filtersOpen ? (
-        <WorkspaceFilterBar />
-      ) : null}
-      {(tab === "ai" &&
-        (opsQuery.isPlaceholderData || varianceQuery.isPlaceholderData || aiActionsQuery.isPlaceholderData)) ||
-      (tab === "digital" && (digitalQuery.isPlaceholderData || digitalActionsQuery.isPlaceholderData)) ? (
-        <p className="-mt-2 flex items-center gap-2 text-xs text-[#667085]" aria-live="polite">
-          <span className="size-1.5 animate-pulse rounded-full bg-[#7DB7D6]" aria-hidden />
-          Updating for these filters…
-        </p>
-      ) : null}
+      {tab === "overview" && filtersOpen ? <WorkspaceFilterBar /> : null}
 
       {tab === "overview" ? (
         <div className="flex flex-col gap-6">
@@ -1901,6 +1906,7 @@ export function AiDigitalDashboardShell() {
               {renderMetricGrid(
                 renderAiCard,
                 <>
+                  {sectionFilters}
                   <CorrectiveActionsSummary
                     source="ai"
                     data={aiActionsQuery.data}
@@ -2089,6 +2095,7 @@ export function AiDigitalDashboardShell() {
               {renderMetricGrid(
                 renderDigitalCard,
                 <>
+                  {sectionFilters}
                   <CorrectiveActionsSummary
                     source="digital"
                     data={digitalActionsQuery.data}

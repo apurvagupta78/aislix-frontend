@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { BeforeAfterEvidence } from "@/components/audit-governance/BeforeAfterEvidence";
+import { ActionAuditPhoto } from "@/components/corrective-actions/ActionAuditPhoto";
 import { CA_PINK_BAR } from "@/components/corrective-actions/CaCharts";
 import { PriorityPill, SourcePill, StagePill } from "@/components/corrective-actions/CaParts";
 import { MpCard } from "@/components/design-system/MpCard";
@@ -32,6 +33,7 @@ import {
   actionTypeLabel,
   escalationLabel,
   evidenceLabel,
+  isUnreviewedAction,
   requiresRootCause,
   verificationMethodLabel,
 } from "@/lib/corrective-action-catalog";
@@ -360,6 +362,26 @@ function ActionDetailPage() {
 
     return (
       <div className="space-y-4">
+        {isUnreviewedAction(action.status) ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#D9E2E8] bg-white p-4">
+            <p className="flex items-center gap-2 text-sm text-navy">
+              <span
+                className="size-1.5 rounded-full"
+                style={{ background: action.status === "proposed" ? AISLIX_PALETTE.purple : "#EEF1F4" }}
+              />
+              {action.status === "proposed"
+                ? "This fix is waiting for review. It gets an owner and a deadline once the auditor or a manager approves it."
+                : "This fix was rejected at review, so no one needs to act on it."}
+            </p>
+            {action.scan_id ? (
+              <Button asChild size="sm" variant="outline" className="rounded-lg">
+                <Link to="/results" search={{ scan: action.scan_id }}>
+                  {action.status === "proposed" ? "Review on the audit" : "Open the audit"}
+                </Link>
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         <MpCard className="p-5">
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="font-semibold text-mp-muted">{action.code ?? "—"}</span>
@@ -409,6 +431,30 @@ function ActionDetailPage() {
           </div>
         </MpCard>
 
+        {action.scan_id ? (
+          <Section
+            title="Audit photo"
+            description={`${action.source === "digital" ? "Digital audit" : "AI audit"}${
+              action.store_name ? ` at ${action.store_name}` : ""
+            } that raised this action.`}
+            accent={AISLIX_PALETTE.cyan}
+            aside={
+              <Button asChild size="sm" variant="outline" className="rounded-lg">
+                <Link to="/results" search={{ scan: action.scan_id }}>
+                  Open full audit
+                </Link>
+              </Button>
+            }
+          >
+            <ActionAuditPhoto
+              scanId={action.scan_id}
+              source={action.source}
+              sku={finding?.sku ?? action.sku}
+              productName={finding?.product_name ?? null}
+            />
+          </Section>
+        ) : null}
+
         <div className="grid gap-4 lg:grid-cols-2">
           <Section title="What was found" description="The finding that raised this action." accent={AISLIX_PALETTE.blue}>
             {finding ? (
@@ -432,13 +478,6 @@ function ActionDetailPage() {
             ) : (
               <p className="text-sm text-mp-muted">{hideModelNames(action.description ?? action.suggestion)}</p>
             )}
-            {action.scan_id ? (
-              <Button asChild size="sm" variant="outline" className="mt-4 rounded-lg">
-                <Link to="/results" search={{ scan: action.scan_id }}>
-                  Open original audit
-                </Link>
-              </Button>
-            ) : null}
           </Section>
 
           <Section

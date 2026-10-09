@@ -718,7 +718,7 @@ export async function fetchOpsAiDashboard(
     .from("corrective_actions")
     .select("id", { count: "exact", head: true })
     .eq("org_id", orgId)
-    .not("status", "in", "(closed,resolved,cancelled)");
+    .not("status", "in", "(closed,resolved,cancelled,proposed,dismissed)");
   caQ = applyStoreScopeFilter(caQ, scope) ?? caQ;
 
   const teamQ = supabase

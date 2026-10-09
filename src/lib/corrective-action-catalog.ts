@@ -68,6 +68,18 @@ export function actionStageLabel(status: string): string {
   return ACTION_STAGES.find((s) => s.value === actionStage(status))?.label ?? "Open";
 }
 
+/**
+ * Fixes an audit proposed that nobody approved yet, or that were rejected. They are not
+ * corrective actions: no owner, no deadline, and left out of every action list and metric.
+ */
+export const UNREVIEWED_ACTION_STATUSES = ["proposed", "dismissed"] as const;
+/** PostgREST filter value for `.not("status", "in", …)`. */
+export const UNREVIEWED_STATUS_FILTER = `(${UNREVIEWED_ACTION_STATUSES.join(",")})`;
+
+export function isUnreviewedAction(status: string): boolean {
+  return (UNREVIEWED_ACTION_STATUSES as readonly string[]).includes(status);
+}
+
 /** Past due while the owner still has work to do (not waiting on verification). */
 export function isActionLate(action: { status: string; due_at: string | null }, now = Date.now()): boolean {
   const stage = actionStage(action.status);

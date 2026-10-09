@@ -1669,15 +1669,6 @@ async function persistPlanogramCompliance(
 
   /** null for ad-hoc "with planogram" scans started from the New Scan page. */
   const assignmentId = scan.assignment_id ?? null;
-  let assigneeId: string | null = null;
-  if (assignmentId) {
-    const { data: assignmentRow } = await supabase
-      .from("scan_assignments")
-      .select("assignee_id")
-      .eq("id", assignmentId)
-      .maybeSingle();
-    assigneeId = (assignmentRow?.assignee_id as string | null) ?? null;
-  }
   const summary = (source.summary ?? {}) as Record<string, unknown>;
   // Headline is SKU presence from metrics; the source percent is a qty-weighted
   // fallback that can read 0% even when every expected SKU was found.
@@ -1754,10 +1745,12 @@ async function persistPlanogramCompliance(
           comparison_id: comparisonId,
           comparison_line_id: insertedLines.find((line) => line.key === key)?.id ?? null,
           org_id: scan.org_id,
+          scan_id: scan.id,
           issue_type: issueType,
           suggestion,
-          status: "open",
-          assigned_to: assigneeId,
+          // The auditor or a manager approves it on the results page; that assigns the owner.
+          status: "proposed",
+          assigned_to: null,
         };
       })
       .filter(Boolean);
@@ -1846,10 +1839,14 @@ async function reconcilePreviousActions(
 
   const { data: openActions } = await supabase
     .from("corrective_actions")
-    .select("id, comparison_line_id")
+    .select("id, comparison_line_id, status")
     .in("comparison_id", ids)
-    .in("status", ["open", "in_progress"]);
-  const rows = (openActions ?? []) as { id: string; comparison_line_id: string | null }[];
+    .in("status", ["proposed", "open", "in_progress"]);
+  const rows = (openActions ?? []) as {
+    id: string;
+    comparison_line_id: string | null;
+    status: string;
+  }[];
   if (!rows.length) return;
 
   const lineIds = rows.map((row) => row.comparison_line_id).filter(Boolean) as string[];
@@ -1863,18 +1860,34 @@ async function reconcilePreviousActions(
   for (const line of (lineRows ?? []) as any[])
     keyByLine.set(line.id as string, normalizeKey(line.expected_brand, line.expected_product));
 
-  const resolvable = rows
-    .filter(
-      (row) =>
-        row.comparison_line_id && fixedKeys.has(keyByLine.get(row.comparison_line_id!) ?? "\u0000"),
-    )
-    .map((row) => row.id);
-  if (!resolvable.length) return;
+  const fixed = rows.filter(
+    (row) =>
+      row.comparison_line_id && fixedKeys.has(keyByLine.get(row.comparison_line_id!) ?? "\u0000"),
+  );
+  if (!fixed.length) return;
+  await settleActions(
+    supabase,
+    fixed.map((row) => row.id),
+    new Date().toISOString(),
+  );
+}
 
+/** Approved actions resolve; fixes nobody reviewed yet are dismissed because the shelf is fine now. */
+async function settleActions(supabase: DB, ids: string[], now: string): Promise<void> {
   await supabase
     .from("corrective_actions")
-    .update({ status: "resolved", resolved_at: new Date().toISOString() } as never)
-    .in("id", resolvable);
+    .update({ status: "resolved", resolved_at: now } as never)
+    .in("id", ids)
+    .in("status", ["open", "in_progress"]);
+  await supabase
+    .from("corrective_actions")
+    .update({
+      status: "dismissed",
+      reviewed_at: now,
+      review_note: "A later scan showed this in place before it was reviewed.",
+    } as never)
+    .in("id", ids)
+    .eq("status", "proposed");
 }
 
 async function countOpenActions(supabase: DB, assignmentId: string): Promise<number> {
@@ -1884,18 +1897,20 @@ async function countOpenActions(supabase: DB, assignmentId: string): Promise<num
     .from("corrective_actions")
     .select("id", { count: "exact", head: true })
     .in("comparison_id", ids)
-    .in("status", ["open", "in_progress"]);
+    .in("status", ["proposed", "open", "in_progress"]);
   return count ?? 0;
 }
 
 async function resolveAllActions(supabase: DB, assignmentId: string, now: string): Promise<void> {
   const ids = await comparisonIdsForAssignment(supabase, assignmentId);
   if (!ids.length) return;
-  await supabase
+  const { data } = await supabase
     .from("corrective_actions")
-    .update({ status: "resolved", resolved_at: now } as never)
+    .select("id")
     .in("comparison_id", ids)
-    .in("status", ["open", "in_progress"]);
+    .in("status", ["proposed", "open", "in_progress"]);
+  const actionIds = ((data ?? []) as { id: string }[]).map((row) => row.id);
+  if (actionIds.length) await settleActions(supabase, actionIds, now);
 }
 
 /** Soft tip after a passing scan — assignor is notified only on explicit Submit. */
