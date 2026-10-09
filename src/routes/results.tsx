@@ -283,15 +283,23 @@ function Results() {
       sku: null,
     }));
   }, [verificationAnalysis, verificationInventory, display]);
-  const digitalActionProducts = useMemo<AuditActionProduct[]>(
-    () =>
-      (digitalQuery.data?.lines ?? []).map((line) => ({
-        key: line.id,
-        name: line.product_name || line.sku || line.item_code || "Product",
-        sku: line.sku ?? line.item_code ?? null,
-      })),
-    [digitalQuery.data],
-  );
+  const digitalActionProducts = useMemo<AuditActionProduct[]>(() => {
+    if (digitalColumnsAudit) {
+      const provided = digitalColumnsAudit.columns.filter((c) => c.role === "reference");
+      const nameKey = provided.find((c) => c.key === "item_name")?.key ?? provided[0]?.key;
+      const skuKey = provided.find((c) => /^(sku|sku_code|item_code|article_code|barcode|ean)/.test(c.key))?.key;
+      return digitalColumnsAudit.rows.map((row) => ({
+        key: `row-${row.index}`,
+        name: (nameKey && row.values[nameKey]?.trim()) || `Row ${row.index + 1}`,
+        sku: (skuKey && skuKey !== nameKey && row.values[skuKey]?.trim()) || null,
+      }));
+    }
+    return (digitalQuery.data?.lines ?? []).map((line) => ({
+      key: line.id,
+      name: line.product_name || line.sku || line.item_code || "Product",
+      sku: line.sku ?? line.item_code ?? null,
+    }));
+  }, [digitalColumnsAudit, digitalQuery.data]);
   const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
 
   const goToScan = (id?: string | null) => {
