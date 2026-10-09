@@ -211,7 +211,7 @@ export function ReferenceMatchSection({
         "Presence",
         "Document qty",
         "Unit",
-        "On shelf (units)",
+        "AI detected qty (units)",
         "Document price",
         "Shelf price",
         "Price status",
@@ -480,7 +480,7 @@ export function ReferenceMatchSection({
                   `${line.invoice_qty}${line.quantity_unit ? ` ${line.quantity_unit}` : ""}`
                 ),
             },
-            { key: "onshelf", header: "On shelf", cell: (line) => qtyCell(line, countPending) },
+            { key: "onshelf", header: "AI detected qty", cell: (line) => qtyCell(line, countPending) },
             {
               key: "price",
               header: "Price",

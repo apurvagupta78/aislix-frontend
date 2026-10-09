@@ -1,5 +1,5 @@
 import { MpRankBars, type MpBarDatum } from "@/components/control-tower/MpCharts";
-import { CHART_ACCENT } from "@/lib/ai-audit/kpi-palette";
+import { AISLIX_PALETTE, CHART_ACCENT } from "@/lib/ai-audit/kpi-palette";
 
 const COLORS = [
   CHART_ACCENT.brandFacingShare,
@@ -95,24 +95,37 @@ export function AiShareComparisonBars({
   );
 }
 
+function VarianceNote({ dot, text }: { dot: string; text: string }) {
+  return (
+    <p className="flex items-start gap-2 rounded-lg border border-[#D9E2E8] bg-white px-3 py-3 text-[13px] text-[#667085]">
+      <span className="mt-1.5 size-1.5 shrink-0 rounded-full" style={{ background: dot }} aria-hidden />
+      {text}
+    </p>
+  );
+}
+
+/** `items` empty = no target to compare against; all zero = every row is on target. */
 export function AiVarianceBars({
   items,
   unit = "",
   accent,
+  onTargetText,
+  unavailableText,
 }: {
   items: Array<{ label: string; variance: number }>;
   unit?: string;
   accent?: string;
+  onTargetText: string;
+  unavailableText: string;
 }) {
-  const data: MpBarDatum[] = items.map((item) => ({
+  if (!items.length) return <VarianceNote dot={AISLIX_PALETTE.grey} text={unavailableText} />;
+  const off = items.filter((item) => item.variance !== 0);
+  if (!off.length) return <VarianceNote dot={AISLIX_PALETTE.green} text={onTargetText} />;
+  const data: MpBarDatum[] = off.map((item) => ({
     label: item.label,
     value: Math.abs(item.variance),
-    color:
-      item.variance === 0
-        ? CHART_ACCENT.brandFacingShare
-        : item.variance < 0
-          ? CHART_ACCENT.financialOos
-          : accent ?? CHART_ACCENT.rankByUnits,
+    display: `${item.variance > 0 ? "+" : "−"}${Math.abs(item.variance)}`,
+    color: item.variance < 0 ? CHART_ACCENT.financialOos : accent ?? CHART_ACCENT.rankByUnits,
   }));
   return <MpRankBars data={data} unit={unit} />;
 }

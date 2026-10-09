@@ -553,7 +553,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
           <>
             <AiAuditCard
               title="Largest facing variance"
-              description="Top rows by absolute facing delta"
+              description="Products furthest from their expected facings"
               className="xl:col-span-1"
               csvDownload={{
                 onDownload: () =>
@@ -565,11 +565,17 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                   ),
               }}
             >
-              <AiVarianceBars items={topVariance} unit=" total facings" accent={CHART_ACCENT.actualFacings} />
+              <AiVarianceBars
+                items={topVariance}
+                unit=" facings"
+                accent={CHART_ACCENT.actualFacings}
+                onTargetText="Every product is at its expected facings — no facing variance."
+                unavailableText="Facing targets aren't set for these products, so facing variance isn't calculated."
+              />
             </AiAuditCard>
             <AiAuditCard
               title="Largest unit variance"
-              description="Top rows by absolute unit delta"
+              description="Products furthest from their expected visible units"
               csvDownload={{
                 onDownload: () =>
                   downloadSectionCsv(
@@ -580,7 +586,13 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                   ),
               }}
             >
-              <AiVarianceBars items={topUnitVariance} unit=" visible units" accent={CHART_ACCENT.actualUnits} />
+              <AiVarianceBars
+                items={topUnitVariance}
+                unit=" units"
+                accent={CHART_ACCENT.actualUnits}
+                onTargetText="Every product is at its expected visible units — no unit variance."
+                unavailableText="Unit targets aren't set in this planogram, so unit variance isn't calculated."
+              />
             </AiAuditCard>
           </>
         ) : null}

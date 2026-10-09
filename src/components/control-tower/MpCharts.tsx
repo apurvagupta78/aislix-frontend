@@ -4,6 +4,8 @@ export interface MpBarDatum {
   label: string;
   value: number;
   color?: string;
+  /** Text shown instead of `value` (e.g. signed variance); bar width still uses `value`. */
+  display?: string;
 }
 
 export interface MpDonutSlice {
@@ -156,7 +158,7 @@ export function MpRankBars({ data, max, unit = "" }: { data: MpBarDatum[]; max?:
           <div className="mb-1 flex items-baseline justify-between gap-3 text-[13px]">
             <span className="truncate text-navy">{item.label}</span>
             <span className="font-semibold tabular-nums text-navy">
-              {item.value}
+              {item.display ?? item.value}
               {unit}
             </span>
           </div>
