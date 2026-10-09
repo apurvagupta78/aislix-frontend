@@ -10,7 +10,7 @@ vi.mock("@/lib/ai-audit/astra-response", async (importOriginal) => ({
 
 import type { AstraPlanogramProduct } from "@/lib/ai-audit/astra-response";
 import type { LifecycleAction } from "@/lib/corrective-action-lifecycle";
-import { teamUserIds } from "@/lib/ai-dashboard-scope";
+import { matchesGeographyBucket, teamUserIds } from "@/lib/ai-dashboard-scope";
 import { filterAiActions } from "@/lib/ai-dashboard-actions";
 import { slaCompliance } from "@/lib/corrective-action-insights";
 import { selectVariances, summariseVariances, type VarianceScanInput } from "@/lib/ai-variance-summary";
@@ -26,6 +26,21 @@ describe("teamUserIds", () => {
     ];
     expect([...teamUserIds(members, "lead")].sort()).toEqual(["auditor", "lead", "sup"]);
     expect([...teamUserIds(members, "sup")].sort()).toEqual(["auditor", "sup"]);
+  });
+});
+
+describe("geographic buckets", () => {
+  it("No city includes null and blank city, not a named city", () => {
+    expect([null, "", "  ", "Delhi"].filter((city) => matchesGeographyBucket(city, "No city", "No city"))).toEqual([null, "", "  "]);
+  });
+  it("No country includes null and blank country, not a named country", () => {
+    expect([null, "", "  ", "India"].filter((country) => matchesGeographyBucket(country, "No country", "No country"))).toEqual([null, "", "  "]);
+  });
+  it("real geography retains equality matching", () => {
+    expect(matchesGeographyBucket("Delhi", "Delhi", "No city")).toBe(true);
+    expect(matchesGeographyBucket("Mumbai", "Delhi", "No city")).toBe(false);
+    expect(matchesGeographyBucket("India", "India", "No country")).toBe(true);
+    expect(matchesGeographyBucket("UK", "India", "No country")).toBe(false);
   });
 });
 

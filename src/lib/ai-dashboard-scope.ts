@@ -56,6 +56,10 @@ export async function resolvePeopleFilter(orgId: string, filters?: ScopeFilters)
 }
 
 /** Store ids allowed by the store / country / city filters; null when none is set. */
+export function matchesGeographyBucket(value: string | null | undefined, selected: string | null | undefined, blankLabel: "No city" | "No country"): boolean {
+  return !active(selected) || (selected === blankLabel ? !value?.trim() : value === selected);
+}
+
 export async function resolveStoreFilter(orgId: string, filters?: ScopeFilters): Promise<Set<string> | null> {
   const country = active(filters?.country) ? filters.country : null;
   const city = active(filters?.city) ? filters.city : null;
@@ -66,8 +70,8 @@ export async function resolveStoreFilter(orgId: string, filters?: ScopeFilters):
   if (city && city !== "No city") q = q.eq("city", city);
   const { data } = await q;
   const ids = new Set((data ?? [])
-    .filter((s) => country !== "No country" || !s.country?.trim())
-    .filter((s) => city !== "No city" || !s.city?.trim())
+    .filter((s) => matchesGeographyBucket(s.country, country, "No country"))
+    .filter((s) => matchesGeographyBucket(s.city, city, "No city"))
     .map((s) => s.id as string));
   if (storeId) return new Set(ids.has(storeId) ? [storeId] : []);
   return ids;
