@@ -327,7 +327,6 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       color: CHART_ACCENT.rankByUnits,
     }));
 
-  const risk = ctx.executionRisk;
   const summaryText = sanitizeShelfOnlyExecutiveSummary(data.executive_summary);
 
   const productColumns = [
@@ -464,44 +463,6 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         locationAnalysis={locationAnalysis}
         countPending={facingsMetric?.status === "COUNT_MISMATCH" || unitsMetric?.status === "COUNT_MISMATCH"}
       />
-
-      {risk ? (
-        <AiAuditCard
-          title="Execution risk"
-          description="Issues that need attention"
-          csvDownload={{
-            onDownload: () =>
-              downloadSectionCsv(
-                data.scan_id,
-                "execution-risk",
-                ["Severity", "Rules triggered", "Reasons", "Rule"],
-                risk.rules_triggered.length
-                  ? risk.rules_triggered.map((rule) => [
-                      risk.severity,
-                      risk.rules_triggered.length,
-                      risk.reasons.length,
-                      String(rule.description ?? rule.rule_id ?? ""),
-                    ])
-                  : [[risk.severity, 0, risk.reasons.length, "None"]],
-              ),
-          }}
-        >
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <AiMetricStat label="Severity" value={risk.severity || "NONE"} bg={KPI_CARD.criticalFindings} />
-            <AiMetricStat label="Rules triggered" value={risk.rules_triggered.length} bg={KPI_CARD.openFindings} />
-            <AiMetricStat label="Reasons" value={risk.reasons.length || "—"} bg={KPI_CARD.overdueActions} />
-          </div>
-          {risk.rules_triggered.length ? (
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-              {risk.rules_triggered.slice(0, 5).map((rule, i) => (
-                <li key={i}>{String(rule.description ?? rule.rule_id ?? "Rule triggered")}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-3 text-sm text-muted-foreground">No execution-risk rules triggered.</p>
-          )}
-        </AiAuditCard>
-      ) : null}
 
       {analysis.focus_brand_analysis ? (
         <AiAuditCard

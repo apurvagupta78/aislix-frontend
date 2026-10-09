@@ -31,7 +31,6 @@ import {
   locationStatusLabel,
   priceStatusLabel,
 } from "@/components/ai-audit/results/AiLocationSections";
-import { PlanogramSideBySidePanel } from "@/components/scan-results/PlanogramSideBySidePanel";
 import { ReferenceMatchSection } from "@/components/ai-audit/results/ReferenceMatchSection";
 import { MpDonut, MpRadialGauge, MpTileGrid } from "@/components/control-tower/MpCharts";
 import type { AiAuditDisplayContext } from "@/lib/ai-audit/astra-display";
@@ -47,7 +46,6 @@ import { CHART_ACCENT, KPI_CARD, summaryFillAt } from "@/lib/ai-audit/kpi-palett
 import { metricDisplayValue, metricStatusLabel } from "@/lib/ai-audit/metric-results";
 import { downloadKeyValueCsv, downloadSectionCsv } from "@/lib/ai-audit/section-csv";
 import { referenceExpectsFacings } from "@/lib/ai-audit/reference-match";
-import { planogramComparisonFromResult } from "@/lib/planogram-display";
 import type { ScanResult } from "@/lib/scan-results";
 
 type Props = {
@@ -151,12 +149,6 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     s.overall_planogram_compliance_percent;
   const compliance =
     countPending || rawCompliance == null ? null : Math.round(rawCompliance);
-  const risk = ctx.executionRisk;
-  const riskCount =
-    risk?.rules_triggered.length ??
-    s.high_priority_execution_risks ??
-    0;
-
   const statusCounts: Record<string, number> = {};
   for (const row of analysis.products) {
     const key = row.overall_status || row.match_status || "UNKNOWN";
@@ -184,7 +176,6 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
           },
         ]
       : []),
-    { label: "Exec. risks", value: String(riskCount), tone: "attention" as const, bg: KPI_CARD.slaCompliance },
     { label: "Value gap ₹", value: String(s.total_potential_visible_unit_value_gap_inr), tone: "active" as const, bg: KPI_CARD.inventoryValueVariance },
   ];
 
@@ -257,7 +248,6 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
   const subHasCompliance = analysis.subcategory_analysis.some((c) => c.compliance_percent != null);
   const subHasStatus = analysis.subcategory_analysis.some((c) => Boolean(c.status));
 
-  const comparison = planogramComparisonFromResult(data, null);
   const astraCvProducts = pickAstraCvProducts(data);
 
   const productColumns = [
@@ -488,48 +478,6 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       </div>
 
       <AiLocationCards scanId={data.scan_id} locationAnalysis={locationAnalysis} countPending={countPending} />
-
-      {risk ? (
-        <AiAuditCard
-          title="Execution risk"
-          description="Rule-based severity from Aislix calc"
-          csvDownload={{
-            onDownload: () =>
-              downloadSectionCsv(
-                data.scan_id,
-                "execution-risk",
-                ["Severity", "Rules triggered", "High-priority risks", "Rule"],
-                risk.rules_triggered.length
-                  ? risk.rules_triggered.map((rule) => [
-                      risk.severity,
-                      risk.rules_triggered.length,
-                      s.high_priority_execution_risks,
-                      String(rule.description ?? rule.rule_id ?? ""),
-                    ])
-                  : [[risk.severity, 0, s.high_priority_execution_risks, "None"]],
-              ),
-          }}
-        >
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <AiMetricStat label="Severity" value={risk.severity || "NONE"} bg={KPI_CARD.criticalFindings} />
-            <AiMetricStat label="Rules triggered" value={risk.rules_triggered.length} bg={KPI_CARD.openFindings} />
-            <AiMetricStat
-              label="High-priority risks"
-              value={s.high_priority_execution_risks}
-              bg={KPI_CARD.overdueActions}
-            />
-          </div>
-          {risk.rules_triggered.length ? (
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-              {risk.rules_triggered.slice(0, 5).map((rule, i) => (
-                <li key={i}>{String(rule.description ?? rule.rule_id ?? "Rule triggered")}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-3 text-sm text-muted-foreground">No execution-risk rules triggered.</p>
-          )}
-        </AiAuditCard>
-      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-3">
         {donutSlices.length ? (
@@ -972,16 +920,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
         </AiAuditCard>
       ) : null}
 
-      {comparison || data.planogram?.requested ? (
-        <PlanogramSideBySidePanel
-          data={data}
-          comparison={comparison}
-          imageUrl={imageUrl}
-          facingTargets={facingTargets}
-        />
-      ) : (
-        <AiEvidencePanel imageUrl={imageUrl} />
-      )}
+      <AiEvidencePanel imageUrl={imageUrl} />
 
       <AiAstraOutputSections result={data} extras={ctx.extras} />
     </div>
