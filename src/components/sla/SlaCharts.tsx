@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Clock } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -8,7 +8,14 @@ import { MpCard, MpCardHeader } from "@/components/design-system/MpCard";
 import { ACCENT_TINT, AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
 import type { AuditChecks } from "@/lib/audit-checks";
 import { hideModelNames } from "@/lib/ai-display-text";
-import { actionStage, issueCategoryLabel, issueCategoryOf } from "@/lib/corrective-action-catalog";
+import { Button } from "@/components/ui/button";
+import {
+  actionStage,
+  actionStageLabel,
+  isActionLate,
+  issueCategoryLabel,
+  issueCategoryOf,
+} from "@/lib/corrective-action-catalog";
 import { slaRemainingLabel } from "@/lib/corrective-action-lifecycle";
 import {
   formatMinutes,
@@ -469,64 +476,228 @@ export function SlaAlertsPanel({ alerts, limit = 8 }: { alerts: SlaAlert[]; limi
 
 const PRIORITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
-/** What needs fixing, who owns it and when it is due: open actions, most urgent first. */
-export function OpenActionsList({ actions, limit = 6 }: { actions: SlaAction[]; limit?: number }) {
-  const open = actions
-    .filter((a) => {
-      const s = actionStage(a.status);
-      return s === "open" || s === "in_progress";
-    })
-    .sort(
-      (x, y) =>
-        (PRIORITY_RANK[x.priority] ?? 4) - (PRIORITY_RANK[y.priority] ?? 4) ||
-        (x.due_at ? new Date(x.due_at).getTime() : Infinity) - (y.due_at ? new Date(y.due_at).getTime() : Infinity),
-    );
+type FixView = "needs_fixing" | "awaiting" | "fixed" | "all";
+type FixSortKey = "what" | "type" | "store" | "owner" | "due" | "status" | "priority";
+
+const FIX_VIEWS: Array<{ id: FixView; label: string }> = [
+  { id: "needs_fixing", label: "Needs fixing" },
+  { id: "awaiting", label: "Awaiting check" },
+  { id: "fixed", label: "Fixed" },
+  { id: "all", label: "All" },
+];
+
+const FIX_COLUMNS: Array<{ key: FixSortKey; label: string }> = [
+  { key: "what", label: "What is wrong" },
+  { key: "type", label: "Issue type" },
+  { key: "store", label: "Store" },
+  { key: "owner", label: "Who is responsible" },
+  { key: "due", label: "Due" },
+  { key: "status", label: "Status" },
+  { key: "priority", label: "Priority" },
+];
+
+const STAGE_RANK: Record<string, number> = { open: 0, in_progress: 1, submitted: 2, verified: 3, closed: 4 };
+const FIX_PAGE = 10;
+
+function inFixView(a: SlaAction, view: FixView): boolean {
+  const s = actionStage(a.status);
+  if (view === "needs_fixing") return s === "open" || s === "in_progress";
+  if (view === "awaiting") return s === "submitted";
+  if (view === "fixed") return s === "verified" || s === "closed";
+  return true;
+}
+
+function fixSortValue(a: SlaAction, key: FixSortKey): string | number {
+  switch (key) {
+    case "what":
+      return a.title.toLowerCase();
+    case "type":
+      return issueCategoryLabel(issueCategoryOf(a)).toLowerCase();
+    case "store":
+      return (a.store_name ?? "").toLowerCase();
+    case "owner":
+      return (a.assigned_name || "").toLowerCase();
+    case "due":
+      return a.due_at ? new Date(a.due_at).getTime() : Number.MAX_SAFE_INTEGER;
+    case "status":
+      return STAGE_RANK[actionStage(a.status)] ?? 9;
+    case "priority":
+      return PRIORITY_RANK[a.priority] ?? 4;
+  }
+}
+
+/** What needs fixing, who is responsible and when it is due — every action, sortable, 10 at a time. */
+export function OpenActionsList({ actions }: { actions: SlaAction[] }) {
+  const navigate = useNavigate();
+  const [view, setView] = useState<FixView>("needs_fixing");
+  const [sort, setSort] = useState<{ key: FixSortKey; dir: "asc" | "desc" }>({ key: "priority", dir: "asc" });
+  const [visible, setVisible] = useState(FIX_PAGE);
+
+  const counts = useMemo(() => {
+    const c: Record<FixView, number> = { needs_fixing: 0, awaiting: 0, fixed: 0, all: actions.length };
+    for (const a of actions) {
+      if (inFixView(a, "needs_fixing")) c.needs_fixing += 1;
+      else if (inFixView(a, "awaiting")) c.awaiting += 1;
+      else if (inFixView(a, "fixed")) c.fixed += 1;
+    }
+    return c;
+  }, [actions]);
+
+  const rows = useMemo(() => {
+    const list = actions.filter((a) => inFixView(a, view));
+    const dueTime = (a: SlaAction) => (a.due_at ? new Date(a.due_at).getTime() : Number.MAX_SAFE_INTEGER);
+    list.sort((x, y) => {
+      const a = fixSortValue(x, sort.key);
+      const b = fixSortValue(y, sort.key);
+      const c = typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b));
+      return (sort.dir === "asc" ? c : -c) || dueTime(x) - dueTime(y);
+    });
+    return list;
+  }, [actions, view, sort]);
+
+  const onSort = (key: FixSortKey) => {
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+    setVisible(FIX_PAGE);
+  };
+
   return (
-    <SlaCard
-      title="What needs fixing"
-      question="What is wrong, who is responsible, and when is it due?"
-      action={<span className="text-xs text-mp-muted">{open.length} open</span>}
-    >
-      {!open.length ? (
-        <ChartUnavailable reason="No open corrective actions in these filters." />
-      ) : (
-        <ul className="-mx-2 divide-y divide-[#EEF1F4]">
-          {open.slice(0, limit).map((a) => (
-            <li key={a.id}>
-              <Link
-                to="/corrective-actions/$actionId"
-                params={{ actionId: a.id }}
-                className="flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-[#F4F7F9]"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-navy">{hideModelNames(a.title)}</span>
-                  <span className="block text-xs text-mp-muted">
-                    {issueCategoryLabel(issueCategoryOf(a))} · {a.code ?? "Action"} · {a.store_name ?? "No store"} ·{" "}
-                    {a.assigned_name || "Unassigned"}
-                  </span>
-                </span>
-                <span className="shrink-0 text-right text-xs text-navy">
-                  {a.due_at
-                    ? new Date(a.due_at).toLocaleString([], {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "No due date"}
-                  <span className="block text-mp-muted">
-                    {a.due_at ? slaRemainingLabel(a.due_at, a.status) : a.priority}
-                  </span>
-                </span>
-              </Link>
-            </li>
+    <MpCard className="overflow-hidden">
+      <MpCardHeader
+        title="What needs fixing"
+        description="What is wrong, who is responsible, and when is it due? Click a column to sort, a row to open the action."
+        action={<span className="text-xs text-mp-muted">{counts.needs_fixing} open</span>}
+      />
+      <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 md:px-5">
+        <div className="inline-flex flex-wrap rounded-lg border border-line bg-white p-0.5" role="tablist" aria-label="Fix status">
+          {FIX_VIEWS.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              role="tab"
+              aria-selected={view === v.id}
+              onClick={() => {
+                setView(v.id);
+                setVisible(FIX_PAGE);
+              }}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                view === v.id ? "bg-[#F4F7F9] text-navy" : "text-mp-muted hover:text-navy",
+              )}
+            >
+              {v.label} ({counts[v.id]})
+            </button>
           ))}
-        </ul>
+        </div>
+        <span className="ml-auto text-xs text-mp-muted">
+          {rows.length} action{rows.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      {!rows.length ? (
+        <div className="p-4 md:p-5">
+          <ChartUnavailable
+            reason={view === "needs_fixing" ? "Nothing needs fixing in these filters." : "No actions with this status in these filters."}
+          />
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-line text-xs text-mp-muted">
+                {FIX_COLUMNS.map((c, i) => {
+                  const active = sort.key === c.key;
+                  const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
+                  return (
+                    <th
+                      key={c.key}
+                      className={cn("py-2 pr-3 font-medium", i === 0 && "px-4 md:px-5")}
+                      aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onSort(c.key)}
+                        className={cn("inline-flex items-center gap-1 hover:text-navy", active && "text-navy")}
+                      >
+                        {c.label}
+                        <Icon className={cn("size-3", !active && "opacity-40")} aria-hidden />
+                      </button>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, visible).map((a) => {
+                const stage = actionStage(a.status);
+                const late = isActionLate(a);
+                return (
+                  <tr
+                    key={a.id}
+                    onClick={() => void navigate({ to: "/corrective-actions/$actionId", params: { actionId: a.id } })}
+                    className="cursor-pointer border-b border-[#EEF1F4] transition-colors hover:bg-[#F4F7F9]"
+                  >
+                    <td className="px-4 py-2 md:px-5">
+                      <Link
+                        to="/corrective-actions/$actionId"
+                        params={{ actionId: a.id }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="block max-w-[300px] truncate font-medium text-navy hover:underline"
+                        title={hideModelNames(a.title)}
+                      >
+                        {hideModelNames(a.title)}
+                      </Link>
+                      <span className="text-[11px] text-mp-muted">{a.code ?? "Action"}</span>
+                    </td>
+                    <td className="whitespace-nowrap py-2 pr-3 text-navy">{issueCategoryLabel(issueCategoryOf(a))}</td>
+                    <td className="py-2 pr-3 text-navy">
+                      <span className="block max-w-[160px] truncate" title={a.store_name ?? "No store"}>
+                        {a.store_name ?? "No store"}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3 text-navy">
+                      <span className="block max-w-[160px] truncate">{a.assigned_name || "Unassigned"}</span>
+                    </td>
+                    <td className="whitespace-nowrap py-2 pr-3 text-navy">
+                      {a.due_at
+                        ? new Date(a.due_at).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                        : "No due date"}
+                      {a.due_at && (stage === "open" || stage === "in_progress") ? (
+                        <span className="block text-[11px] text-mp-muted">{slaRemainingLabel(a.due_at, a.status)}</span>
+                      ) : null}
+                    </td>
+                    <td className="whitespace-nowrap py-2 pr-3">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2 py-0.5 text-[11px] font-medium text-navy">
+                        <span
+                          className="size-1.5 rounded-full"
+                          style={{
+                            background: late
+                              ? CA_PINK_BAR
+                              : stage === "verified" || stage === "closed"
+                                ? AISLIX_PALETTE.green
+                                : stage === "submitted"
+                                  ? AISLIX_PALETTE.blue
+                                  : AISLIX_PALETTE.purple,
+                          }}
+                          aria-hidden
+                        />
+                        {late ? "Overdue" : actionStageLabel(a.status)}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap py-2 pr-4 capitalize text-navy">{a.priority}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {rows.length > visible ? (
+            <div className="border-t border-line p-3 text-center">
+              <Button variant="outline" size="sm" onClick={() => setVisible((v) => v + FIX_PAGE)}>
+                Show more ({rows.length - visible} left)
+              </Button>
+            </div>
+          ) : null}
+        </div>
       )}
-      {open.length > limit ? (
-        <p className="mt-2 text-xs text-mp-muted">+{open.length - limit} more in the action list.</p>
-      ) : null}
-    </SlaCard>
+    </MpCard>
   );
 }
 

@@ -193,9 +193,9 @@ export function CorrectiveActionsSummary({ data, loading, source }: SectionProps
             <PipelineChart counts={pipeline} />
             <TypeChart rows={types} />
             <StoreChart rows={stores} />
-            {source === "ai" ? <RecheckChart rows={rechecks} /> : <OpenActionsList actions={rows} limit={5} />}
+            {source === "ai" ? <RecheckChart rows={rechecks} /> : null}
           </div>
-          {source === "ai" ? <OpenActionsList actions={rows} limit={6} /> : null}
+          <OpenActionsList actions={rows} />
           <StoreVarianceMatrix
             rows={byStoreVariance.rows}
             totals={byStoreVariance.totals}

@@ -13,7 +13,8 @@ import type { LifecycleAction } from "@/lib/corrective-action-lifecycle";
 import { teamUserIds } from "@/lib/ai-dashboard-scope";
 import { filterAiActions } from "@/lib/ai-dashboard-actions";
 import { slaCompliance } from "@/lib/corrective-action-insights";
-import { summariseVariances, type VarianceScanInput } from "@/lib/ai-variance-summary";
+import { selectVariances, summariseVariances, type VarianceScanInput } from "@/lib/ai-variance-summary";
+import { auditorIssues, filterLinkedActions, lensGroups, linkActions } from "@/lib/ai-dashboard-lens";
 
 describe("teamUserIds", () => {
   it("includes the manager and every indirect report, but not other teams", () => {
@@ -227,5 +228,61 @@ describe("summariseVariances", () => {
   it("skips audits without a plan", () => {
     const noPlan = { ...scan("s3", "Store C", []), metrics: null };
     expect(summariseVariances([noPlan]).auditsWithPlan).toBe(0);
+  });
+
+  it("keeps a shelf fact for every product, grouped by lens", () => {
+    const summary = summariseVariances(scans);
+    expect(summary.facts).toHaveLength(2);
+    expect(summary.facts.find((f) => f.scanId === "s1")!.facets).toMatchObject({
+      store: "Store A",
+      location: "AMB-D0303",
+      price: "Price matches plan",
+      facings: "Below plan",
+    });
+  });
+});
+
+describe("View by selection", () => {
+  const scans = [
+    scan("s1", "Store A", [
+      planned({ actual_facings: 4, facing_variance: -2 }),
+      planned({ sku: "LAYS-MM", variant: "Magic Masala", location_status: "WRONG_LOCATION", actual_location_label: "B-2" }),
+    ]),
+    scan("s2", "Store B", [planned({})]),
+  ];
+  const summary = summariseVariances(scans);
+
+  it("View by Location shows location issues only, in every store", () => {
+    const view = selectVariances(summary, [], { lens: "location", value: "all" });
+    expect(view.records.map((r) => r.field)).toEqual(["location"]);
+    expect(view.fields.map((f) => f.key)).toEqual(["location"]);
+  });
+
+  it("a picked value narrows every record and fact", () => {
+    const view = selectVariances(summary, [], { lens: "store", value: "Store B" });
+    expect(view.records).toHaveLength(0);
+    expect(view.facts.every((f) => f.facets.store === "Store B")).toBe(true);
+    expect(view.audits).toBe(1);
+  });
+
+  it("issues an auditor recorded on the audit count as variances", () => {
+    const manual = action({
+      id: "m1",
+      scan_id: "s2",
+      sku: "LAYS-CL",
+      title: "Branding issue · Lay's · potato chips Classic Salted",
+      issue_category: "branding",
+      raised_manually: true,
+    });
+    const linked = linkActions([manual], summary.facts, summary.scans);
+    expect(linked[0]!.facets?.store).toBe("Store B");
+    const issues = auditorIssues(linked, summary.scans);
+    const view = selectVariances(summary, issues, { lens: "store", value: "Store B" });
+    expect(view.recorded).toBe(1);
+    expect(view.records[0]).toMatchObject({ origin: "auditor", fieldLabel: "Branding issue", store: "Store B" });
+    expect(filterLinkedActions(linked, { lens: "location", value: "all" })).toHaveLength(0);
+    expect(filterLinkedActions(linked, { lens: "brand", value: "all" })).toHaveLength(1);
+    const groups = lensGroups("store", summary.facts, view.records, linked);
+    expect(groups.find((g) => g.value === "Store B")).toMatchObject({ issues: 1, openFixes: 1 });
   });
 });

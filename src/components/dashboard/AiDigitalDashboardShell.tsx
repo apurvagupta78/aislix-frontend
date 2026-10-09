@@ -6,8 +6,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -27,7 +25,7 @@ import { toast } from "sonner";
 import { AskAislixSection } from "@/components/ask-aislix/AskAislixSection";
 import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
 import { WorkspaceFilterBar, WorkspaceFiltersToggle } from "@/components/filters/GlobalFilterBarShell";
-import { MpDonut, MpRankBars } from "@/components/control-tower/MpCharts";
+import { MpDonut } from "@/components/control-tower/MpCharts";
 import { DemoPreviewToggle } from "@/components/control-tower/DemoPreviewToggle";
 import {
   BrandShareMultiRing,
@@ -54,10 +52,20 @@ import {
 import { AISLIX } from "@/lib/aislix-theme";
 import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
 import { DashboardOverviewPanel } from "@/components/dashboard/DashboardOverviewPanel";
-import { AiVarianceSection } from "@/components/dashboard/AiDashboardInsights";
+import { AiLensPanel, AiVarianceSection } from "@/components/dashboard/AiDashboardInsights";
 import { CorrectiveActionsSummary, SlaSummarySection } from "@/components/sla/SlaActionsSummary";
 import { AuditPhotoStrip } from "@/components/dashboard/AuditPhotoStrip";
-import { fetchAiVarianceSummary } from "@/lib/ai-variance-summary";
+import { fetchAiVarianceSummary, selectVariances } from "@/lib/ai-variance-summary";
+import {
+  ALL_VALUES,
+  auditorIssues,
+  filterLinkedActions,
+  lensGroups,
+  linkActions,
+  matchesValue,
+  shelfMetrics,
+  type LensSelection,
+} from "@/lib/ai-dashboard-lens";
 import { fetchScopedActions } from "@/lib/ai-dashboard-actions";
 import { SegmentHomePanel } from "@/components/dashboard/SegmentHomePanel";
 import {
@@ -111,7 +119,6 @@ const SPAN2_CARD_IDS = new Set([
   "chart_planogram",
   "chart_top_facings",
   "chart_completion",
-  "chart_trend",
   "chart_brand",
   "chart_category",
   "chart_units",
@@ -695,10 +702,31 @@ export function AiDigitalDashboardShell() {
     }
   };
 
-  const opsQuery = useQuery({
-    queryKey: ["dashboard-ops-ai-v6", filterKey, demoPreview.previewDemo],
+  const { completion: _completion, ...insightFilters } = filterKey;
+  const varianceQuery = useQuery({
+    queryKey: ["dashboard-ai-variances-v2", insightFilters, demoPreview.previewDemo],
     queryFn: () =>
-      fetchOpsAiDashboard(filterKey, {
+      fetchAiVarianceSummary(insightFilters, {
+        previewDemo: demoPreview.previewDemo,
+        userEmail: demoPreview.userEmail,
+      }),
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+    enabled: tab === "ai",
+  });
+
+  const [lensSelection, setLensSelection] = useState<LensSelection>({ lens: "store", value: ALL_VALUES });
+  /** Picking one store also scopes the audit-level cards (compliance, confidence, completion). */
+  const lensStoreId = useMemo(() => {
+    if (lensSelection.lens !== "store" || lensSelection.value === ALL_VALUES) return null;
+    return varianceQuery.data?.scans.find((s) => s.store === lensSelection.value)?.storeId ?? null;
+  }, [lensSelection, varianceQuery.data]);
+  const opsFilterKey = lensStoreId ? { ...filterKey, storeId: lensStoreId } : filterKey;
+
+  const opsQuery = useQuery({
+    queryKey: ["dashboard-ops-ai-v6", opsFilterKey, demoPreview.previewDemo],
+    queryFn: () =>
+      fetchOpsAiDashboard(opsFilterKey, {
         previewDemo: demoPreview.previewDemo,
         userEmail: demoPreview.userEmail,
       }),
@@ -719,18 +747,6 @@ export function AiDigitalDashboardShell() {
     enabled: tab !== "ai" || (!opsQuery.isPending && Boolean(opsQuery.data)),
   });
 
-  const { completion: _completion, ...insightFilters } = filterKey;
-  const varianceQuery = useQuery({
-    queryKey: ["dashboard-ai-variances-v1", insightFilters, demoPreview.previewDemo],
-    queryFn: () =>
-      fetchAiVarianceSummary(insightFilters, {
-        previewDemo: demoPreview.previewDemo,
-        userEmail: demoPreview.userEmail,
-      }),
-    staleTime: 60_000,
-    placeholderData: keepPreviousData,
-    enabled: tab === "ai",
-  });
   const aiActionsQuery = useQuery({
     queryKey: ["dashboard-sla-actions-v1", "ai", insightFilters, demoPreview.previewDemo],
     queryFn: () =>
@@ -761,6 +777,26 @@ export function AiDigitalDashboardShell() {
   const data = opsQuery.data;
   const dig = digitalQuery.data;
   const ai = data?.metrics;
+
+  const lensView = useMemo(() => {
+    const summary = varianceQuery.data;
+    if (!summary) return null;
+    const linked = linkActions(aiActionsQuery.data?.actions ?? [], summary.facts, summary.scans);
+    const issues = auditorIssues(linked, summary.scans);
+    const all: LensSelection = { lens: lensSelection.lens, value: ALL_VALUES };
+    const everyIssue = selectVariances(summary, issues, all).records;
+    const facts = summary.facts.filter((f) => matchesValue(f.facets, lensSelection));
+    return {
+      groups: lensGroups(lensSelection.lens, summary.facts, everyIssue, linked),
+      variances: selectVariances(summary, issues, lensSelection),
+      actions: aiActionsQuery.data
+        ? { ...aiActionsQuery.data, actions: filterLinkedActions(linked, lensSelection) }
+        : undefined,
+      shelf: lensSelection.value === ALL_VALUES ? null : shelfMetrics(facts),
+    };
+  }, [varianceQuery.data, aiActionsQuery.data, lensSelection]);
+  /** Product-level cards follow the View by choice once one value is picked. */
+  const shelf = lensView?.shelf ?? null;
 
   const emptyRealAi =
     !demoPreview.previewDemo &&
@@ -1095,21 +1131,6 @@ export function AiDigitalDashboardShell() {
             moreTo="/history"
           />
         );
-      case "kpi_total_audits":
-        return (
-          <KpiCard
-            label="Total audits"
-            value={fmtOrEmpty(
-              emptyRealAi,
-              data?.executive.audits
-                ?? data?.synopsis?.historyCount
-                ?? ((data?.completionMix ?? []).reduce((sum, row) => sum + (row.value || 0), 0)
-                  || ai?.auditCount),
-            )}
-            accent={accent}
-            moreTo="/history"
-          />
-        );
       case "kpi_confidence":
         return (
           <KpiCard
@@ -1123,7 +1144,7 @@ export function AiDigitalDashboardShell() {
         return (
           <KpiCard
             label="Products identified"
-            value={fmtOrEmpty(emptyRealAi, ai?.productsIdentified)}
+            value={fmtOrEmpty(emptyRealAi, shelf ? shelf.products : ai?.productsIdentified)}
             accent={accent}
           />
         );
@@ -1131,7 +1152,7 @@ export function AiDigitalDashboardShell() {
         return (
           <KpiCard
             label="Brands identified"
-            value={fmtOrEmpty(emptyRealAi, ai?.brandsIdentified)}
+            value={fmtOrEmpty(emptyRealAi, shelf ? shelf.brands : ai?.brandsIdentified)}
             accent={accent}
           />
         );
@@ -1139,7 +1160,7 @@ export function AiDigitalDashboardShell() {
         return (
           <KpiCard
             label="Total facings"
-            value={fmtOrEmpty(emptyRealAi, ai?.totalFacings)}
+            value={fmtOrEmpty(emptyRealAi, shelf ? shelf.facings : ai?.totalFacings)}
             accent={accent}
           />
         );
@@ -1147,7 +1168,7 @@ export function AiDigitalDashboardShell() {
         return (
           <KpiCard
             label="Visible units"
-            value={fmtOrEmpty(emptyRealAi, ai?.totalVisibleUnits)}
+            value={fmtOrEmpty(emptyRealAi, shelf ? shelf.units : ai?.totalVisibleUnits)}
             accent={accent}
           />
         );
@@ -1174,74 +1195,8 @@ export function AiDigitalDashboardShell() {
             )}
           </ChartCard>
         );
-      case "chart_field_match": {
-        const rows = (ai?.fieldMatchRates ?? []).filter((r) => r.checked > 0);
-        return (
-          <ChartCard title="Plan vs AI detected" moreTo="/history">
-            <p className="-mt-1 mb-3 text-xs text-[#667085]">
-              Planned products where what the AI read from the photo matched the plan.
-            </p>
-            {rows.length ? (
-              <MpRankBars
-                max={100}
-                data={rows.map((r) => ({
-                  label: r.notVisible ? `${r.label} · ${r.notVisible} not visible in photo` : r.label,
-                  value: Math.round((r.matched / r.checked) * 100),
-                  display: `${Math.round((r.matched / r.checked) * 100)}% · ${r.matched} of ${r.checked}`,
-                  color: AISLIX_PALETTE.green,
-                }))}
-              />
-            ) : (
-              <p className="text-sm text-[#667085]">Data unavailable — no planogram audits yet.</p>
-            )}
-          </ChartCard>
-        );
-      }
-      case "chart_ai_accuracy": {
-        const rows = ai?.aiAccuracyByField ?? [];
-        const audits = ai?.verifiedAudits;
-        return (
-          <ChartCard title="AI accuracy vs human checks" moreTo="/history">
-            <p className="-mt-1 mb-3 text-xs text-[#667085]">
-              {audits?.total
-                ? `Human verified in ${audits.verified} of ${audits.total} recent audits. Share of checked fields where the AI read the same value.`
-                : "Share of human-checked fields where the AI read the same value."}
-            </p>
-            {rows.length ? (
-              <MpRankBars
-                max={100}
-                data={rows.map((r) => ({
-                  label: r.label,
-                  value: Math.round((r.agreed / r.verified) * 100),
-                  display: `${Math.round((r.agreed / r.verified) * 100)}% · ${r.agreed} of ${r.verified}`,
-                  color: AISLIX_PALETTE.blue,
-                }))}
-              />
-            ) : (
-              <p className="text-sm text-[#667085]">
-                Verification required — no fields have been human verified yet.
-              </p>
-            )}
-          </ChartCard>
-        );
-      }
-      case "chart_open_by_field": {
-        const rows = ai?.openFindingsByField ?? [];
-        return (
-          <ChartCard title="Open findings by field" moreTo="/findings">
-            {rows.length ? (
-              <MpRankBars
-                data={rows.map((r) => ({ label: r.label, value: r.value, color: AISLIX_PALETTE.purple }))}
-                unit=" open"
-              />
-            ) : (
-              <p className="text-sm text-[#667085]">No open AI findings.</p>
-            )}
-          </ChartCard>
-        );
-      }
       case "chart_top_facings": {
-        const rows = (ai?.topProductsByFacings ?? []).slice(0, 6);
+        const rows = (shelf?.topProductsByFacings ?? ai?.topProductsByFacings ?? []).slice(0, 6);
         return (
           <ChartCard title="Top products by facings" moreTo="/audit-intelligence">
             {rows.length ? (
@@ -1296,48 +1251,22 @@ export function AiDigitalDashboardShell() {
             )}
           </ChartCard>
         );
-      case "chart_trend":
-        return (
-          <ChartCard title="Audits over time" moreTo="/history">
-            {(data?.auditTrend ?? []).length ? (
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data?.auditTrend ?? []}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E7EDF0" />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke={AISLIX_PALETTE.purple}
-                      strokeWidth={2}
-                      dot={{ fill: AISLIX_PALETTE.purple }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <p className="text-sm text-[#667085]">Data unavailable</p>
-            )}
-          </ChartCard>
-        );
       case "chart_brand":
         return (
           <ChartCard title="Brand share of facings" moreTo="/audit-intelligence">
-            <BrandShareMultiRing rows={ai?.brandShare ?? []} />
+            <BrandShareMultiRing rows={shelf?.brandShare ?? ai?.brandShare ?? []} />
           </ChartCard>
         );
       case "chart_category":
         return (
           <ChartCard title="Category share of facings" moreTo="/audit-intelligence">
-            <CategoryShareDonut rows={ai?.categoryShare ?? []} />
+            <CategoryShareDonut rows={shelf?.categoryShare ?? ai?.categoryShare ?? []} />
           </ChartCard>
         );
       case "chart_units":
         return (
           <ChartCard title="Top products by visible units" moreTo="/audit-intelligence">
-            <ProductRankingCards rows={ai?.topProductsByUnits ?? []} />
+            <ProductRankingCards rows={shelf?.topProductsByUnits ?? ai?.topProductsByUnits ?? []} />
           </ChartCard>
         );
       case "chart_low_compliance":
@@ -1903,20 +1832,33 @@ export function AiDigitalDashboardShell() {
                 }
               />
 
+              <AiLensPanel
+                selection={lensSelection}
+                onChange={setLensSelection}
+                groups={lensView?.groups ?? []}
+                audits={lensView?.variances.audits ?? 0}
+                auditLimit={varianceQuery.data?.auditLimit ?? 50}
+                loading={varianceQuery.isPending}
+              />
+
               {renderMetricGrid(
                 renderAiCard,
                 <>
                   {sectionFilters}
                   <CorrectiveActionsSummary
                     source="ai"
-                    data={aiActionsQuery.data}
+                    data={lensView?.actions ?? aiActionsQuery.data}
                     loading={aiActionsQuery.isPending}
                   />
-                  <SlaSummarySection source="ai" data={aiActionsQuery.data} loading={aiActionsQuery.isPending} />
+                  <SlaSummarySection
+                    source="ai"
+                    data={lensView?.actions ?? aiActionsQuery.data}
+                    loading={aiActionsQuery.isPending}
+                  />
                 </>,
               )}
 
-              <AiVarianceSection summary={varianceQuery.data} loading={varianceQuery.isPending} />
+              <AiVarianceSection summary={lensView?.variances} loading={varianceQuery.isPending} />
 
               <div className="overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
                 <div className="p-4">

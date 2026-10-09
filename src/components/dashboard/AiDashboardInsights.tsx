@@ -40,6 +40,16 @@ import {
 import { StoreVarianceMatrix } from "@/components/corrective-actions/StoreVarianceMatrix";
 import type { CorrectiveActionsSearch } from "@/routes/corrective-actions";
 import type { VarianceDimension, VarianceRecord, VarianceSummary } from "@/lib/ai-variance-summary";
+import {
+  ALL_VALUES,
+  LENS_TOPIC,
+  LENSES,
+  lensDef,
+  type LensGroup,
+  type LensId,
+  type LensSelection,
+} from "@/lib/ai-dashboard-lens";
+import { MpRankBars } from "@/components/control-tower/MpCharts";
 import { downloadCsvFile } from "@/lib/kpi-details-csv";
 import { toCsv } from "@/lib/store-import";
 import { cn } from "@/lib/utils";
@@ -175,7 +185,7 @@ function downloadVariances(summary: VarianceSummary) {
   downloadCsvFile(`aislix-ai-variances-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(headers, rows));
 }
 
-const PAGE = 25;
+const PAGE = 10;
 
 type SortKey = "date" | "store" | "product" | "field" | "expected" | "ai" | "human" | "result";
 type SortState = { key: SortKey; dir: "asc" | "desc" };
@@ -187,7 +197,7 @@ const SORT_COLUMNS: Array<{ key: SortKey; label: string }> = [
   { key: "field", label: "Field" },
   { key: "expected", label: "Expected" },
   { key: "ai", label: "AI detected" },
-  { key: "human", label: "Human verified" },
+  { key: "human", label: "Human check / note" },
   { key: "result", label: "Result" },
 ];
 
@@ -284,6 +294,16 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
       .sort((a, b) => compareRecords(a, b, sort));
   }, [summary, field, search, sort]);
 
+  const fieldOptions = useMemo(() => {
+    const counts = new Map<string, { label: string; n: number }>();
+    for (const r of summary?.records ?? []) {
+      const c = counts.get(r.field) ?? { label: r.fieldLabel, n: 0 };
+      c.n += 1;
+      counts.set(r.field, c);
+    }
+    return [...counts.entries()].map(([key, c]) => ({ key, ...c })).sort((a, b) => b.n - a.n);
+  }, [summary]);
+
   const dim = DIMENSIONS.find((d) => d.id === dimension)!;
   const groups = (summary?.groups[dimension] ?? []).slice(0, 8).map((g) => ({
     label: short(g.label),
@@ -292,11 +312,11 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
     matched: g.checked - g.variances,
   }));
 
-  const description = summary
-    ? summary.auditsWithPlan
-      ? `Plan vs what the AI detected, or a human verified, across ${summary.auditsWithPlan} audit${summary.auditsWithPlan === 1 ? "" : "s"} with a plan (latest ${summary.auditLimit} audits in these filters).`
-      : "Plan vs what the AI detected, or a human verified, for every field."
-    : "Plan vs what the AI detected, or a human verified, for every field.";
+  const planVariances = summary ? summary.records.length - summary.recorded : 0;
+  const description = summary?.audits
+    ? `Plan vs what the AI detected or a human verified, plus issues auditors recorded — latest ${summary.auditLimit} audits in these filters.`
+    : "Plan vs what the AI detected or a human verified, plus issues auditors recorded on the audit.";
+  const empty = !summary || (!summary.records.length && !summary.checked && !summary.fields.some((f) => f.notVisible));
 
   return (
     <section className="space-y-3" aria-label="Variances across AI audits">
@@ -318,22 +338,20 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
             <Skeleton key={i} className="h-[104px] rounded-xl" />
           ))}
         </div>
-      ) : !summary || !summary.auditsWithPlan || (!summary.checked && !summary.fields.some((f) => f.notVisible)) ? (
+      ) : empty ? (
         <MpCard className="p-4">
           <ChartUnavailable
             reason={
               !summary?.audits
                 ? "No completed AI audits match these filters."
-                : !summary.auditsWithPlan
-                  ? "None of these audits had a planogram or document to compare against."
-                  : "No planned products match these filters."
+                : "No variances or recorded issues for this selection."
             }
           />
         </MpCard>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {summary.fields.map((f, i) => (
+            {summary.fields.filter((f) => f.checked || f.notVisible).map((f, i) => (
               <CaKpiCard
                 key={f.key}
                 label={f.label}
@@ -405,7 +423,9 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
           <MpCard className="overflow-hidden">
             <MpCardHeader
               title="All variances"
-              description={`${summary.variances} of ${summary.checked} checked fields differ from the plan. Open an audit to verify or act on it.`}
+              description={`${planVariances} of ${summary.checked} checked fields differ from the plan${
+                summary.recorded ? ` · ${summary.recorded} issue${summary.recorded === 1 ? "" : "s"} recorded by auditors` : ""
+              }. Newest first.`}
             />
             <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 md:px-5">
               <div className="relative">
@@ -431,13 +451,11 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
                 aria-label="Field"
               >
                 <option value="all">All fields</option>
-                {summary.fields
-                  .filter((f) => f.variances > 0)
-                  .map((f) => (
-                    <option key={f.key} value={f.key}>
-                      {f.label} ({f.variances})
-                    </option>
-                  ))}
+                {fieldOptions.map((f) => (
+                  <option key={f.key} value={f.key}>
+                    {f.label} ({f.n})
+                  </option>
+                ))}
               </select>
               <span className="ml-auto text-xs text-mp-muted">
                 {records.length} variance{records.length === 1 ? "" : "s"}
@@ -445,7 +463,7 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
             </div>
             {!records.length ? (
               <p className="px-5 py-6 text-sm text-mp-muted">
-                {summary.variances ? "No variances match this search." : "Every checked field matches the plan."}
+                {summary.records.length ? "No variances match this search." : "Every checked field matches the plan."}
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -483,8 +501,12 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
                         </td>
                         <td className="whitespace-nowrap py-2 pr-3 text-navy">{r.fieldLabel}</td>
                         <td className="py-2 pr-3 text-mp-muted">{r.expected || "—"}</td>
-                        <td className="py-2 pr-3 text-navy">{r.aiDetected}</td>
-                        <td className="py-2 pr-3 text-navy">{r.humanVerified || "—"}</td>
+                        <td className="py-2 pr-3 text-navy">{r.aiDetected || "—"}</td>
+                        <td className="py-2 pr-3 text-navy">
+                          <span className="block max-w-[220px] truncate" title={r.humanVerified}>
+                            {r.humanVerified || "—"}
+                          </span>
+                        </td>
                         <td className="py-2 pr-3">
                           <ResultPill
                             result={r.result}
@@ -516,6 +538,276 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
           </MpCard>
         </>
       )}
+    </section>
+  );
+}
+
+type LensSortKey = "value" | "audits" | "products" | "facings" | "share" | "units" | "issues" | "openFixes";
+
+const LENS_COLUMNS: Array<{ key: LensSortKey; label: string; numeric: boolean }> = [
+  { key: "value", label: "", numeric: false },
+  { key: "audits", label: "Audits", numeric: true },
+  { key: "products", label: "Products", numeric: true },
+  { key: "facings", label: "Facings", numeric: true },
+  { key: "share", label: "Share of facings", numeric: true },
+  { key: "units", label: "Visible units", numeric: true },
+  { key: "issues", label: "Issues", numeric: true },
+  { key: "openFixes", label: "Open fixes", numeric: true },
+];
+
+function lensSortValue(g: LensGroup, key: LensSortKey): string | number {
+  switch (key) {
+    case "value":
+      return g.value.toLowerCase();
+    case "share":
+      return g.sharePct ?? -1;
+    case "units":
+      return g.units ?? -1;
+    default:
+      return g[key];
+  }
+}
+
+/** Facings share colour per view: product views purple, place views blue, value views cyan. */
+const LENS_SHARE_COLOR: Record<LensId, string> = {
+  store: AISLIX_PALETTE.blue,
+  category: AISLIX_PALETTE.blue,
+  location: AISLIX_PALETTE.blue,
+  price: AISLIX_PALETTE.cyan,
+  brand: AISLIX_PALETTE.purple,
+  product: AISLIX_PALETTE.purple,
+  promotion: AISLIX_PALETTE.cyan,
+  facings: AISLIX_PALETTE.purple,
+};
+
+/**
+ * "View by" for the whole AI dashboard: pick a lens (store, category, location, price, brand share,
+ * product share, promotion, facings) and optionally one value; every metric below follows it.
+ */
+export function AiLensPanel({
+  selection,
+  onChange,
+  groups,
+  audits,
+  auditLimit,
+  loading,
+}: {
+  selection: LensSelection;
+  onChange: (next: LensSelection) => void;
+  groups: LensGroup[];
+  audits: number;
+  auditLimit: number;
+  loading: boolean;
+}) {
+  const [sort, setSort] = useState<{ key: LensSortKey; dir: "asc" | "desc" }>({ key: "issues", dir: "desc" });
+  const [visible, setVisible] = useState(PAGE);
+  const def = lensDef(selection.lens);
+  const topic = LENS_TOPIC[selection.lens];
+  const issueWord = topic ? `${def.label.replace(" share", "").toLowerCase()} issues` : "issues";
+
+  const sorted = useMemo(() => {
+    const list = [...groups];
+    list.sort((a, b) => {
+      const x = lensSortValue(a, sort.key);
+      const y = lensSortValue(b, sort.key);
+      const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+      return sort.dir === "asc" ? c : -c;
+    });
+    return list;
+  }, [groups, sort]);
+
+  const issueBars = groups
+    .filter((g) => g.issues > 0)
+    .sort((a, b) => b.issues - a.issues)
+    .slice(0, 8)
+    .map((g) => ({
+      label: short(g.value, 32),
+      value: g.issues,
+      display: `${g.issues}`,
+      color: g.value === selection.value || selection.value === ALL_VALUES ? CA_PINK_BAR : AISLIX_PALETTE.border,
+    }));
+  const shareBars = groups
+    .filter((g) => (g.sharePct ?? 0) > 0)
+    .sort((a, b) => (b.sharePct ?? 0) - (a.sharePct ?? 0))
+    .slice(0, 8)
+    .map((g) => ({
+      label: short(g.value, 32),
+      value: g.sharePct ?? 0,
+      display: `${g.sharePct}% · ${g.facings} facings`,
+      color:
+        g.value === selection.value || selection.value === ALL_VALUES
+          ? LENS_SHARE_COLOR[selection.lens]
+          : AISLIX_PALETTE.border,
+    }));
+
+  const pick = (value: string) => {
+    onChange({ lens: selection.lens, value: value === selection.value ? ALL_VALUES : value });
+  };
+
+  return (
+    <section aria-label="View metrics by">
+      <MpCard>
+        <MpCardHeader
+          title="View metrics by"
+          description={`Every metric, variance and action below follows this choice — from the latest ${auditLimit} AI audits in your filters${audits ? ` (${audits} audit${audits === 1 ? "" : "s"})` : ""}.`}
+          action={
+            selection.value !== ALL_VALUES ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => onChange({ lens: selection.lens, value: ALL_VALUES })}>
+                Clear selection
+              </Button>
+            ) : null
+          }
+        />
+        <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 pb-3 pt-1 md:px-5">
+          <SegmentToggle
+            value={selection.lens}
+            onChange={(lens) => {
+              onChange({ lens, value: ALL_VALUES });
+              setVisible(PAGE);
+              setSort({ key: "issues", dir: "desc" });
+            }}
+            options={LENSES.map((l) => ({ id: l.id, label: l.label }))}
+            label="View metrics by"
+          />
+          <select
+            className="h-9 min-w-[200px] max-w-full rounded-lg border border-line bg-white px-2.5 text-sm text-navy"
+            value={selection.value}
+            onChange={(e) => onChange({ lens: selection.lens, value: e.target.value })}
+            aria-label={`${def.label} value`}
+          >
+            <option value={ALL_VALUES}>All {def.plural}</option>
+            {[...groups]
+              .sort((a, b) => a.value.localeCompare(b.value))
+              .map((g) => (
+                <option key={g.value} value={g.value}>
+                  {g.value}
+                  {g.issues ? ` (${g.issues} issue${g.issues === 1 ? "" : "s"})` : ""}
+                </option>
+              ))}
+          </select>
+          <span className="text-xs text-mp-muted">
+            {selection.value === ALL_VALUES
+              ? `Showing all ${def.plural}${topic ? ` · ${issueWord} only` : ""}`
+              : `Showing ${def.label.toLowerCase()}: ${selection.value}${topic ? ` · ${issueWord} only` : ""}`}
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="grid gap-3 p-4 md:grid-cols-2 md:p-5">
+            <Skeleton className="h-40 rounded-xl" />
+            <Skeleton className="h-40 rounded-xl" />
+          </div>
+        ) : !groups.length ? (
+          <div className="p-4 md:p-5">
+            <ChartUnavailable reason="No completed AI audits with product reads match these filters." />
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 p-4 md:grid-cols-2 md:p-5">
+              <div>
+                <h3 className="text-sm font-semibold text-navy">Issues by {def.label.replace(" share", "").toLowerCase()}</h3>
+                <p className="mb-3 mt-0.5 text-xs text-mp-muted">{def.question}</p>
+                {issueBars.length ? (
+                  <MpRankBars data={issueBars} />
+                ) : (
+                  <ChartUnavailable reason={`No ${issueWord} found in these audits.`} />
+                )}
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-navy">
+                  Share of facings by {def.label.replace(" share", "").toLowerCase()}
+                </h3>
+                <p className="mb-3 mt-0.5 text-xs text-mp-muted">How much of the shelf each one holds.</p>
+                {shareBars.length ? (
+                  <MpRankBars data={shareBars} max={Math.max(...shareBars.map((b) => b.value), 1)} />
+                ) : (
+                  <ChartUnavailable reason="Data unavailable — no facings read for this view." />
+                )}
+              </div>
+            </div>
+            <div className="overflow-x-auto border-t border-line">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-line text-xs text-mp-muted">
+                    {LENS_COLUMNS.map((c, i) => {
+                      const active = sort.key === c.key;
+                      const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
+                      return (
+                        <th
+                          key={c.key}
+                          className={cn("py-2 pr-3 font-medium", i === 0 && "px-4 md:px-5", c.numeric && "text-right")}
+                          aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSort((s) =>
+                                s.key === c.key
+                                  ? { key: c.key, dir: s.dir === "asc" ? "desc" : "asc" }
+                                  : { key: c.key, dir: c.numeric ? "desc" : "asc" },
+                              );
+                              setVisible(PAGE);
+                            }}
+                            className={cn("inline-flex items-center gap-1 hover:text-navy", active && "text-navy")}
+                          >
+                            {c.label || def.label.replace(" share", "")}
+                            <Icon className={cn("size-3", !active && "opacity-40")} aria-hidden />
+                          </button>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.slice(0, visible).map((g) => {
+                    const selected = g.value === selection.value;
+                    return (
+                      <tr
+                        key={g.value}
+                        onClick={() => pick(g.value)}
+                        aria-selected={selected}
+                        className={cn(
+                          "cursor-pointer border-b border-[#EEF1F4] transition-colors hover:bg-[#F4F7F9]",
+                          selected && "bg-[#F4F7F9]",
+                        )}
+                      >
+                        <td className="px-4 py-2 md:px-5">
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="size-1.5 shrink-0 rounded-full"
+                              style={{ background: g.issues ? CA_PINK_BAR : AISLIX_PALETTE.green }}
+                              aria-hidden
+                            />
+                            <span className={cn("block max-w-[260px] truncate text-navy", selected && "font-semibold")} title={g.value}>
+                              {g.value}
+                            </span>
+                          </span>
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums text-navy">{g.audits}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums text-navy">{g.products}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums text-navy">{g.facings}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums text-navy">
+                          {g.sharePct == null ? "N/A" : `${g.sharePct}%`}
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums text-navy">{g.units ?? "N/A"}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums font-semibold text-navy">{g.issues}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums text-navy">{g.openFixes}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {sorted.length > visible ? (
+                <div className="border-t border-line p-3 text-center">
+                  <Button variant="outline" size="sm" onClick={() => setVisible((v) => v + PAGE)}>
+                    Show more ({sorted.length - visible} left)
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          </>
+        )}
+      </MpCard>
     </section>
   );
 }

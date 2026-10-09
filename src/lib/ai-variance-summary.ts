@@ -31,6 +31,18 @@ import {
 } from "@/lib/ai-dashboard-scope";
 import { resolveDashboardDateBounds, type DashboardFilterState } from "@/lib/dashboard-filters";
 import { resolveDemoExperience } from "@/lib/demo-environment";
+import {
+  canonicalBrands,
+  fieldInTopic,
+  LENS_TOPIC,
+  matchesValue,
+  rowFacets,
+  type AuditorIssue,
+  type LensFacets,
+  type LensScan,
+  type LensSelection,
+  type ShelfFact,
+} from "@/lib/ai-dashboard-lens";
 
 export const VARIANCE_FIELDS: ReadonlyArray<{ key: VerificationFieldKey; label: string }> = [
   { key: "present", label: "Product found" },
@@ -54,7 +66,8 @@ export type VarianceRecord = {
   category: string;
   sku: string;
   product: string;
-  field: VerificationFieldKey;
+  /** A plan field, or `ca:<issue category>` for an issue a person recorded on the audit. */
+  field: string;
   fieldLabel: string;
   expected: string;
   aiDetected: string;
@@ -63,6 +76,8 @@ export type VarianceRecord = {
   resultLabel: string;
   /** Detected (or verified) minus expected, for numeric fields. */
   difference: number | null;
+  origin: "plan" | "auditor";
+  facets: LensFacets;
 };
 
 export type VarianceFieldTotal = {
@@ -75,6 +90,15 @@ export type VarianceFieldTotal = {
 
 export type VarianceGroup = { label: string; variances: number; checked: number };
 
+/** One planned field the AI could assess on one product. */
+export type VarianceCheck = {
+  scanId: string;
+  field: VerificationFieldKey;
+  outcome: "variance" | "match" | "not_visible";
+  dims: Record<VarianceDimension, string>;
+  facets: LensFacets;
+};
+
 export type VarianceSummary = {
   audits: number;
   auditsWithPlan: number;
@@ -82,13 +106,20 @@ export type VarianceSummary = {
   auditLimit: number;
   checked: number;
   variances: number;
+  /** Issues people recorded on the audits (included in `records`). */
+  recorded: number;
   fields: VarianceFieldTotal[];
   groups: Record<VarianceDimension, VarianceGroup[]>;
   records: VarianceRecord[];
+  checks: VarianceCheck[];
+  /** Every product row the AI read, in every audit (with or without a plan). */
+  facts: ShelfFact[];
+  scans: LensScan[];
 };
 
 export type VarianceScanInput = {
   scanId: string;
+  storeId?: string | null;
   date: string;
   store: string;
   city: string;
@@ -102,6 +133,7 @@ export type VarianceScanInput = {
 const NUMERIC = new Set<VerificationFieldKey>(["facings", "visible_units", "price"]);
 const VARIANCE_RESULTS = new Set<FieldResult>(["mismatch", "below", "above"]);
 const MAX_AUDITS = 50;
+const DIMS: VarianceDimension[] = ["store", "city", "team", "category", "sku"];
 
 export const EMPTY_VARIANCE_SUMMARY: VarianceSummary = {
   audits: 0,
@@ -109,13 +141,85 @@ export const EMPTY_VARIANCE_SUMMARY: VarianceSummary = {
   auditLimit: MAX_AUDITS,
   checked: 0,
   variances: 0,
+  recorded: 0,
   fields: VARIANCE_FIELDS.map((f) => ({ ...f, checked: 0, variances: 0, notVisible: 0 })),
   groups: { store: [], city: [], team: [], category: [], sku: [] },
   records: [],
+  checks: [],
+  facts: [],
+  scans: [],
 };
 
 function lower(value: string | null | undefined): string {
   return String(value ?? "").trim().toLowerCase();
+}
+
+/** Field totals, groups and counts from checks + variance records. */
+function rollup(
+  base: { audits: number; auditLimit: number; scans: LensScan[]; facts: ShelfFact[] },
+  checks: VarianceCheck[],
+  records: VarianceRecord[],
+  fieldKeys: ReadonlySet<string> | null = null,
+): VarianceSummary {
+  const fields = new Map(
+    VARIANCE_FIELDS.filter((f) => !fieldKeys || fieldKeys.has(f.key)).map((f) => [
+      f.key,
+      { ...f, checked: 0, variances: 0, notVisible: 0 },
+    ]),
+  );
+  const groups = new Map<VarianceDimension, Map<string, VarianceGroup>>(DIMS.map((d) => [d, new Map()]));
+  const bump = (dims: Record<VarianceDimension, string>, variance: boolean) => {
+    for (const dim of DIMS) {
+      const map = groups.get(dim)!;
+      const label = dims[dim];
+      const g = map.get(label) ?? { label, variances: 0, checked: 0 };
+      g.checked += 1;
+      if (variance) g.variances += 1;
+      map.set(label, g);
+    }
+  };
+  const planScans = new Set<string>();
+  for (const c of checks) {
+    planScans.add(c.scanId);
+    const total = fields.get(c.field);
+    if (!total) continue;
+    if (c.outcome === "not_visible") {
+      total.notVisible += 1;
+      continue;
+    }
+    total.checked += 1;
+    if (c.outcome === "variance") total.variances += 1;
+    bump(c.dims, c.outcome === "variance");
+  }
+  let recorded = 0;
+  for (const r of records) {
+    if (r.origin !== "auditor") continue;
+    recorded += 1;
+    bump({ store: r.store, city: r.city, team: r.team, category: r.category, sku: r.sku || r.product }, true);
+  }
+  const fieldTotals = [...fields.values()];
+  const sortGroups = (dim: VarianceDimension) =>
+    [...groups.get(dim)!.values()].sort((a, b) => b.variances - a.variances || b.checked - a.checked);
+  return {
+    audits: base.audits,
+    auditsWithPlan: planScans.size,
+    auditLimit: base.auditLimit,
+    checked: fieldTotals.reduce((s, f) => s + f.checked, 0),
+    variances: fieldTotals.reduce((s, f) => s + f.variances, 0),
+    recorded,
+    fields: fieldTotals,
+    groups: {
+      store: sortGroups("store"),
+      city: sortGroups("city"),
+      team: sortGroups("team"),
+      category: sortGroups("category"),
+      sku: sortGroups("sku"),
+    },
+    records: [...records].sort((a, b) => b.date.localeCompare(a.date)),
+    checks,
+    facts: base.facts,
+    scans: base.scans,
+  };
 }
 
 /** Pure roll-up — every planned field the AI could check, with the human value winning when verified. */
@@ -125,52 +229,68 @@ export function summariseVariances(
 ): VarianceSummary {
   const category = lower(opts.category);
   const sku = lower(opts.sku);
-  const fields = new Map(VARIANCE_FIELDS.map((f) => [f.key, { ...f, checked: 0, variances: 0, notVisible: 0 }]));
-  const groups = new Map<VarianceDimension, Map<string, VarianceGroup>>(
-    (["store", "city", "team", "category", "sku"] as const).map((d) => [d, new Map()]),
-  );
-  const bump = (dim: VarianceDimension, label: string, variance: boolean) => {
-    const map = groups.get(dim)!;
-    const g = map.get(label) ?? { label, variances: 0, checked: 0 };
-    g.checked += 1;
-    if (variance) g.variances += 1;
-    map.set(label, g);
-  };
   const records: VarianceRecord[] = [];
-  let auditsWithPlan = 0;
+  const checks: VarianceCheck[] = [];
+  const facts: ShelfFact[] = [];
+  const lensScans: LensScan[] = [];
 
   for (const scan of scans) {
+    lensScans.push({
+      scanId: scan.scanId,
+      storeId: scan.storeId ?? null,
+      date: scan.date,
+      store: scan.store,
+      city: scan.city,
+      team: scan.team,
+      category: scan.category?.trim() || "Uncategorised",
+    });
     if (!scan.metrics) continue;
     const analysis = astraAnalysisFromScanResult({ metrics: scan.metrics });
-    if (analysis.mode !== "planogram") continue;
-    const rows = buildVerificationRows(analysis, scan.inventory).filter((row) => row.planned);
+    const rows = buildVerificationRows(analysis, scan.inventory);
     if (!rows.length) continue;
-    auditsWithPlan += 1;
     const verified = verificationMap(scan.verifications);
     for (const row of rows) {
       const rowCategory = row.category?.trim() || scan.category?.trim() || "Uncategorised";
       if (category && lower(rowCategory) !== category) continue;
       const rowSku = row.sku?.trim() || row.label;
       if (sku && !lower(rowSku).includes(sku) && !lower(row.label).includes(sku)) continue;
+      const human = (key: VerificationFieldKey) => verifiedFieldValue(verified.get(`${row.rowKey}:${key}`));
+      const facets = rowFacets({
+        row,
+        store: scan.store,
+        category: rowCategory,
+        value: (key) => human(key) ?? row.ai[key],
+        result: (key) => fieldResult(row, key, human(key)),
+      });
+      const facings = human("facings") ?? row.ai.facings;
+      const units = human("visible_units") ?? row.ai.visible_units;
+      facts.push({
+        scanId: scan.scanId,
+        storeId: scan.storeId ?? null,
+        date: scan.date,
+        product: row.label,
+        sku: row.sku?.trim() ?? "",
+        planned: row.planned,
+        facings: facings == null ? null : Number(facings),
+        units: units == null ? null : Number(units),
+        facets,
+      });
+      if (!row.planned) continue;
+      const dims = { store: scan.store, city: scan.city, team: scan.team, category: rowCategory, sku: rowSku };
       for (const f of VARIANCE_FIELDS) {
-        const human = verifiedFieldValue(verified.get(`${row.rowKey}:${f.key}`));
-        const result = fieldResult(row, f.key, human);
-        const total = fields.get(f.key)!;
+        const verifiedValue = human(f.key);
+        const result = fieldResult(row, f.key, verifiedValue);
         if (result === "na") continue;
-        if (result === "not_visible") {
-          total.notVisible += 1;
-          continue;
-        }
         const isVariance = VARIANCE_RESULTS.has(result);
-        total.checked += 1;
-        if (isVariance) total.variances += 1;
-        bump("store", scan.store, isVariance);
-        bump("city", scan.city, isVariance);
-        bump("team", scan.team, isVariance);
-        bump("category", rowCategory, isVariance);
-        bump("sku", rowSku, isVariance);
+        checks.push({
+          scanId: scan.scanId,
+          field: f.key,
+          outcome: result === "not_visible" ? "not_visible" : isVariance ? "variance" : "match",
+          dims,
+          facets,
+        });
         if (!isVariance) continue;
-        const value = human ?? row.ai[f.key];
+        const value = verifiedValue ?? row.ai[f.key];
         const expected = row.expected[f.key];
         records.push({
           scanId: scan.scanId,
@@ -185,37 +305,67 @@ export function summariseVariances(
           fieldLabel: f.label,
           expected: formatFieldValue(f.key, expected),
           aiDetected: formatFieldValue(f.key, row.ai[f.key]) || "Not detected",
-          humanVerified: formatFieldValue(f.key, human),
+          humanVerified: formatFieldValue(f.key, verifiedValue),
           result,
           resultLabel: RESULT_LABEL[result],
           difference:
             NUMERIC.has(f.key) && value != null && expected != null
               ? Math.round((Number(value) - Number(expected)) * 100) / 100
               : null,
+          origin: "plan",
+          facets,
         });
       }
     }
   }
 
-  const fieldTotals = [...fields.values()];
-  const sortGroups = (dim: VarianceDimension) =>
-    [...groups.get(dim)!.values()].sort((a, b) => b.variances - a.variances || b.checked - a.checked);
-  return {
-    audits: scans.length,
-    auditsWithPlan,
-    auditLimit: MAX_AUDITS,
-    checked: fieldTotals.reduce((s, f) => s + f.checked, 0),
-    variances: fieldTotals.reduce((s, f) => s + f.variances, 0),
-    fields: fieldTotals,
-    groups: {
-      store: sortGroups("store"),
-      city: sortGroups("city"),
-      team: sortGroups("team"),
-      category: sortGroups("category"),
-      sku: sortGroups("sku"),
+  canonicalBrands(facts.map((f) => f.facets));
+  return rollup({ audits: scans.length, auditLimit: MAX_AUDITS, scans: lensScans, facts }, checks, records);
+}
+
+/**
+ * The variances for one View by choice: plan variances plus issues people recorded on the audits,
+ * limited to the selected value and, for topic views (location, price…), to that topic.
+ */
+export function selectVariances(
+  summary: VarianceSummary,
+  issues: AuditorIssue[],
+  sel: LensSelection,
+): VarianceSummary {
+  const auditor: VarianceRecord[] = issues.map((i) => ({
+    scanId: i.scanId,
+    date: i.date,
+    store: i.store,
+    city: i.city,
+    team: i.team,
+    category: i.category,
+    sku: i.sku,
+    product: i.product,
+    field: i.field,
+    fieldLabel: i.fieldLabel,
+    expected: "",
+    aiDetected: "",
+    humanVerified: i.detail,
+    result: "mismatch",
+    resultLabel: "Recorded by auditor",
+    difference: null,
+    origin: "auditor",
+    facets: i.facets,
+  }));
+  const keep = (x: { facets: LensFacets; field: string }) => fieldInTopic(sel.lens, x.field) && matchesValue(x.facets, sel);
+  const topic = LENS_TOPIC[sel.lens];
+  const facts = summary.facts.filter((f) => matchesValue(f.facets, sel));
+  return rollup(
+    {
+      audits: sel.value === "all" ? summary.audits : new Set(facts.map((f) => f.scanId)).size,
+      auditLimit: summary.auditLimit,
+      scans: summary.scans,
+      facts,
     },
-    records: records.sort((a, b) => b.date.localeCompare(a.date)),
-  };
+    summary.checks.filter(keep),
+    [...summary.records.filter((r) => r.origin === "plan"), ...auditor].filter(keep),
+    topic ? new Set(topic.fields) : null,
+  );
 }
 
 export type VarianceFilters = ScopeFilters &
@@ -322,6 +472,7 @@ export async function fetchAiVarianceSummary(
     const store = s.store_id ? storeById.get(s.store_id as string) : null;
     return {
       scanId: s.id as string,
+      storeId: (s.store_id as string | null) ?? null,
       date: ((s.processing_completed_at ?? s.created_at) as string) ?? "",
       store: store?.name ?? "No store",
       city: store?.city?.trim() || "No city",
