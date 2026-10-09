@@ -52,7 +52,7 @@ const CHECK_SEARCH: Record<AuditCheckKey, CorrectiveActionsSearch> = {
   pre_post: { variance: "pre_post" },
 };
 
-const sourceText = (source: "ai" | "digital") => (source === "ai" ? "AI audits" : "Digital audits");
+const sourceText = (source: "ai" | "digital") => (source === "ai" ? "AI audits" : "digital audits");
 
 function SectionHeader({ title, question, actions }: { title: string; question: string; actions: ReactNode }) {
   return (
@@ -100,7 +100,7 @@ function SectionSkeleton({ count }: { count: number }) {
  */
 export function CorrectiveActionsSummary({ data, loading, source }: SectionProps) {
   const navigate = useNavigate();
-  const label = sourceText(source).toLowerCase();
+  const label = sourceText(source);
   const rows = useMemo(() => data?.actions ?? [], [data]);
   const kpis = useMemo(() => correctiveActionKpis(rows), [rows]);
   const checks = useMemo(() => auditChecks(rows, data?.verifications ?? []), [rows, data]);
@@ -216,7 +216,7 @@ const SLA_ACCENTS: AislixAccent[] = ["green", "blue", "pink", "cyan", "purple", 
 export function SlaSummarySection({ data, loading, source }: SectionProps) {
   const [slaType, setSlaType] = useState("all");
   const navigate = useNavigate();
-  const label = sourceText(source).toLowerCase();
+  const label = sourceText(source);
 
   const all = useMemo(() => data?.actions ?? [], [data]);
   const rows = useMemo(() => all.filter((a) => matchesSlaFilters(a, slaType, "all")), [all, slaType]);
