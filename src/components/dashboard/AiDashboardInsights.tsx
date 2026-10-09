@@ -318,13 +318,15 @@ export function AiVarianceSection({ summary, loading }: { summary: VarianceSumma
             <Skeleton key={i} className="h-[104px] rounded-xl" />
           ))}
         </div>
-      ) : !summary || !summary.auditsWithPlan ? (
+      ) : !summary || !summary.auditsWithPlan || (!summary.checked && !summary.fields.some((f) => f.notVisible)) ? (
         <MpCard className="p-4">
           <ChartUnavailable
             reason={
-              summary?.audits
-                ? "None of these audits had a planogram or document to compare against."
-                : "No completed AI audits match these filters."
+              !summary?.audits
+                ? "No completed AI audits match these filters."
+                : !summary.auditsWithPlan
+                  ? "None of these audits had a planogram or document to compare against."
+                  : "No planned products match these filters."
             }
           />
         </MpCard>
