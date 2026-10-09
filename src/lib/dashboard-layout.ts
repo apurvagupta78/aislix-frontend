@@ -29,7 +29,7 @@ export const AI_METRIC_CARDS: DashboardCardDef[] = [
   { id: "chart_planogram", title: "Planogram expected vs actual", kind: "metric" },
   { id: "chart_field_match", title: "Plan vs AI detected", kind: "metric" },
   { id: "chart_ai_accuracy", title: "AI accuracy vs human checks", kind: "metric" },
-  { id: "chart_open_by_field", title: "Open corrective actions by field", kind: "metric" },
+  { id: "chart_open_by_field", title: "Open findings by field", kind: "metric" },
   { id: "chart_top_facings", title: "Top products by facings", kind: "metric" },
   { id: "chart_completion", title: "Completion mix", kind: "metric" },
   { id: "chart_trend", title: "Audits over time", kind: "metric" },

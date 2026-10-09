@@ -1228,14 +1228,14 @@ export function AiDigitalDashboardShell() {
       case "chart_open_by_field": {
         const rows = ai?.openFindingsByField ?? [];
         return (
-          <ChartCard title="Open corrective actions by field" moreTo="/corrective-actions">
+          <ChartCard title="Open findings by field" moreTo="/findings">
             {rows.length ? (
               <MpRankBars
                 data={rows.map((r) => ({ label: r.label, value: r.value, color: AISLIX_PALETTE.purple }))}
                 unit=" open"
               />
             ) : (
-              <p className="text-sm text-[#667085]">No open AI corrective actions.</p>
+              <p className="text-sm text-[#667085]">No open AI findings.</p>
             )}
           </ChartCard>
         );
