@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -11,7 +11,18 @@ import {
   createScanAssignment,
   fetchAssignableMembers,
   fetchMemberStoreCoverage,
+  type ScopeType,
+  type ScopeValues,
 } from "@/lib/assignments";
+import {
+  fetchEditableAudit,
+  saveAssignmentEdit,
+  saveSeriesEdit,
+  type AuditEditTarget,
+  type AuditSetupPatch,
+  type KeptAuditSetup,
+} from "@/lib/audit-edit";
+import { NewAuditCurrentSetup, NewAuditLockedStore } from "@/components/new-audit/NewAuditCurrentSetup";
 import { fetchAuditTemplate, fetchAuditTemplates, templateToDefinition } from "@/lib/audit-templates";
 import { hydrateFromSavedTemplate } from "@/lib/audit-builder/load-saved-template-audit";
 import {
@@ -120,6 +131,7 @@ import { ensureSystemTemplate } from "@/lib/audit-engine/seed-templates";
 import { getRecommendedTemplates, getSystemTemplateSpec } from "@/lib/audit-engine/template-factory";
 import {
   buildAssignmentPreview,
+  computeNextOccurrence,
   detectAssignmentConflicts,
   distributeAssignments,
   hasBlockingConflicts,
@@ -129,6 +141,8 @@ import {
   resolveSelectedAssignees,
   saveAssignmentDraft,
   storeAssigneeMapping,
+  utcToZonedDateTime,
+  zonedDateTimeToUtc,
   type AssignmentMode,
   type AssignmentPlan,
   type DistributionStrategy,
@@ -145,9 +159,33 @@ const NEW_AUDIT_SCAN_CONTEXT: ScanContextState = {
   planogramMeta: { ...EMPTY_PLANOGRAM_META, category: "" },
 };
 
+const ID_PATTERN = /^[0-9a-f-]{36}$/i;
+const idParam = (value: unknown) =>
+  typeof value === "string" && ID_PATTERN.test(value) ? value : undefined;
+
+type NewAuditSearch = {
+  templateId: string | undefined;
+  systemKey: string | undefined;
+  assign: boolean;
+  dueDate: string | undefined;
+  dueTime: string | undefined;
+  /** Edit an open audit in place. */
+  edit?: string;
+  /** Edit a recurring series (future rounds). */
+  editSeries?: string;
+  /** New audit pre-filled from a finished assigned audit. */
+  rerun?: string;
+  /** New audit pre-filled from a finished audit that had no assignment. */
+  rerunScan?: string;
+};
+
 export const Route = createFileRoute("/new-audit")({
   head: () => ({ meta: [{ title: "New audit — Aislix" }] }),
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): NewAuditSearch => ({
+    edit: idParam(search.edit),
+    editSeries: idParam(search.editSeries),
+    rerun: idParam(search.rerun),
+    rerunScan: idParam(search.rerunScan),
     templateId: typeof search.templateId === "string" ? search.templateId : undefined,
     systemKey: typeof search.systemKey === "string" ? search.systemKey : undefined,
     assign:
@@ -169,6 +207,17 @@ export const Route = createFileRoute("/new-audit")({
 
 type TemplateChoice = "general" | "fnv" | "expiry" | "planogram" | string;
 
+/** Template, snapshot and planogram an audit is created (or updated) with. */
+type BuiltSetup = {
+  template: { id: string; version: number | null } | null;
+  templateSnapshot: Record<string, unknown> | null;
+  planogramVersionId: string | null;
+  ownPlanogramRows: number;
+  hasInputData: boolean;
+};
+
+type AssignmentInputSource = Parameters<typeof createScanAssignment>[0]["inputSource"];
+
 function NewAuditPage() {
   const navigate = useNavigate();
   const {
@@ -177,7 +226,40 @@ function NewAuditPage() {
     assign: initialAssign,
     dueDate: initialDueDate,
     dueTime: initialDueTime,
+    edit: editId,
+    editSeries: editSeriesId,
+    rerun: rerunId,
+    rerunScan: rerunScanId,
   } = Route.useSearch();
+  const queryClient = useQueryClient();
+  const editTarget = useMemo<AuditEditTarget | null>(() => {
+    if (editId) return { kind: "assignment", id: editId };
+    if (editSeriesId) return { kind: "series", id: editSeriesId };
+    if (rerunId) return { kind: "rerun", id: rerunId };
+    if (rerunScanId) return { kind: "rerun_scan", id: rerunScanId };
+    return null;
+  }, [editId, editSeriesId, rerunId, rerunScanId]);
+  const editQuery = useQuery({
+    queryKey: ["audit-edit", editTarget?.kind, editTarget?.id],
+    queryFn: () => fetchEditableAudit(editTarget!),
+    enabled: Boolean(editTarget),
+    retry: false,
+  });
+  const editData = editQuery.data ?? null;
+  /** A finished audit opened with "edit" is run again as a new audit instead. */
+  const editMode: "edit" | "series" | "rerun" | null = !editTarget
+    ? null
+    : editTarget.kind === "series"
+      ? "series"
+      : editTarget.kind === "assignment" && !(editData?.finished ?? false)
+        ? "edit"
+        : "rerun";
+  const isAssignmentEdit = editMode === "edit";
+  const isEditing = editMode === "edit" || editMode === "series";
+  /** Started audits keep their store and setup. */
+  const setupLocked = isAssignmentEdit && Boolean(editData?.started);
+  const [keepSetup, setKeepSetup] = useState(false);
+  const [editPrefilled, setEditPrefilled] = useState(false);
   const [auditName, setAuditName] = useState("");
   const [auditDescription, setAuditDescription] = useState("");
   const [startChoice, setStartChoice] = useState<StartChoice>(() =>
@@ -580,6 +662,57 @@ function NewAuditPage() {
   }, [storesQuery.data, locationScope.storeIds.length]);
 
   useEffect(() => {
+    const stores = storesQuery.data;
+    if (!editData || editPrefilled || !stores || !userId) return;
+    setEditPrefilled(true);
+    singleStorePreselected.current = true;
+    setAuditName(editData.name);
+    setAuditDescription(editData.description);
+    setInstructions(editData.instructions);
+    setMethod(editData.auditMode);
+    setMethodTouched(true);
+    if (editData.operatingModel) setOperatingModel(editData.operatingModel);
+    if (editData.auditMode === "ai") {
+      const mode = editData.setup?.templateSnapshot?.planogram_mode;
+      setAiPlanogramChoice(
+        mode === "none" ? "without" : mode === "custom" || mode === "demo" ? "with_demo" : "reference",
+      );
+    }
+    setLocationScope(storeSelection(stores, editData.storeIds));
+    const people = editData.assigneeIds;
+    if (people.length === 1 && people[0] === userId) {
+      setAssignToSelf(true);
+    } else if (people.length) {
+      const others = people.filter((id) => id !== userId);
+      setTeamScope({ assigneeIds: others });
+      setAssigneeId(others[0] ?? "");
+      setStoreAssigneeOverrides(editData.storeAssignees);
+    }
+    if (editData.evidencePolicy) {
+      setEvidencePolicy(editData.evidencePolicy);
+      setEvidenceLevel(editData.evidencePolicy.level ?? "custom");
+    }
+    setRequireRca(editData.requireRca);
+    setReviewerId(editData.reviewerId ?? "");
+    setKeepSetup(Boolean(editData.setup));
+    if (editMode === "series") {
+      setAssignmentMode("recurring");
+      if (editData.recurrence) setRecurrence(editData.recurrence);
+      setDueConfig(editData.dueConfig);
+    } else {
+      setAssignmentMode("assign_now");
+      if (editMode === "edit" && editData.dueAt) {
+        const local = utcToZonedDateTime(editData.dueAt, recurrence.timezone || "Asia/Kolkata");
+        setDueConfig({ dueDate: local.date, dueTime: local.time });
+      } else {
+        setDueConfig({});
+      }
+    }
+    setScheduleTouched(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editData, editPrefilled, storesQuery.data, userId]);
+
+  useEffect(() => {
     if (assignToSelf && assigneeId) return;
     if (assigneeId && !teamScope.assigneeIds.includes(assigneeId)) {
       setTeamScope({ assigneeIds: [assigneeId] });
@@ -764,10 +897,10 @@ function NewAuditPage() {
     if (!assignmentPlan) return null;
     const conflicts = detectAssignmentConflicts({
       plan: assignmentPlan,
-      existingAssignments: existingAssignmentsQuery.data ?? [],
+      existingAssignments: (existingAssignmentsQuery.data ?? []).filter((a) => a.id !== editId),
     });
     return buildAssignmentPreview(assignmentPlan, conflicts);
-  }, [assignmentPlan, existingAssignmentsQuery.data]);
+  }, [assignmentPlan, existingAssignmentsQuery.data, editId]);
 
   const stepStatus = validateNewAuditSteps({
     auditName,
@@ -789,6 +922,7 @@ function NewAuditPage() {
     hasBlockingConflicts: hasBlockingConflicts(assignmentPreview?.conflicts ?? []),
     captureReady: captureFiles.length > 0,
     aiAnalysisReady: method !== "ai" || aiAnalysisReady(aiAnalysisRequest),
+    keepSetup,
   });
   const shownSteps = displayStepStatus(stepStatus, { method: methodTouched, schedule: scheduleTouched });
   function touchSchedule<T>(set: (value: T) => void) {
@@ -801,7 +935,7 @@ function NewAuditPage() {
   const stepErrors = {
     name: !auditName.trim() ? "Audit name is required." : null,
     start:
-      method === "digital" && !startReady
+      method === "digital" && !startReady && !keepSetup
         ? startChoice === "template"
           ? !hasTemplate || templateChoice === "general"
             ? "Choose a template to continue."
@@ -822,17 +956,21 @@ function NewAuditPage() {
         : null,
     method: !method ? "Choose how the audit will be performed." : null,
     planogram:
-      method === "ai"
+      method === "ai" && !keepSetup
         ? aiStep3Error(aiPlanogramChoice, aiScanContext, aiAnalysisReady(aiAnalysisRequest))
         : null,
     where: !hasLocations
       ? storesQuery.data && !storesQuery.data.length && operatingModel !== "fmcg_distributor"
         ? "Add a store before creating an audit."
         : "Choose at least one store."
-      : null,
+      : isAssignmentEdit && locationScope.storeIds.length > 1
+        ? "An audit covers one store. Keep one store here, or create a new audit for the others."
+        : null,
     assign: !(assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId)
       ? "Choose at least one team member or assign to yourself."
-      : null,
+      : isAssignmentEdit && !assignToSelf && teamScope.assigneeIds.length > 1
+        ? "Choose one person for this audit."
+        : null,
     schedule:
       assignmentMode === "schedule_once" && !publishAt
         ? "Choose a publish date and time for the scheduled audit."
@@ -964,6 +1102,331 @@ function NewAuditPage() {
     }
   }
 
+  function withAuditName(values: ScopeValues): ScopeValues {
+    return {
+      ...values,
+      audit_name: auditName.trim() || undefined,
+      audit_description: auditDescription.trim() || undefined,
+    };
+  }
+
+  function keptSetupResult(kept: KeptAuditSetup): BuiltSetup {
+    const snapshot = kept.templateSnapshot;
+    return {
+      template: kept.templateId ? { id: kept.templateId, version: kept.templateVersion } : null,
+      templateSnapshot:
+        snapshot && kept.auditMode === "digital" ? { ...snapshot, evidence_policy: effectivePolicy } : snapshot,
+      planogramVersionId: kept.planogramVersionId,
+      ownPlanogramRows: 0,
+      hasInputData: false,
+    };
+  }
+
+  function newSetupScope(built: BuiltSetup): {
+    scopeType: ScopeType;
+    scopeValues: ScopeValues;
+    inputSource: string;
+  } {
+    return {
+      // An assignment-owned version holds exactly this audit's lines; a
+      // location/category scope would filter them out by shelf name.
+      scopeType:
+        built.ownPlanogramRows || templateChoice === "planogram"
+          ? "planogram"
+          : location
+            ? "location"
+            : "category",
+      scopeValues: withAuditName({
+        location,
+        category,
+        product_count: built.ownPlanogramRows,
+        ...aiShelfScope,
+      }),
+      inputSource: built.hasInputData
+        ? dataset.source === "csv"
+          ? "csv_upload"
+          : "manual_rows"
+        : built.template
+          ? "template"
+          : auditMode === "ai"
+            ? "camera"
+            : "manual_rows",
+    };
+  }
+
+  /** Template, snapshot and planogram for the setup chosen in Step 3. */
+  async function buildNewSetup(primaryStoreId: string): Promise<BuiltSetup> {
+    let templateForAssignment = selectedTemplate;
+    if (systemTemplateKey) {
+      const ensured = await ensureSystemTemplate(systemTemplateKey);
+      if (!ensured) throw new Error("Could not load the selected system template.");
+      templateForAssignment = ensured;
+    }
+
+    if (auditMode === "digital" && dataDefinitionError) {
+      throw new Error(dataDefinitionError);
+    }
+
+    const hasInputData =
+      dataInputMode !== "template_only" &&
+      dataInputMode !== "master_data" &&
+      dataset.rows.length > 0;
+
+    const isDigitalCsvAudit =
+      auditMode === "digital" &&
+      !templateForAssignment &&
+      ((startChoice === "csv" && hasInputData && dataset.source === "csv") ||
+        (isScratch && dataset.columns.length > 0));
+
+    let digitalCsvTemplate: Awaited<ReturnType<typeof createDigitalCsvAuditTemplate>> | null = null;
+    if (isDigitalCsvAudit) {
+      if (!csvSaved) throw new Error("Save your audit data to continue.");
+      if (datasetError) throw new Error(datasetError);
+      digitalCsvTemplate = await createDigitalCsvAuditTemplate({
+        name: auditName.trim() || campaignName || `Digital Audit ${new Date().toLocaleDateString()}`,
+        inputSchema: buildDigitalInputSchema(dataset, syncDigitalMappings(dataset, inputSchema.columnMappings)),
+        dataset,
+        operatingModel,
+        rowEvidence: rowEvidenceFromPolicy(effectivePolicy),
+        shelfColumnId: activeShelfColumnId,
+        barcodeColumnId: activeBarcodeColumnId,
+      });
+      templateForAssignment = digitalCsvTemplate;
+    }
+
+    const assignmentRows =
+      auditMode === "digital" && hasInputData && !datasetError && !isDigitalCsvAudit
+        ? datasetToDraftRows(dataset, { location, category })
+        : [];
+
+    let planogramVersionId: string | null = null;
+    let ownPlanogramRows = 0;
+    if (assignmentRows.length && primaryStoreId) {
+      ownPlanogramRows = assignmentRows.length;
+      planogramVersionId = await createAssignmentPlanogramVersion({
+        storeId: primaryStoreId,
+        rows: assignmentRows,
+        sourceType: dataset.source === "csv" ? "csv" : "manual",
+        sourceFilename: dataset.filename,
+      });
+    } else if (usesAiCustomPlanogram && primaryStoreId) {
+      const referenceMeta = aiScanContext.reference?.meta;
+      ownPlanogramRows = aiScanContext.planogramRows.length;
+      planogramVersionId = await createAssignmentPlanogramVersion({
+        storeId: primaryStoreId,
+        rows: aiScanContext.planogramRows.map((row) => toDraftRow(row)),
+        sourceType: referenceMeta?.source === "csv" ? "csv" : "manual",
+        sourceFilename: referenceMeta
+          ? referenceMeta.filename || "Reference document"
+          : "New Audit Planogram",
+      });
+    } else if (usesTemplateDemoPlanogram && primaryStoreId) {
+      const demoRows = demoPlanogramDraftRows();
+      ownPlanogramRows = demoRows.length;
+      planogramVersionId = await createAssignmentPlanogramVersion({
+        storeId: primaryStoreId,
+        rows: demoRows,
+        sourceType: "manual",
+        sourceFilename: "Aislix Demo Planogram",
+      });
+    }
+
+    let templateSnapshot: Record<string, unknown>;
+
+    if (digitalCsvTemplate) {
+      templateSnapshot = {
+        ...(digitalCsvTemplate as unknown as Record<string, unknown>),
+        evidence_policy: effectivePolicy,
+      };
+    } else if (
+      templateForAssignment &&
+      (hasInputData ||
+        (startChoice === "template" &&
+          templateUsesLines &&
+          dataset.source === "csv" &&
+          dataset.columns.some((c) => !isTemplateColumn(c.id))))
+    ) {
+      templateSnapshot = buildMergedTemplateSnapshot({
+        template: templateForAssignment,
+        inputSchema,
+        dataset,
+        dataInputMode,
+      });
+    } else if (templateForAssignment) {
+      templateSnapshot = templateForAssignment as unknown as Record<string, unknown>;
+    } else if (hasInputData || inputSchema.columnMappings.length) {
+      const csvDef = buildTemplateFromInputSchema(inputSchema, dataset, {
+        name: auditName.trim() || campaignName || `Custom Audit ${new Date().toLocaleDateString()}`,
+        operatingModel,
+      });
+      templateSnapshot = mergeInputSchemaIntoSnapshot(
+        {
+          ...definitionToPatch(csvDef),
+          predefined_type: templateChoice,
+          evidence_policy: effectivePolicy,
+          name: csvDef.sections[0]?.label ?? "Custom CSV Audit",
+        } as Record<string, unknown>,
+        inputSchema,
+        dataset,
+      );
+    } else {
+      templateSnapshot = {
+        predefined_type: templateChoice,
+        evidence_policy: effectivePolicy,
+      };
+    }
+
+    const reference =
+      aiPlanogramChoice === "reference" ? referencePayloadFromContext(aiScanContext) : null;
+    if (usesAiCustomPlanogram) {
+      templateSnapshot = {
+        ...templateSnapshot,
+        planogram_mode: reference ? "reference" : "custom",
+        ...(reference ? { reference } : {}),
+        audit_role: demoScanContext.auditRole,
+        scan_category: reference
+          ? referenceScope(aiScanContext).category
+          : (demoScanContext.planogramMeta?.category ?? DEMO_ORAL_CARE_META.category),
+        scan_sub_category: reference
+          ? referenceScope(aiScanContext).subCategory
+          : (demoScanContext.planogramMeta?.sub_category ?? DEMO_ORAL_CARE_META.sub_category),
+      };
+    } else if (usesTemplateDemoPlanogram) {
+      templateSnapshot = {
+        ...templateSnapshot,
+        demo_oral_care: true,
+        planogram_mode: "demo",
+        scan_category: DEMO_ORAL_CARE_META.category,
+        scan_sub_category: DEMO_ORAL_CARE_META.sub_category,
+      };
+    } else if (method === "ai" && aiPlanogramChoice === "without") {
+      templateSnapshot = {
+        ...templateSnapshot,
+        planogram_mode: "none",
+        audit_role: demoScanContext.auditRole,
+      };
+    }
+    if (method === "ai" && aiAnalysisReady(aiAnalysisRequest)) {
+      templateSnapshot = { ...templateSnapshot, ai_analysis: aiAnalysisRequest };
+    }
+
+    return {
+      template: templateForAssignment
+        ? { id: templateForAssignment.id, version: templateForAssignment.version ?? null }
+        : null,
+      templateSnapshot,
+      planogramVersionId,
+      ownPlanogramRows,
+      hasInputData,
+    };
+  }
+
+  function setupPatch(built: BuiltSetup, kept: KeptAuditSetup | null): AuditSetupPatch {
+    const scope = kept
+      ? { scopeType: kept.scopeType, scopeValues: withAuditName(kept.scopeValues), inputSource: kept.inputSource }
+      : newSetupScope(built);
+    return {
+      auditMode: kept?.auditMode ?? auditMode,
+      scopeType: scope.scopeType,
+      scopeValues: scope.scopeValues,
+      templateId: built.template?.id ?? null,
+      templateVersion: built.template?.version ?? null,
+      templateSnapshot: built.templateSnapshot,
+      planogramVersionId: built.planogramVersionId,
+      inputSource: scope.inputSource,
+    };
+  }
+
+  /** Save changes to an open audit, or to a recurring series' future rounds. */
+  const saveEditMutation = useMutation({
+    mutationFn: async () => {
+      if (!editData || !editMode) throw new Error("This audit could not be loaded.");
+      const me = await requireUserId();
+      const storeIds = locationScope.storeIds;
+      const primaryStoreId = storeIds[0];
+      if (!primaryStoreId) throw new Error("Choose at least one store.");
+      const kept = keepSetup ? editData.setup : null;
+      const timezone = recurrence.timezone || "Asia/Kolkata";
+
+      if (editMode === "series") {
+        const people = assignToSelf ? [me] : teamScope.assigneeIds;
+        if (!people.length) throw new Error("Choose at least one team member or assign to yourself.");
+        const built = kept ? keptSetupResult(kept) : await buildNewSetup(primaryStoreId);
+        const ruleChanged = JSON.stringify(recurrence) !== JSON.stringify(editData.recurrence);
+        let nextRunAt: string | null = null;
+        if (ruleChanged) {
+          const start = zonedDateTimeToUtc(recurrence.startDate, recurrence.startTime, timezone);
+          const from = start.getTime() > Date.now() ? start : new Date();
+          nextRunAt = computeNextOccurrence(recurrence, from).toISOString();
+        }
+        await saveSeriesEdit({
+          scheduleId: editData.target.id,
+          name: auditName,
+          storeIds,
+          assigneeIds: people,
+          distribution: distributeAssignments({
+            storeIds,
+            assignees: assignToSelf
+              ? [{ user_id: me, name: "Me", role: "member", email: "", status: "active" }]
+              : selectedAssignees,
+            strategy: distributionStrategy,
+            manualMapping: teamScopeForPlan.manualMapping,
+            storeNames: Object.fromEntries((locationScope.stores ?? []).map((s) => [s.id, s.name])),
+          }),
+          recurrence,
+          nextRunAt,
+          dueConfig,
+          instructions,
+          reviewerId: reviewerId || null,
+          evidencePolicy: effectivePolicy,
+          requireRca,
+          operatingModel,
+          scopeValues: kept ? withAuditName(kept.scopeValues) : newSetupScope(built).scopeValues,
+          setup: setupPatch(built, kept),
+        });
+        return;
+      }
+
+      const assigneeForAudit = assignToSelf ? me : assigneeId || teamScope.assigneeIds[0] || "";
+      if (!assigneeForAudit) throw new Error("Choose who should do this audit.");
+      if (reviewerId && reviewerId === assigneeForAudit) {
+        throw new Error("The reviewer can't be the person doing the audit. Choose a different reviewer.");
+      }
+      const resolvedDueAt = resolveAssignmentDueAt({ dueConfig, timezone, publishAt: new Date() });
+      const built = setupLocked ? null : kept ? keptSetupResult(kept) : await buildNewSetup(primaryStoreId);
+      const baseScope = editData.setup?.scopeValues ?? {};
+      await saveAssignmentEdit({
+        assignmentId: editData.target.id,
+        previousAssigneeId: editData.assigneeIds[0] ?? null,
+        auditName,
+        storeId: primaryStoreId,
+        storeName: locationScope.stores?.find((s) => s.id === primaryStoreId)?.name ?? null,
+        assigneeId: assigneeForAudit,
+        dueAt: resolvedDueAt,
+        instructions,
+        reviewerId: reviewerId || null,
+        evidencePolicy: effectivePolicy,
+        requireRca,
+        scopeValues: built ? setupPatch(built, kept).scopeValues : withAuditName(baseScope),
+        setup: built ? setupPatch(built, kept) : undefined,
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["audit-history"] });
+      void queryClient.invalidateQueries({ queryKey: ["recurring-series"] });
+      void queryClient.invalidateQueries({ queryKey: ["audit-edit"] });
+      toast.success(editMode === "series" ? "Recurring audit updated. Changes apply to future rounds." : "Audit updated.");
+      void navigate({ to: "/history" });
+    },
+    onError: (error) => {
+      if (error instanceof DueDateResolutionError) {
+        toast.error(error.message);
+        return;
+      }
+      toast.error(toUserMessage(error) || "Could not save your changes. Please try again.");
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (options?: { skipNavigation?: boolean }) => {
       const userId = await requireUserId();
@@ -1019,163 +1482,20 @@ function NewAuditPage() {
         };
       }
 
-      let templateForAssignment = selectedTemplate;
-      if (systemTemplateKey) {
-        const ensured = await ensureSystemTemplate(systemTemplateKey);
-        if (!ensured) throw new Error("Could not load the selected system template.");
-        templateForAssignment = ensured;
-      }
-
-      if (auditMode === "digital" && dataDefinitionError) {
-        throw new Error(dataDefinitionError);
-      }
-
-      const hasInputData =
-        dataInputMode !== "template_only" &&
-        dataInputMode !== "master_data" &&
-        dataset.rows.length > 0;
-
-      const isDigitalCsvAudit =
-        auditMode === "digital" &&
-        !templateForAssignment &&
-        ((startChoice === "csv" && hasInputData && dataset.source === "csv") ||
-          (isScratch && dataset.columns.length > 0));
-
-      let digitalCsvTemplate: Awaited<ReturnType<typeof createDigitalCsvAuditTemplate>> | null = null;
-      if (isDigitalCsvAudit) {
-        if (!csvSaved) throw new Error("Save your audit data to continue.");
-        if (datasetError) throw new Error(datasetError);
-        digitalCsvTemplate = await createDigitalCsvAuditTemplate({
-          name: auditName.trim() || campaignName || `Digital Audit ${new Date().toLocaleDateString()}`,
-          inputSchema: buildDigitalInputSchema(dataset, syncDigitalMappings(dataset, inputSchema.columnMappings)),
-          dataset,
-          operatingModel,
-          rowEvidence: rowEvidenceFromPolicy(effectivePolicy),
-          shelfColumnId: activeShelfColumnId,
-          barcodeColumnId: activeBarcodeColumnId,
-        });
-        templateForAssignment = digitalCsvTemplate;
-      }
-
-      const assignmentRows =
-        auditMode === "digital" && hasInputData && !datasetError && !isDigitalCsvAudit
-          ? datasetToDraftRows(dataset, { location, category })
-          : [];
-
       const storeIds = locationScope.storeIds;
       const primaryStoreId = storeIds[0];
       if (!primaryStoreId) throw new Error("Choose at least one store.");
 
-      let planogramVersionId: string | null = null;
-      let ownPlanogramRows = 0;
-      if (assignmentRows.length && primaryStoreId) {
-        ownPlanogramRows = assignmentRows.length;
-        planogramVersionId = await createAssignmentPlanogramVersion({
-          storeId: primaryStoreId,
-          rows: assignmentRows,
-          sourceType: dataset.source === "csv" ? "csv" : "manual",
-          sourceFilename: dataset.filename,
-        });
-      } else if (usesAiCustomPlanogram && primaryStoreId) {
-        const referenceMeta = aiScanContext.reference?.meta;
-        ownPlanogramRows = aiScanContext.planogramRows.length;
-        planogramVersionId = await createAssignmentPlanogramVersion({
-          storeId: primaryStoreId,
-          rows: aiScanContext.planogramRows.map((row) => toDraftRow(row)),
-          sourceType: referenceMeta?.source === "csv" ? "csv" : "manual",
-          sourceFilename: referenceMeta
-            ? referenceMeta.filename || "Reference document"
-            : "New Audit Planogram",
-        });
-      } else if (usesTemplateDemoPlanogram && primaryStoreId) {
-        const demoRows = demoPlanogramDraftRows();
-        ownPlanogramRows = demoRows.length;
-        planogramVersionId = await createAssignmentPlanogramVersion({
-          storeId: primaryStoreId,
-          rows: demoRows,
-          sourceType: "manual",
-          sourceFilename: "Aislix Demo Planogram",
-        });
-      }
-
-      let templateSnapshot: Record<string, unknown>;
-
-      if (digitalCsvTemplate) {
-        templateSnapshot = {
-          ...(digitalCsvTemplate as unknown as Record<string, unknown>),
-          evidence_policy: effectivePolicy,
-        };
-      } else if (
-        templateForAssignment &&
-        (hasInputData ||
-          (startChoice === "template" &&
-            templateUsesLines &&
-            dataset.source === "csv" &&
-            dataset.columns.some((c) => !isTemplateColumn(c.id))))
-      ) {
-        templateSnapshot = buildMergedTemplateSnapshot({
-          template: templateForAssignment,
-          inputSchema,
-          dataset,
-          dataInputMode,
-        });
-      } else if (templateForAssignment) {
-        templateSnapshot = templateForAssignment as unknown as Record<string, unknown>;
-      } else if (hasInputData || inputSchema.columnMappings.length) {
-        const csvDef = buildTemplateFromInputSchema(inputSchema, dataset, {
-          name: auditName.trim() || campaignName || `Custom Audit ${new Date().toLocaleDateString()}`,
-          operatingModel,
-        });
-        templateSnapshot = mergeInputSchemaIntoSnapshot(
-          {
-            ...definitionToPatch(csvDef),
-            predefined_type: templateChoice,
-            evidence_policy: effectivePolicy,
-            name: csvDef.sections[0]?.label ?? "Custom CSV Audit",
-          } as Record<string, unknown>,
-          inputSchema,
-          dataset,
-        );
-      } else {
-        templateSnapshot = {
-          predefined_type: templateChoice,
-          evidence_policy: effectivePolicy,
-        };
-      }
-
-      const reference =
-        aiPlanogramChoice === "reference" ? referencePayloadFromContext(aiScanContext) : null;
-      if (usesAiCustomPlanogram) {
-        templateSnapshot = {
-          ...templateSnapshot,
-          planogram_mode: reference ? "reference" : "custom",
-          ...(reference ? { reference } : {}),
-          audit_role: demoScanContext.auditRole,
-          scan_category: reference
-            ? referenceScope(aiScanContext).category
-            : (demoScanContext.planogramMeta?.category ?? DEMO_ORAL_CARE_META.category),
-          scan_sub_category: reference
-            ? referenceScope(aiScanContext).subCategory
-            : (demoScanContext.planogramMeta?.sub_category ?? DEMO_ORAL_CARE_META.sub_category),
-        };
-      } else if (usesTemplateDemoPlanogram) {
-        templateSnapshot = {
-          ...templateSnapshot,
-          demo_oral_care: true,
-          planogram_mode: "demo",
-          scan_category: DEMO_ORAL_CARE_META.category,
-          scan_sub_category: DEMO_ORAL_CARE_META.sub_category,
-        };
-      } else if (method === "ai" && aiPlanogramChoice === "without") {
-        templateSnapshot = {
-          ...templateSnapshot,
-          planogram_mode: "none",
-          audit_role: demoScanContext.auditRole,
-        };
-      }
-      if (method === "ai" && aiAnalysisReady(aiAnalysisRequest)) {
-        templateSnapshot = { ...templateSnapshot, ai_analysis: aiAnalysisRequest };
-      }
+      const kept = keepSetup ? (editData?.setup ?? null) : null;
+      const built = kept ? keptSetupResult(kept) : await buildNewSetup(primaryStoreId);
+      const { template: templateForAssignment, templateSnapshot, planogramVersionId, ownPlanogramRows } = built;
+      const scope = kept
+        ? {
+            scopeType: kept.scopeType,
+            scopeValues: withAuditName(kept.scopeValues),
+            inputSource: kept.inputSource,
+          }
+        : newSetupScope(built);
 
       const useUniversalEngine =
         storeIds.length > 1 ||
@@ -1188,7 +1508,14 @@ function NewAuditPage() {
         }
         const plan: AssignmentPlan = {
           ...assignmentPlan,
-          ...(ownPlanogramRows
+          ...(kept
+            ? {
+                auditMode: kept.auditMode,
+                scopeType: kept.scopeType,
+                scopeValues: scope.scopeValues,
+                inputSource: kept.inputSource ?? assignmentPlan.inputSource,
+              }
+            : ownPlanogramRows
             ? {
                 scopeType: "planogram" as const,
                 scopeValues: { ...assignmentPlan.scopeValues, product_count: ownPlanogramRows },
@@ -1240,22 +1567,8 @@ function NewAuditPage() {
 
       const assignmentId = await createScanAssignment({
         storeId: primaryStoreId,
-        // An assignment-owned version holds exactly this audit's lines; a
-        // location/category scope would filter them out by shelf name.
-        scopeType:
-          ownPlanogramRows || templateChoice === "planogram"
-            ? "planogram"
-            : location
-              ? "location"
-              : "category",
-        scopeValues: {
-          location,
-          category,
-          product_count: ownPlanogramRows,
-          ...aiShelfScope,
-          ...(auditName.trim() ? { audit_name: auditName.trim() } : {}),
-          ...(auditDescription.trim() ? { audit_description: auditDescription.trim() } : {}),
-        },
+        scopeType: scope.scopeType,
+        scopeValues: scope.scopeValues,
         assigneeId: assignee.id,
         assigneeName: assignee.name,
         dueAt: resolvedDueAt,
@@ -1263,7 +1576,8 @@ function NewAuditPage() {
         // Explicit null for AI shelf-only so createScanAssignment does not
         // fall back to the store's active planogram CSV.
         planogramVersionId:
-          method === "ai" && aiPlanogramChoice === "without" ? null : planogramVersionId,        auditMode,
+          !kept && method === "ai" && aiPlanogramChoice === "without" ? null : planogramVersionId,
+        auditMode: kept?.auditMode ?? auditMode,
         templateId: templateForAssignment?.id ?? null,
         templateVersion: templateForAssignment?.version ?? null,
         templateSnapshot,
@@ -1271,15 +1585,7 @@ function NewAuditPage() {
         evidencePolicy: effectivePolicy,
         requireRca,
         creationSource: "unified_new_audit",
-        inputSource: hasInputData
-          ? dataset.source === "csv"
-            ? "csv_upload"
-            : "manual_rows"
-          : templateForAssignment
-            ? "template"
-            : auditMode === "ai"
-              ? "camera"
-              : "manual_rows",
+        inputSource: (scope.inputSource ?? undefined) as AssignmentInputSource,
       });
 
       if (assignToSelf) await startAssignment(assignmentId);
@@ -1316,8 +1622,13 @@ function NewAuditPage() {
         });
         return;
       }
+      const keptSetup = keepSetup ? editData?.setup : null;
       if (!self) {
         void navigate({ to: "/assigned-scans" });
+      } else if (keptSetup) {
+        if (keptSetup.auditMode === "ai") void navigate({ to: "/assigned-scans" });
+        else if (keptSetup.templateId) void navigate({ to: "/audit/$assignmentId", params: { assignmentId } });
+        else void navigate({ to: "/digital-audit", search: { assignmentId } });
       } else if (
         selectedTemplate ||
         systemTemplateKey ||
@@ -1384,12 +1695,19 @@ function NewAuditPage() {
   const showAssignmentSteps = method !== "ai" || aiPlanogramChoice !== null;
   /** Immediate self-run needs photo capture; schedule/recurring still creates an assignment. */
   const isAiSelfImmediate =
-    method === "ai" && assignToSelf && assignmentMode === "assign_now";
+    method === "ai" && assignToSelf && assignmentMode === "assign_now" && !isEditing && !keepSetup;
   const previewReady = stepStatus[7];
-  const canSubmit = previewReady && Boolean(assignmentPlan) && !isAiSelfImmediate;
+  const canSubmit =
+    previewReady &&
+    Boolean(assignmentPlan) &&
+    !isAiSelfImmediate &&
+    !stepErrors.where &&
+    !stepErrors.assign &&
+    (!editTarget || Boolean(editData));
   const canRunAiAudit =
     isAiSelfImmediate && captureFiles.length > 0 && stepStatus[7] && !aiAuditLaunched;
-  const footerBusy = createMutation.isPending || aiSelfAuditMutation.isPending;
+  const footerBusy =
+    createMutation.isPending || aiSelfAuditMutation.isPending || saveEditMutation.isPending;
 
   function handleSubmit() {
     if (!canSubmit && !canRunAiAudit) {
@@ -1406,6 +1724,10 @@ function NewAuditPage() {
       );
       return;
     }
+    if (isEditing) {
+      saveEditMutation.mutate();
+      return;
+    }
     if (canRunAiAudit) {
       aiSelfAuditMutation.mutate();
       return;
@@ -1417,26 +1739,111 @@ function NewAuditPage() {
     ? uploadProgress != null
       ? `Uploading ${uploadProgress}%…`
       : "Uploading…"
-    : createMutation.isPending
+    : saveEditMutation.isPending
+      ? "Saving…"
+      : createMutation.isPending
       ? "Submitting…"
       : aiAuditLaunched
         ? "Audit started"
         : canRunAiAudit
           ? "Run AI audit"
-          : "Submit";
+          : isEditing
+            ? "Save changes"
+            : editMode === "rerun"
+              ? "Create audit"
+              : "Submit";
+
+  const pageTitle =
+    editMode === "series"
+      ? "Edit recurring audit"
+      : editMode === "edit"
+        ? "Edit audit"
+        : editMode === "rerun"
+          ? "Run again with changes"
+          : "New audit";
+  const pageDescription =
+    editMode === "series"
+      ? "Change the stores, people, schedule or setup. Changes apply to rounds created from now on; rounds already assigned stay as they are."
+      : editMode === "edit"
+        ? editData?.started
+          ? "This audit has started. You can change who does it, the due date, evidence and instructions."
+          : "Change anything about this audit. The person doing it is notified when you save."
+        : editMode === "rerun"
+          ? "Start a new audit from this one. The finished audit and its report stay unchanged."
+          : "Set up your audit, choose how it will be performed, assign your team and schedule it.";
+  const exitTo = editTarget ? "/history" : "/audits";
+
+  if (editTarget && (editQuery.isLoading || editQuery.isError || (isEditing && editData && !editData.canEdit))) {
+    const message = editQuery.isLoading
+      ? "Loading audit…"
+      : editQuery.isError
+        ? toUserMessage(editQuery.error) || "This audit could not be loaded."
+        : "Only the person who created this audit, or an owner, admin or manager, can edit it.";
+    return (
+      <AppShell title="" hidePageHeader>
+        <div className="play-canvas mx-auto max-w-4xl space-y-6 pb-36">
+          <PageHeader title={pageTitle} />
+          <div className="rounded-xl border border-[#D9E2E8] bg-white px-5 py-8 text-center">
+            <p className="text-sm text-[#667085]">{message}</p>
+            {editQuery.isLoading ? null : (
+              <Button variant="outline" className="mt-4" onClick={() => void navigate({ to: "/history" })}>
+                Back to audit history
+              </Button>
+            )}
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const evidenceSettingsPanel = (
+    <AdvancedSettingsPanel
+      evidenceLevel={evidenceLevel}
+      evidencePolicy={effectivePolicy}
+      requireRca={requireRca}
+      onEvidenceLevelChange={selectEvidenceLevel}
+      onToggleProof={toggleProof}
+      onEvidencePolicyChange={(patch) => {
+        const photoRules =
+          "captureSource" in patch || "maximumEvidenceAgeMinutes" in patch || "qualityChecks" in patch;
+        if (photoRules) setEvidenceLevel("custom");
+        setEvidencePolicy((current) => ({ ...current, ...patch, ...(photoRules ? { level: "custom" } : {}) }));
+      }}
+      onRequireRcaChange={setRequireRca}
+      dataset={evidenceDataset}
+      shelfColumnId={activeShelfColumnId ?? shelfColumnId}
+      barcodeColumnId={activeBarcodeColumnId ?? barcodeColumnId}
+      onShelfColumnChange={setShelfColumnId}
+      onBarcodeColumnChange={setBarcodeColumnId}
+      members={[
+        ...(userId ? [{ user_id: userId, name: "Me" }] : []),
+        ...(membersQuery.data ?? [])
+          .filter((m) => m.status === "active" && ["owner", "admin", "manager"].includes(m.role.toLowerCase()))
+          .map((m) => ({ user_id: m.user_id, name: m.name })),
+      ]}
+      reviewerId={reviewerId}
+      onReviewerChange={setReviewerId}
+    />
+  );
+
+  function handleEditMethodChange(next: CaptureMethod) {
+    if (setupLocked) {
+      toast.error("This audit has started, so how it's performed can't change.");
+      return;
+    }
+    if (keepSetup && next !== method) setKeepSetup(false);
+    handleMethodChange(next);
+  }
 
   return (
     <AppShell title="" hidePageHeader>
       <div className="play-canvas mx-auto max-w-4xl space-y-6 pb-36">
-        <PageHeader
-          title="New audit"
-          description="Set up your audit, choose how it will be performed, assign your team and schedule it."
-        />
+        <PageHeader title={pageTitle} description={pageDescription} />
 
         <NewAuditStepNav
           stepStatus={shownSteps}
           method={method}
-          assignToSelf={assignToSelf}
+          assignToSelf={assignToSelf && !isEditing && !keepSetup}
           assignmentMode={assignmentMode}
         />
 
@@ -1452,11 +1859,21 @@ function NewAuditPage() {
 
           <NewAuditStep3AuditMode
             method={method}
-            onMethodChange={handleMethodChange}
+            onMethodChange={editTarget ? handleEditMethodChange : handleMethodChange}
             complete={shownSteps[2]}
             error={stepErrors.method}
           />
 
+          {keepSetup && editData?.setup ? (
+            <NewAuditCurrentSetup
+              setupLabel={editData.setup.label}
+              locked={setupLocked}
+              onChangeSetup={() => setKeepSetup(false)}
+              evidenceSettings={method === "digital" ? evidenceSettingsPanel : undefined}
+              complete={stepStatus[3]}
+              error={method === "digital" ? stepErrors.evidence : null}
+            />
+          ) : (
           <NewAuditStep2StartMethod
             method={method}
             startChoice={startChoice}
@@ -1507,37 +1924,7 @@ function NewAuditPage() {
                 }}
               />
             }
-            evidenceSettings={
-              method === "digital" ? (
-                <AdvancedSettingsPanel
-                  evidenceLevel={evidenceLevel}
-                  evidencePolicy={effectivePolicy}
-                  requireRca={requireRca}
-                  onEvidenceLevelChange={selectEvidenceLevel}
-                  onToggleProof={toggleProof}
-                  onEvidencePolicyChange={(patch) => {
-                    const photoRules =
-                      "captureSource" in patch || "maximumEvidenceAgeMinutes" in patch || "qualityChecks" in patch;
-                    if (photoRules) setEvidenceLevel("custom");
-                    setEvidencePolicy((current) => ({ ...current, ...patch, ...(photoRules ? { level: "custom" } : {}) }));
-                  }}
-                  onRequireRcaChange={setRequireRca}
-                  dataset={evidenceDataset}
-                  shelfColumnId={activeShelfColumnId ?? shelfColumnId}
-                  barcodeColumnId={activeBarcodeColumnId ?? barcodeColumnId}
-                  onShelfColumnChange={setShelfColumnId}
-                  onBarcodeColumnChange={setBarcodeColumnId}
-                  members={[
-                    ...(userId ? [{ user_id: userId, name: "Me" }] : []),
-                    ...(membersQuery.data ?? [])
-                      .filter((m) => m.status === "active" && ["owner", "admin", "manager"].includes(m.role.toLowerCase()))
-                      .map((m) => ({ user_id: m.user_id, name: m.name })),
-                  ]}
-                  reviewerId={reviewerId}
-                  onReviewerChange={setReviewerId}
-                />
-              ) : undefined
-            }
+            evidenceSettings={method === "digital" ? evidenceSettingsPanel : undefined}
             evidenceError={method === "digital" ? stepErrors.evidence : null}
             scratchBuilder={
               <DigitalAuditUploadPanel
@@ -1578,9 +1965,13 @@ function NewAuditPage() {
               }
             }}
           />
+          )}
 
           {showAssignmentSteps ? (
             <>
+              {setupLocked ? (
+                <NewAuditLockedStore storeName={locationScope.stores?.[0]?.name ?? "Store"} />
+              ) : (
               <NewAuditStep4Stores
                 operatingModel={operatingModel}
                 stores={storesQuery.data ?? []}
@@ -1596,6 +1987,7 @@ function NewAuditPage() {
                 complete={stepStatus[4]}
                 error={stepErrors.where}
               />
+              )}
 
               <NewAuditStep4Assignment
                 members={membersQuery.data ?? []}
@@ -1626,6 +2018,14 @@ function NewAuditPage() {
                 onInstructionsChange={setInstructions}
                 complete={shownSteps[6]}
                 error={stepErrors.schedule}
+                lockMode={isEditing}
+                description={
+                  editMode === "series"
+                    ? "How often new rounds are created, and when each is due."
+                    : editMode === "edit"
+                      ? "When this audit is due."
+                      : undefined
+                }
               />
 
               <NewAuditStep7Preview
@@ -1648,8 +2048,9 @@ function NewAuditPage() {
                 scheduleSummary={formatScheduleSummary(assignmentMode, publishAt)}
                 evidenceSummary={evidenceSummary}
                 showEvidence={method !== "ai"}
-                assignToSelf={assignToSelf}
+                assignToSelf={isAiSelfImmediate}
                 complete={stepStatus[7]}
+                setupSummary={keepSetup ? editData?.setup?.label : undefined}
               />
 
               {isAiSelfImmediate ? (
@@ -1682,10 +2083,11 @@ function NewAuditPage() {
 
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--aislix-border)] bg-white/95 px-4 py-3 backdrop-blur md:px-6">
           <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-            <Button variant="ghost" onClick={() => void navigate({ to: "/audits" })}>
+            <Button variant="ghost" onClick={() => void navigate({ to: exitTo })}>
               Cancel
             </Button>
             <div className="flex items-center gap-2">
+              {editTarget ? null : (
               <Button
                 variant="outline"
                 disabled={!assignmentPlan || createMutation.isPending}
@@ -1701,6 +2103,7 @@ function NewAuditPage() {
               >
                 Save draft
               </Button>
+              )}
               <Button
                 variant="brand"
                 disabled={

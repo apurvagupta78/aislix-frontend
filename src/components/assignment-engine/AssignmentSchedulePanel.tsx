@@ -25,6 +25,8 @@ type Props = {
   onDueConfigChange: (config: DueConfig) => void;
   recurrence: RecurrenceRule;
   onRecurrenceChange: (rule: RecurrenceRule) => void;
+  /** Hide the mode picker (editing keeps the audit's existing mode). */
+  lockMode?: boolean;
 };
 
 const WEEKDAYS = [
@@ -46,12 +48,14 @@ export function AssignmentSchedulePanel({
   onDueConfigChange,
   recurrence,
   onRecurrenceChange,
+  lockMode,
 }: Props) {
   const patchRecurrence = (patch: Partial<RecurrenceRule>) =>
     onRecurrenceChange({ ...recurrence, ...patch });
 
   return (
     <div className="space-y-4">
+      {lockMode ? null : (
       <RadioGroup
         value={mode}
         onValueChange={(v) => onModeChange(v as AssignmentMode)}
@@ -69,6 +73,7 @@ export function AssignmentSchedulePanel({
           ),
         )}
       </RadioGroup>
+      )}
 
       {mode === "schedule_once" ? (
         <div className="grid gap-3 md:grid-cols-2">

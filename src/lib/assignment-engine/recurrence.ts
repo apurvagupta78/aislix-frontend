@@ -49,6 +49,34 @@ export function zonedDateTimeToUtc(date: string, time: string, timezone: string)
   }
 }
 
+/** UTC instant → wall-clock YYYY-MM-DD and HH:mm in an IANA timezone. */
+export function utcToZonedDateTime(iso: string, timezone: string): { date: string; time: string } {
+  const ms = new Date(iso).getTime();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  try {
+    const parts = readZonedParts(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }),
+      ms,
+    );
+    return {
+      date: `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`,
+      time: `${pad(parts.hour % 24)}:${pad(parts.minute)}`,
+    };
+  } catch {
+    const d = new Date(ms);
+    return { date: d.toISOString().slice(0, 10), time: d.toISOString().slice(11, 16) };
+  }
+}
+
 export function formatScheduleLabel(rule: RecurrenceRule): string {
   const time = rule.startTime;
   switch (rule.frequency) {

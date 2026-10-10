@@ -52,6 +52,8 @@ export type AuditHistoryRow = {
   assigner_id: string | null;
   conducted_by_id: string | null;
   conducted_by_name: string | null;
+  /** Recurring series this audit was created by. */
+  schedule_id: string | null;
 };
 
 export type AuditHistoryData = {
@@ -89,12 +91,13 @@ type AssignmentRow = {
   due_at: string | null;
   created_at: string;
   last_compliance_percent: number | null;
+  schedule_id: string | null;
 };
 
 const SCAN_COLUMNS =
   "id, status, audit_mode, shelf_label, category, total_products, created_at, store_id, created_by, finalized_by, assignment_id";
 const ASSIGNMENT_COLUMNS =
-  "id, status, approval_status, audit_mode, store_id, assignee_id, assigner_id, scan_id, due_at, created_at, last_compliance_percent";
+  "id, status, approval_status, audit_mode, store_id, assignee_id, assigner_id, scan_id, due_at, created_at, last_compliance_percent, schedule_id";
 
 const BATCH = 1000;
 const MAX_ROWS = 5000;
@@ -311,6 +314,7 @@ export async function fetchAuditHistory(scope: AuditHistoryScope): Promise<Audit
       assigner_id: assignment?.assigner_id ?? null,
       conducted_by_id: conductor,
       conducted_by_name: nameOf(conductor),
+      schedule_id: assignment?.schedule_id ?? null,
     });
   }
 
@@ -335,6 +339,7 @@ export async function fetchAuditHistory(scope: AuditHistoryScope): Promise<Audit
       assigner_id: assignment.assigner_id,
       conducted_by_id: null,
       conducted_by_name: null,
+      schedule_id: assignment.schedule_id,
     });
   }
 

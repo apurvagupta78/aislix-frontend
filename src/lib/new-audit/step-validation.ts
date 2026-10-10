@@ -102,6 +102,8 @@ export type StepValidationInput = {
   captureReady?: boolean;
   /** AI audits: at least one check ticked or a question asked. */
   aiAnalysisReady?: boolean;
+  /** Editing an audit that keeps its saved setup — nothing to pick in Step 3. */
+  keepSetup?: boolean;
 };
 
 export type StepValidationResult = Record<NewAuditStepId, boolean>;
@@ -113,8 +115,9 @@ export function validateNewAuditSteps(input: StepValidationInput): StepValidatio
     Boolean(input.evidenceLevel) &&
     (input.evidencePolicy.reviewMode !== "independent" || Boolean(input.reviewerId)) &&
     !input.evidenceError;
-  const step3 =
-    input.method === "digital"
+  const step3 = input.keepSetup
+    ? input.method === "ai" || evidenceReady
+    : input.method === "digital"
       ? input.startReady && evidenceReady
       : input.method === "ai"
         ? isAiStep3Ready(input.aiPlanogramChoice, input.demoScanContext) && input.aiAnalysisReady !== false

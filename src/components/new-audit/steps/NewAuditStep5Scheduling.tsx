@@ -21,6 +21,8 @@ type Props = {
   onInstructionsChange: (value: string) => void;
   complete?: boolean;
   error?: string | null;
+  lockMode?: boolean;
+  description?: string;
 };
 
 export function NewAuditStep5Scheduling({
@@ -36,13 +38,15 @@ export function NewAuditStep5Scheduling({
   onInstructionsChange,
   complete,
   error,
+  lockMode,
+  description = "Assign immediately or schedule for later.",
 }: Props) {
   return (
     <NewAuditStepSection
       id="step-6-when"
       stepNumber={6}
       title="When?"
-      description="Assign immediately or schedule for later."
+      description={description}
       complete={complete}
       error={error}
     >
@@ -56,6 +60,7 @@ export function NewAuditStep5Scheduling({
           onDueConfigChange={onDueConfigChange}
           recurrence={recurrence}
           onRecurrenceChange={onRecurrenceChange}
+          lockMode={lockMode}
         />
         <div className="space-y-1.5">
           <Label>Instructions for the auditor</Label>

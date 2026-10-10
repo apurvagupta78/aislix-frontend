@@ -6,6 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import { createScanAssignment, type AuditMode, type ScopeType, type ScopeValues } from "@/lib/assignments";
 import { triggerScheduleRun } from "@/lib/assignment-engine/scheduler";
+import {
+  computeNextOccurrence,
+  formatScheduleLabel,
+  utcToZonedDateTime,
+} from "@/lib/assignment-engine/recurrence";
+import type { RecurrenceRule } from "@/lib/assignment-engine/types";
 
 export type ScheduleCadence = "daily" | "weekly" | "monthly" | "special";
 
@@ -149,13 +155,172 @@ export async function createAuditSchedule(input: ScheduleInput): Promise<string>
 }
 
 export async function toggleAuditSchedule(id: string, active: boolean): Promise<void> {
+  if (active) await resumeAuditSchedule(id);
+  else await pauseAuditSchedule(id);
+}
+
+/* ---------------------------- recurring series ---------------------------- */
+
+type ScheduleRuleRow = {
+  cadence?: string | null;
+  day_of_week?: number | null;
+  day_of_month?: number | null;
+  next_run_at?: string | null;
+  timezone?: string | null;
+  recurrence_config?: unknown;
+};
+
+/** The series' repeat rule; legacy rows only carry cadence + day columns. */
+export function scheduleRecurrenceRule(row: ScheduleRuleRow): RecurrenceRule {
+  const timezone = row.timezone || "Asia/Kolkata";
+  const config = (row.recurrence_config ?? {}) as Partial<RecurrenceRule>;
+  const anchor = row.next_run_at
+    ? utcToZonedDateTime(row.next_run_at, timezone)
+    : { date: new Date().toISOString().slice(0, 10), time: "09:00" };
+  if (config.frequency) {
+    return {
+      frequency: config.frequency,
+      interval: config.interval || 1,
+      daysOfWeek:
+        config.frequency === "weekly"
+          ? config.daysOfWeek?.length
+            ? config.daysOfWeek
+            : [row.day_of_week ?? 1]
+          : config.daysOfWeek,
+      dayOfMonth: config.dayOfMonth ?? row.day_of_month ?? undefined,
+      startDate: config.startDate || anchor.date,
+      startTime: config.startTime || anchor.time,
+      endDate: config.endDate,
+      maxOccurrences: config.maxOccurrences,
+      timezone: config.timezone || timezone,
+    };
+  }
+  const cadence = row.cadence === "daily" || row.cadence === "monthly" ? row.cadence : "weekly";
+  return {
+    frequency: cadence,
+    interval: 1,
+    daysOfWeek: cadence === "weekly" ? [row.day_of_week ?? 1] : undefined,
+    dayOfMonth: cadence === "monthly" ? (row.day_of_month ?? 1) : undefined,
+    startDate: anchor.date,
+    startTime: anchor.time,
+    timezone,
+  };
+}
+
+export type RecurringSeries = {
+  id: string;
+  name: string;
+  auditMode: AuditMode;
+  storeNames: string[];
+  assigneeNames: string[];
+  repeatLabel: string;
+  nextRunAt: string | null;
+  paused: boolean;
+  createdBy: string | null;
+  assigneeIds: string[];
+};
+
+const ENDED_SCHEDULE_STATUSES = ["completed", "cancelled", "expired"];
+
+/** Every repeating audit series in the org (one-off scheduled audits excluded). */
+export async function fetchRecurringSeries(): Promise<RecurringSeries[]> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("audit_schedules")
+    .select(
+      "id, name, audit_mode, store_id, store_ids, assignee_id, assignee_ids, cadence, day_of_week, day_of_month, next_run_at, timezone, recurrence_config, status, active, assignment_mode, created_by, scope_values",
+    )
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false });
+  if (error) dbError(error, "Could not load recurring audits.");
+
+  const rows = ((data ?? []) as Record<string, unknown>[]).filter((row) => {
+    const mode = row.assignment_mode as string | null;
+    if (mode && mode !== "recurring") return false;
+    return !ENDED_SCHEDULE_STATUSES.includes(String(row.status ?? ""));
+  });
+  if (!rows.length) return [];
+
+  const idsOf = (row: Record<string, unknown>, many: string, one: string) => {
+    const list = ((row[many] as string[] | null) ?? []).filter(Boolean);
+    const single = row[one] as string | null;
+    return list.length ? list : single ? [single] : [];
+  };
+  const storeIds = [...new Set(rows.flatMap((row) => idsOf(row, "store_ids", "store_id")))];
+  const personIds = [...new Set(rows.flatMap((row) => idsOf(row, "assignee_ids", "assignee_id")))];
+  const [{ data: stores }, { data: people }] = await Promise.all([
+    storeIds.length
+      ? supabase.from("stores").select("id, name").in("id", storeIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    personIds.length
+      ? supabase.from("profiles").select("id, full_name, email").in("id", personIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string | null }[] }),
+  ]);
+  const storeName = new Map((stores ?? []).map((s) => [s.id as string, s.name as string]));
+  const personName = new Map(
+    (people ?? []).map((p) => [p.id as string, (p.full_name as string | null)?.trim() || (p.email as string | null) || "Member"]),
+  );
+
+  return rows.map((row) => {
+    const paused = row.status === "paused" || (row.active === false && row.status !== "scheduled");
+    const scopeName = (row.scope_values as ScopeValues | null)?.audit_name as string | undefined;
+    const assigneeIds = idsOf(row, "assignee_ids", "assignee_id");
+    return {
+      id: row.id as string,
+      name: (row.name as string | null)?.trim() || scopeName?.trim() || "Recurring audit",
+      auditMode: (row.audit_mode as AuditMode) ?? "digital",
+      storeNames: idsOf(row, "store_ids", "store_id").map((id) => storeName.get(id) ?? "Store"),
+      assigneeNames: assigneeIds.map((id) => personName.get(id) ?? "Member"),
+      repeatLabel: formatScheduleLabel(scheduleRecurrenceRule(row as ScheduleRuleRow)),
+      nextRunAt: paused ? null : ((row.next_run_at as string | null) ?? null),
+      paused,
+      createdBy: (row.created_by as string | null) ?? null,
+      assigneeIds,
+    };
+  });
+}
+
+/** Stop future rounds. Rounds already assigned stay open. */
+export async function pauseAuditSchedule(id: string): Promise<void> {
   const orgId = await requireOrgId();
   const { error } = await supabase
     .from("audit_schedules")
-    .update({ active, updated_at: new Date().toISOString() } as Record<string, unknown>)
+    .update({ active: false, status: "paused", updated_at: new Date().toISOString() })
     .eq("org_id", orgId)
     .eq("id", id);
-  if (error) dbError(error, "Could not update the schedule.");
+  if (error) dbError(error, "Could not pause the recurring audit.");
+}
+
+/** Restart future rounds from the next upcoming slot — missed rounds are not created. */
+export async function resumeAuditSchedule(id: string): Promise<void> {
+  const orgId = await requireOrgId();
+  const { data, error: readError } = await supabase
+    .from("audit_schedules")
+    .select("cadence, day_of_week, day_of_month, next_run_at, timezone, recurrence_config")
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) dbError(readError, "Could not resume the recurring audit.");
+  if (!data) throw new Error("This recurring audit no longer exists.");
+
+  const now = new Date();
+  const current = data.next_run_at ? new Date(data.next_run_at as string) : null;
+  const nextRun =
+    current && current.getTime() > now.getTime()
+      ? current
+      : computeNextOccurrence(scheduleRecurrenceRule(data as ScheduleRuleRow), now);
+
+  const { error } = await supabase
+    .from("audit_schedules")
+    .update({
+      active: true,
+      status: "active",
+      next_run_at: nextRun.toISOString(),
+      updated_at: now.toISOString(),
+    })
+    .eq("org_id", orgId)
+    .eq("id", id);
+  if (error) dbError(error, "Could not resume the recurring audit.");
 }
 
 export async function deleteAuditSchedule(id: string): Promise<void> {

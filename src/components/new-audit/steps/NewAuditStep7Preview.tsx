@@ -25,6 +25,8 @@ type Props = {
   sectionId?: string;
   assignToSelf?: boolean;
   complete?: boolean;
+  /** Editing: the audit keeps this setup, so the start rows are replaced by it. */
+  setupSummary?: string;
 };
 
 function PreviewGroup({ title, rows }: { title: string; rows: PreviewRow[] }) {
@@ -75,6 +77,7 @@ export function NewAuditStep7Preview({
   sectionId = "step-7-preview",
   assignToSelf,
   complete,
+  setupSummary,
 }: Props) {
   const modeLabel =
     CAPTURE_METHOD_OPTIONS.find((o) => o.value === method)?.title ?? method;
@@ -109,7 +112,9 @@ export function NewAuditStep7Preview({
         <PreviewGroup
           title="Start"
           rows={
-            method === "ai"
+            setupSummary
+              ? [{ label: "Setup", value: setupSummary }]
+              : method === "ai"
               ? [
                   { label: "Audit against", value: planogramSummary ?? "—" },
                   { label: "AI analyses", value: aiAnalysisSummary ?? "—" },

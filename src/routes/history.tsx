@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeftRight,
   ChevronDown,
@@ -8,7 +8,12 @@ import {
   FileText,
   ImageDown,
   MoreHorizontal,
+  Pause,
+  Pencil,
+  Play,
   Printer,
+  Repeat,
+  RotateCcw,
   SearchX,
   Sheet as SheetIcon,
   SlidersHorizontal,
@@ -54,6 +59,13 @@ import {
   type AuditHistoryStatus,
 } from "@/lib/audit-history";
 import { downloadScanAnnotatedImage, downloadScanCsv, downloadScanPdf } from "@/lib/scan-results";
+import { isOrgManager } from "@/lib/assignments";
+import {
+  fetchRecurringSeries,
+  pauseAuditSchedule,
+  resumeAuditSchedule,
+  type RecurringSeries,
+} from "@/lib/audit-schedules";
 import { cn } from "@/lib/utils";
 
 import { toast } from "sonner";
@@ -201,10 +213,50 @@ function RowCta({ row, userId, className }: { row: AuditHistoryRow; userId: stri
   );
 }
 
-function RowActions({ row, onDelete }: { row: AuditHistoryRow; onDelete: (row: AuditHistoryRow) => void }) {
+const NEW_AUDIT_SEARCH = {
+  templateId: undefined,
+  systemKey: undefined,
+  assign: false,
+  dueDate: undefined,
+  dueTime: undefined,
+} as const;
+
+const OPEN_STATUSES: AuditHistoryStatus[] = ["not_started", "in_progress", "needs_correction"];
+
+type RowAccess = {
+  userId: string;
+  isManager: boolean;
+  seriesById: Map<string, RecurringSeries>;
+  onToggleSeries: (series: RecurringSeries) => void;
+};
+
+/** Creator of the audit (or whoever ran an ad hoc one), or a manager. */
+function canChangeRow(row: AuditHistoryRow, access: RowAccess): boolean {
+  if (access.isManager) return true;
+  const owner = row.assignment_id ? row.assigner_id : row.conducted_by_id;
+  return Boolean(owner) && owner === access.userId;
+}
+
+function RowActions({
+  row,
+  access,
+  onDelete,
+}: {
+  row: AuditHistoryRow;
+  access: RowAccess;
+  onDelete: (row: AuditHistoryRow) => void;
+}) {
   const [busy, setBusy] = useState<"pdf" | "csv" | "image" | null>(null);
   const scanId = row.scan_id;
-  if (!scanId) return <span className="inline-block size-9" aria-hidden />;
+  const canChange = canChangeRow(row, access);
+  const editable = canChange && Boolean(row.assignment_id) && OPEN_STATUSES.includes(row.status);
+  const rerunnable = canChange && !OPEN_STATUSES.includes(row.status) && Boolean(row.assignment_id ?? scanId);
+  const series = row.schedule_id ? access.seriesById.get(row.schedule_id) : undefined;
+  const seriesControl =
+    series && (access.isManager || series.createdBy === access.userId) ? series : undefined;
+  if (!scanId && !editable && !rerunnable && !seriesControl) {
+    return <span className="inline-block size-9" aria-hidden />;
+  }
   const done = row.scan_status === "completed";
 
   const run = async (kind: "pdf" | "csv" | "image", task: () => Promise<void>) => {
@@ -224,11 +276,46 @@ function RowActions({ row, onDelete }: { row: AuditHistoryRow; onDelete: (row: A
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-lg" aria-label={`More actions for audit ${scanId.slice(0, 8)}`}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-lg"
+          aria-label={`More actions for audit ${(scanId ?? row.assignment_id ?? "").slice(0, 8)}`}
+        >
           <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52 rounded-xl">
+      <DropdownMenuContent align="end" className="w-56 rounded-xl">
+        {editable ? (
+          <DropdownMenuItem asChild>
+            <Link to="/new-audit" search={{ ...NEW_AUDIT_SEARCH, edit: row.assignment_id! }}>
+              <Pencil className="size-4" /> Edit audit
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {rerunnable ? (
+          <DropdownMenuItem asChild>
+            <Link
+              to="/new-audit"
+              search={
+                row.assignment_id
+                  ? { ...NEW_AUDIT_SEARCH, rerun: row.assignment_id }
+                  : { ...NEW_AUDIT_SEARCH, rerunScan: scanId! }
+              }
+            >
+              <RotateCcw className="size-4" /> Run again with changes
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {seriesControl ? (
+          <DropdownMenuItem onSelect={() => access.onToggleSeries(seriesControl)}>
+            {seriesControl.paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+            {seriesControl.paused ? "Resume recurring audit" : "Pause recurring audit"}
+          </DropdownMenuItem>
+        ) : null}
+        {scanId ? (
+          <>
+        {editable || rerunnable || seriesControl ? <DropdownMenuSeparator /> : null}
         <DropdownMenuItem asChild>
           <Link to="/results" search={{ scan: scanId }}>
             <FileText className="size-4" /> Open full report
@@ -270,8 +357,110 @@ function RowActions({ row, onDelete }: { row: AuditHistoryRow; onDelete: (row: A
         <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => onDelete(row)}>
           <Trash2 className="size-4" /> Delete audit
         </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+const SERIES_PREVIEW = 5;
+
+function seriesMeta(series: RecurringSeries): string {
+  const stores =
+    series.storeNames.length > 2
+      ? `${series.storeNames.length} stores`
+      : series.storeNames.join(", ") || "No store";
+  const people =
+    series.assigneeNames.length > 2
+      ? `${series.assigneeNames.length} people`
+      : series.assigneeNames.join(", ") || "No one assigned";
+  return [series.repeatLabel, stores, people].join(" · ");
+}
+
+function RecurringSection({
+  series,
+  canManage,
+  pendingId,
+  onToggle,
+}: {
+  series: RecurringSeries[];
+  canManage: (series: RecurringSeries) => boolean;
+  pendingId: string | null;
+  onToggle: (series: RecurringSeries) => void;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? series : series.slice(0, SERIES_PREVIEW);
+  return (
+    <section className="rounded-xl border border-[#D9E2E8] bg-white">
+      <div className="flex items-start gap-3 border-b border-[#D9E2E8] p-4">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#F4F7F9]">
+          <Repeat className="size-4 text-[#04203F]" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#04203F]">Recurring audits ({series.length})</p>
+          <p className="mt-0.5 text-xs text-[#667085] sm:text-sm">
+            Each one creates a new round on schedule. Pausing stops new rounds; rounds already assigned stay open.
+          </p>
+        </div>
+      </div>
+      <ul className="divide-y divide-[#D9E2E8]">
+        {shown.map((item) => {
+          const manage = canManage(item);
+          const busy = pendingId === item.id;
+          return (
+            <li key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-sm font-medium text-[#04203F]">{item.name}</p>
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#D9E2E8] bg-white px-2 py-0.5 text-xs font-medium text-[#04203F]">
+                    <span
+                      className={cn("size-1.5 rounded-full", item.paused ? "bg-[#D9E2E8]" : "bg-[#79E2A8]")}
+                      aria-hidden
+                    />
+                    {item.paused ? "Paused" : "Active"}
+                  </span>
+                </div>
+                <p className="mt-1 truncate text-xs text-[#667085]">{seriesMeta(item)}</p>
+                <p className="mt-0.5 text-xs text-[#667085]">
+                  {item.paused
+                    ? "No new rounds until resumed"
+                    : item.nextRunAt
+                      ? `Next round ${formatScanDate(item.nextRunAt)} ${formatScanTime(item.nextRunAt)}`
+                      : "Next round not scheduled"}
+                </p>
+              </div>
+              {manage ? (
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg"
+                    disabled={busy}
+                    onClick={() => onToggle(item)}
+                  >
+                    {item.paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+                    {busy ? (item.paused ? "Resuming…" : "Pausing…") : item.paused ? "Resume" : "Pause"}
+                  </Button>
+                  <Button variant="subtle" size="sm" className="rounded-lg" asChild>
+                    <Link to="/new-audit" search={{ ...NEW_AUDIT_SEARCH, editSeries: item.id }}>
+                      <Pencil className="size-4" /> Edit
+                    </Link>
+                  </Button>
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      {series.length > SERIES_PREVIEW ? (
+        <div className="border-t border-[#D9E2E8] px-4 py-2">
+          <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-xs" onClick={() => setShowAll((v) => !v)}>
+            {showAll ? "Show fewer" : `Show all recurring audits (${series.length})`}
+          </Button>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -341,6 +530,41 @@ function HistoryPage() {
     placeholderData: (previous) => previous,
     retry: false,
   });
+
+  const managerQuery = useQuery({ queryKey: ["is-org-manager"], queryFn: isOrgManager, staleTime: 60_000 });
+  const seriesQuery = useQuery({ queryKey: ["recurring-series"], queryFn: fetchRecurringSeries, retry: false });
+  const isManager = managerQuery.data ?? false;
+  const userId = data?.userId ?? "";
+  const allSeries = seriesQuery.data ?? [];
+  const seriesById = useMemo(() => new Map(allSeries.map((s) => [s.id, s])), [allSeries]);
+  const visibleSeries = useMemo(
+    () =>
+      scope === "team"
+        ? allSeries
+        : allSeries.filter((s) => s.createdBy === userId || s.assigneeIds.includes(userId)),
+    [allSeries, scope, userId],
+  );
+  const canManageSeries = (series: RecurringSeries) => isManager || series.createdBy === userId;
+
+  const seriesToggle = useMutation({
+    mutationFn: (series: RecurringSeries) =>
+      series.paused ? resumeAuditSchedule(series.id) : pauseAuditSchedule(series.id),
+    onSuccess: (_, series) => {
+      toast.success(
+        series.paused
+          ? `"${series.name}" resumed. New rounds start from the next scheduled date.`
+          : `"${series.name}" paused. Rounds already assigned stay open.`,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["recurring-series"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update this recurring audit."),
+  });
+  const rowAccess: RowAccess = {
+    userId,
+    isManager,
+    seriesById,
+    onToggleSeries: (series) => seriesToggle.mutate(series),
+  };
 
   const rows = data?.rows ?? [];
   const options = useMemo(() => auditHistoryOptions(rows), [rows]);
@@ -428,6 +652,15 @@ function HistoryPage() {
           }
           actions={scopeToggle}
         />
+
+        {visibleSeries.length ? (
+          <RecurringSection
+            series={visibleSeries}
+            canManage={canManageSeries}
+            pendingId={seriesToggle.isPending ? (seriesToggle.variables?.id ?? null) : null}
+            onToggle={(series) => seriesToggle.mutate(series)}
+          />
+        ) : null}
 
         <section className="space-y-3 rounded-xl border border-[#D9E2E8] bg-white p-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -602,7 +835,9 @@ function HistoryPage() {
                     </Button>
                   ) : (
                     <Button variant="brand" size="sm" className="rounded-lg" asChild>
-                      <Link to="/new-audit">New audit</Link>
+                      <Link to="/new-audit" search={NEW_AUDIT_SEARCH}>
+                        New audit
+                      </Link>
                     </Button>
                   )
                 }
@@ -668,7 +903,7 @@ function HistoryPage() {
                         <TableCell className="sticky right-0 border-l border-[#D9E2E8] bg-white text-right transition-colors group-hover:bg-[#F4F7F9]">
                           <div className="flex items-center justify-end gap-1">
                             <RowCta row={row} userId={data!.userId} />
-                            <RowActions row={row} onDelete={setPendingDelete} />
+                            <RowActions row={row} access={rowAccess} onDelete={setPendingDelete} />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -722,7 +957,7 @@ function HistoryPage() {
 
                     <div className="mt-3 flex items-center gap-2">
                       <RowCta row={row} userId={data!.userId} className="flex-1" />
-                      <RowActions row={row} onDelete={setPendingDelete} />
+                      <RowActions row={row} access={rowAccess} onDelete={setPendingDelete} />
                     </div>
                   </li>
                 ))}
