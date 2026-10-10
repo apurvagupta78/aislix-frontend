@@ -1,40 +1,27 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeftRight,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
+  ChevronDown,
   Download,
   FileText,
   ImageDown,
   MoreHorizontal,
+  Printer,
   SearchX,
   Sheet as SheetIcon,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import {
-  EmptyState,
-  FilterBar,
-  FilterRow,
-  FilterSearch,
-  PageHeader,
-  StatusBadge,
-} from "@/components/design-system";
+import { EmptyState, FilterSearch, PageHeader } from "@/components/design-system";
+import { TablePager, usePager } from "@/components/design-system/TablePager";
 import { ErrorState, TableSkeleton } from "@/components/States";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,35 +39,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { deleteScan, formatCount, formatScanDate, formatScanTime } from "@/lib/scan-history";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  deleteScan,
-  fetchScanHistory,
-  formatCount,
-  formatScanDate,
-  formatScanTime,
-  type ScanHistoryItem,
-  type AuditModeFilter,
-  type ScanHistoryQuery,
-  type ScanStatus,
-} from "@/lib/scan-history";
-import {
-  downloadScanAnnotatedImage,
-  downloadScanCsv,
-  downloadScanPdf,
-} from "@/lib/scan-results";
-import { assignmentStatusLabel, resolveAssignmentDisplayStatus } from "@/lib/assignment-status-ui";
+  AUDIT_HISTORY_STATUS_LABELS,
+  EMPTY_AUDIT_HISTORY_FILTERS,
+  activeAuditHistoryFilterCount,
+  auditHistoryOptions,
+  fetchAuditHistory,
+  filterAuditHistory,
+  type AuditHistoryFilters,
+  type AuditHistoryRow,
+  type AuditHistoryScope,
+  type AuditHistoryStatus,
+} from "@/lib/audit-history";
+import { downloadScanAnnotatedImage, downloadScanCsv, downloadScanPdf } from "@/lib/scan-results";
+import { cn } from "@/lib/utils";
 
 import { toast } from "sonner";
-
-const PAGE_SIZE = 10;
 
 type HistorySearch = {
   q?: string;
@@ -111,7 +87,7 @@ export const Route = createFileRoute("/history")({
       {
         name: "description",
         content:
-          "Search and filter audits by store, location and category, then compare any two shelf audits.",
+          "Every audit you ran or assigned, with its report. Filter by store, date, status and people, then compare any two audits.",
       },
       { property: "og:title", content: "Audit history — Aislix" },
       {
@@ -127,53 +103,109 @@ export const Route = createFileRoute("/history")({
 
 /* --------------------------------- helpers -------------------------------- */
 
-function AssignmentStatusBadge({
-  status,
-  approvalStatus,
-}: {
-  status: string | null;
-  approvalStatus?: string | null;
-}) {
-  if (!status) return <span className="text-muted-foreground">—</span>;
-  const display = resolveAssignmentDisplayStatus({ status, approval_status: approvalStatus });
-  const known = [
-    "pending",
-    "in_progress",
-    "needs_correction",
-    "completed",
-    "cancelled",
-    "overdue",
-    "submitted",
-    "pending_review",
-    "approved",
-  ] as const;
-  if (known.includes(display as (typeof known)[number])) {
-    return <StatusBadge kind="assignment" status={display as (typeof known)[number]} />;
-  }
-  return <Badge variant="outline">{assignmentStatusLabel(display)}</Badge>;
-}
+const STATUS_DOT: Record<AuditHistoryStatus, string> = {
+  not_started: "bg-[#D9E2E8]",
+  in_progress: "bg-[#7DB7D6]",
+  submitted: "bg-[#9B86D9]",
+  approved: "bg-[#79E2A8]",
+  needs_correction: "bg-[#ECBDCC]",
+  completed: "bg-[#79E2A8]",
+  failed: "bg-[#ECBDCC]",
+  cancelled: "bg-[#D9E2E8]",
+};
 
-function complianceTone(value: number | null): string {
-  if (value === null) return "text-muted-foreground";
-  if (value >= 100) return "text-accent-green";
-  if (value >= 70) return "text-[#04203F]";
-  return "text-destructive";
+const STATUS_ORDER: AuditHistoryStatus[] = [
+  "not_started",
+  "in_progress",
+  "submitted",
+  "approved",
+  "needs_correction",
+  "completed",
+  "failed",
+  "cancelled",
+];
+
+function StatusPill({ status }: { status: AuditHistoryStatus }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#D9E2E8] bg-white px-2 py-0.5 text-xs font-medium text-[#04203F]">
+      <span className={cn("size-1.5 rounded-full", STATUS_DOT[status])} aria-hidden />
+      {AUDIT_HISTORY_STATUS_LABELS[status]}
+    </span>
+  );
 }
 
 function formatCompliance(value: number | null): string {
   return value === null ? "—" : `${Math.round(value)}%`;
 }
 
-function RowActions({
-  scan,
+function isOverdue(row: AuditHistoryRow): boolean {
+  if (!row.due_at || (row.status !== "not_started" && row.status !== "in_progress")) return false;
+  return new Date(row.due_at).getTime() < Date.now();
+}
 
-  onDelete,
-}: {
-  scan: ScanHistoryItem;
-  onDelete: (scan: ScanHistoryItem) => void;
-}) {
-  const d = scan.downloads;
+function auditSubtitle(row: AuditHistoryRow): string {
+  const place = [row.location, row.category].filter(Boolean).join(" · ");
+  const id = (row.scan_id ?? row.assignment_id ?? "").slice(0, 8);
+  return place ? `${place} · ${id}` : id;
+}
+
+function DateCell({ row }: { row: AuditHistoryRow }) {
+  if (row.scan_id) {
+    return (
+      <>
+        {formatScanDate(row.date)}
+        <span className="ml-2 tabular-nums">{formatScanTime(row.date)}</span>
+      </>
+    );
+  }
+  return (
+    <div className="space-y-0.5">
+      <p>Assigned {formatScanDate(row.date)}</p>
+      {row.due_at ? (
+        <p className={cn("text-xs", isOverdue(row) ? "font-medium text-[#04203F]" : "text-[#667085]")}>
+          {isOverdue(row) ? (
+            <span className="mr-1 inline-block size-1.5 rounded-full bg-[#ECBDCC] align-middle" aria-hidden />
+          ) : null}
+          {isOverdue(row) ? "Overdue · due " : "Due "}
+          {formatScanDate(row.due_at)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function RowCta({ row, userId, className }: { row: AuditHistoryRow; userId: string; className?: string }) {
+  if (row.scan_id) {
+    const done = row.scan_status === "completed";
+    const label = done ? "View report" : row.scan_status === "failed" ? "View details" : "View progress";
+    return (
+      <Button variant={done ? "brand" : "subtle"} size="sm" className={cn("rounded-lg", className)} asChild>
+        <Link to="/results" search={{ scan: row.scan_id }}>
+          {label}
+        </Link>
+      </Button>
+    );
+  }
+  if (row.status === "cancelled") return null;
+  if (row.assignee_id === userId) {
+    return (
+      <Button variant="subtle" size="sm" className={cn("rounded-lg", className)} asChild>
+        <Link to="/my-scans">Open in My work</Link>
+      </Button>
+    );
+  }
+  return (
+    <Button variant="subtle" size="sm" className={cn("rounded-lg", className)} asChild>
+      <Link to="/assigned-scans">Track audit</Link>
+    </Button>
+  );
+}
+
+function RowActions({ row, onDelete }: { row: AuditHistoryRow; onDelete: (row: AuditHistoryRow) => void }) {
   const [busy, setBusy] = useState<"pdf" | "csv" | "image" | null>(null);
+  const scanId = row.scan_id;
+  if (!scanId) return <span className="inline-block size-9" aria-hidden />;
+  const done = row.scan_status === "completed";
 
   const run = async (kind: "pdf" | "csv" | "image", task: () => Promise<void>) => {
     setBusy(kind);
@@ -192,56 +224,50 @@ function RowActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-xl" aria-label={`Actions for ${scan.scan_id}`}>
+        <Button variant="ghost" size="icon" className="rounded-lg" aria-label={`More actions for audit ${scanId.slice(0, 8)}`}>
           <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52 rounded-xl">
         <DropdownMenuItem asChild>
-          <Link to="/results" search={{ scan: scan.scan_id }}>
-            <FileText className="size-4" /> View results
+          <Link to="/results" search={{ scan: scanId }}>
+            <FileText className="size-4" /> Open full report
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to="/report" search={{ scan: scan.scan_id }}>
-            <FileText className="size-4" /> View report
+        <DropdownMenuItem asChild disabled={!done}>
+          <Link to="/report" search={{ scan: scanId }}>
+            <Printer className="size-4" /> Printable report
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={busy === "pdf" || scan.status !== "completed"}
+          disabled={busy === "pdf" || !done}
           onSelect={(e) => {
             e.preventDefault();
-            void run("pdf", () => downloadScanPdf(scan.scan_id, d?.pdf_url));
+            void run("pdf", () => downloadScanPdf(scanId));
           }}
         >
           <Download className="size-4" /> {busy === "pdf" ? "Preparing PDF…" : "Download PDF"}
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={busy === "csv" || scan.status !== "completed"}
+          disabled={busy === "csv" || !done}
           onSelect={(e) => {
             e.preventDefault();
-            void run("csv", () => downloadScanCsv(scan.scan_id, d?.csv_url));
+            void run("csv", () => downloadScanCsv(scanId));
           }}
         >
           <SheetIcon className="size-4" /> {busy === "csv" ? "Preparing CSV…" : "Download CSV"}
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={busy === "image" || scan.status !== "completed"}
+          disabled={busy === "image" || !done}
           onSelect={(e) => {
             e.preventDefault();
-            void run("image", () =>
-              downloadScanAnnotatedImage(scan.scan_id, d?.annotated_image_url),
-            );
+            void run("image", () => downloadScanAnnotatedImage(scanId));
           }}
         >
           <ImageDown className="size-4" /> {busy === "image" ? "Preparing image…" : "Annotated image"}
         </DropdownMenuItem>
-
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-destructive focus:text-destructive"
-          onSelect={() => onDelete(scan)}
-        >
+        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => onDelete(row)}>
           <Trash2 className="size-4" /> Delete audit
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -249,60 +275,88 @@ function RowActions({
   );
 }
 
+function FilterField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="flex min-w-0 flex-col gap-1.5 text-xs text-[#667085]">
+      {label}
+      {children}
+    </label>
+  );
+}
+
+function OptionSelect({
+  value,
+  onChange,
+  allLabel,
+  options,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  allLabel: string;
+  options: { id: string; name: string }[];
+  ariaLabel: string;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-10 rounded-lg" aria-label={ariaLabel}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">{allLabel}</SelectItem>
+        {options.map((option) => (
+          <SelectItem key={option.id} value={option.id}>
+            {option.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 /* ---------------------------------- page ---------------------------------- */
 
 function HistoryPage() {
   const navigate = useNavigate();
-  const {
-    q: initialQuery,
-    store: initialStore,
-    date: initialDate,
-    date_from: initialDateFrom,
-    date_to: initialDateTo,
-  } = Route.useSearch();
+  const search = Route.useSearch();
   const queryClient = useQueryClient();
 
-  const [q, setQ] = useState(initialQuery ?? "");
-  const [store, setStore] = useState(initialStore ?? "all");
-  const [date, setDate] = useState(initialDate ?? "");
-  const [sort, setSort] = useState<NonNullable<ScanHistoryQuery["sort"]>>("newest");
-  const [type, setType] = useState<NonNullable<ScanHistoryQuery["type"]>>("all");
-  const [auditMode, setAuditMode] = useState<AuditModeFilter>("all");
-  const [page, setPage] = useState(1);
+  const [scope, setScope] = useState<AuditHistoryScope>("mine");
+  const [filters, setFiltersState] = useState<AuditHistoryFilters>(() => ({
+    ...EMPTY_AUDIT_HISTORY_FILTERS,
+    q: search.q ?? "",
+    store: search.store ?? "all",
+    dateFrom: search.date_from ?? search.date ?? "",
+    dateTo: search.date_to ?? search.date ?? "",
+  }));
+  const [filtersOpen, setFiltersOpen] = useState(() => Boolean(search.store || search.date || search.date_from || search.date_to));
   const [selected, setSelected] = useState<string[]>([]);
-  const [pendingDelete, setPendingDelete] = useState<ScanHistoryItem | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AuditHistoryRow | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const params: ScanHistoryQuery = {
-    q,
-    store,
-    date,
-    date_from: initialDateFrom,
-    date_to: initialDateTo,
-    sort,
-    type,
-    audit_mode: auditMode,
-    page,
-    page_size: PAGE_SIZE,
-  };
-
-
   const { data, isPending, isError, error, refetch } = useQuery({
-    queryKey: ["scan-history", params],
-    queryFn: ({ signal }) => fetchScanHistory(params, signal),
+    queryKey: ["audit-history", scope],
+    queryFn: () => fetchAuditHistory(scope),
     retry: false,
   });
 
-  const items = data?.items ?? [];
-  const total = data?.total ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const stores = useMemo(
-    () => data?.stores ?? Array.from(new Set(items.map((i) => i.store))).sort(),
-    [data?.stores, items],
-  );
+  const rows = data?.rows ?? [];
+  const options = useMemo(() => auditHistoryOptions(rows), [rows]);
+  const filtered = useMemo(() => filterAuditHistory(rows, filters), [rows, filters]);
+  const pager = usePager(filtered.length);
+  const pageRows = filtered.slice(pager.start, pager.end);
+  const activeCount = activeAuditHistoryFilterCount(filters);
+  const narrowed = activeCount > 0 || Boolean(filters.q.trim());
 
-  const resetPage = () => setPage(1);
+  const setFilters = (patch: Partial<AuditHistoryFilters>) => {
+    setFiltersState((prev) => ({ ...prev, ...patch }));
+    pager.setPage(0);
+  };
+  const clearFilters = () => {
+    setFiltersState({ ...EMPTY_AUDIT_HISTORY_FILTERS, sort: filters.sort });
+    pager.setPage(0);
+  };
 
   const toggleSelected = (id: string) =>
     setSelected((prev) =>
@@ -315,14 +369,15 @@ function HistoryPage() {
   };
 
   const confirmDelete = async () => {
-    if (!pendingDelete) return;
+    const scanId = pendingDelete?.scan_id;
+    if (!scanId) return;
     setDeleting(true);
     setDeleteError(null);
     try {
-      await deleteScan(pendingDelete.scan_id);
-      setSelected((prev) => prev.filter((id) => id !== pendingDelete.scan_id));
+      await deleteScan(scanId);
+      setSelected((prev) => prev.filter((id) => id !== scanId));
       setPendingDelete(null);
-      await queryClient.invalidateQueries({ queryKey: ["scan-history"] });
+      await queryClient.invalidateQueries({ queryKey: ["audit-history"] });
     } catch (e) {
       setDeleteError(e instanceof Error ? e.message : "Could not delete this audit.");
     } finally {
@@ -330,279 +385,290 @@ function HistoryPage() {
     }
   };
 
+  const canCompare = (row: AuditHistoryRow) => Boolean(row.scan_id) && row.scan_status === "completed";
+
+  const scopeToggle = data?.canSeeTeam ? (
+    <div className="inline-flex rounded-lg border border-[#D9E2E8] bg-white p-0.5" role="group" aria-label="Whose audits">
+      {(
+        [
+          ["mine", "My audits"],
+          ["team", "Everyone in my stores"],
+        ] as const
+      ).map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={scope === value}
+          onClick={() => {
+            setScope(value);
+            setSelected([]);
+            pager.setPage(0);
+          }}
+          className={cn(
+            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+            scope === value ? "bg-[#04203F] text-white" : "text-[#667085] hover:bg-[#F4F7F9] hover:text-[#04203F]",
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
           title="Audit history"
-          description="Past audits with scores, findings, and exports."
+          description={
+            scope === "team"
+              ? "Every audit in your stores — open any report, or filter by store, date, status and people."
+              : "Every audit you ran or assigned — open any report, or filter by store, date, status and people."
+          }
+          actions={scopeToggle}
         />
 
-        <FilterBar>
-          <FilterRow>
+        <section className="space-y-3 rounded-xl border border-[#D9E2E8] bg-white p-4">
+          <div className="flex flex-wrap items-center gap-3">
             <FilterSearch
-              value={q}
-              onChange={(value) => {
-                setQ(value);
-                resetPage();
-              }}
-              placeholder="Search store or audit…"
+              value={filters.q}
+              onChange={(value) => setFilters({ q: value })}
+              placeholder="Search store, audit ID, location, category or person…"
             />
-
-            <div className="relative">
-              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="date"
-                value={date}
-                onChange={(e) => {
-                  setDate(e.target.value);
-                  resetPage();
-                }}
-                className="h-11 rounded-xl pl-9 sm:w-[190px]"
-                aria-label="Filter by date"
-              />
-            </div>
-
-            <Select
-              value={store}
-              onValueChange={(v) => {
-                setStore(v);
-                resetPage();
-              }}
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              className={cn(
+                "inline-flex h-10 items-center gap-2 rounded-lg border bg-white px-3 text-sm font-medium text-[#04203F] transition-colors hover:bg-[#F4F7F9]",
+                activeCount > 0 ? "border-[#04203F]/40" : "border-[#D9E2E8]",
+              )}
             >
-              <SelectTrigger className="h-11 rounded-xl sm:w-[200px]" aria-label="Filter by store">
-                <SelectValue placeholder="All stores" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All stores</SelectItem>
-                {stores.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={sort}
-              onValueChange={(v) => {
-                setSort(v as typeof sort);
-                resetPage();
-              }}
-            >
-              <SelectTrigger className="h-11 rounded-xl sm:w-[190px]" aria-label="Sort audits">
+              <SlidersHorizontal className="size-4 text-[#667085]" aria-hidden />
+              Filters{activeCount > 0 ? ` (${activeCount})` : ""}
+              <ChevronDown className={cn("size-4 text-[#667085] transition-transform", filtersOpen && "rotate-180")} aria-hidden />
+            </button>
+            <Select value={filters.sort} onValueChange={(v) => setFilters({ sort: v as AuditHistoryFilters["sort"] })}>
+              <SelectTrigger className="h-10 w-[150px] rounded-lg" aria-label="Sort audits">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="newest">Newest first</SelectItem>
                 <SelectItem value="oldest">Oldest first</SelectItem>
-                <SelectItem value="processing_time">Longest processing</SelectItem>
               </SelectContent>
             </Select>
+          </div>
 
-            <Select
-              value={type}
-              onValueChange={(v) => {
-                setType(v as typeof type);
-                resetPage();
-              }}
-            >
-              <SelectTrigger className="h-11 rounded-xl sm:w-[170px]" aria-label="Filter by audit type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All audits</SelectItem>
-                <SelectItem value="assigned">Assigned only</SelectItem>
-                <SelectItem value="adhoc">Ad hoc only</SelectItem>
-              </SelectContent>
-            </Select>
+          {filtersOpen ? (
+            <div className="grid gap-3 border-t border-[#D9E2E8] pt-3 sm:grid-cols-2 lg:grid-cols-4">
+              <FilterField label="Store">
+                <OptionSelect
+                  value={filters.store}
+                  onChange={(v) => setFilters({ store: v })}
+                  allLabel="All stores"
+                  options={options.stores}
+                  ariaLabel="Filter by store"
+                />
+              </FilterField>
+              <FilterField label="From">
+                <Input
+                  type="date"
+                  value={filters.dateFrom}
+                  max={filters.dateTo || undefined}
+                  onChange={(e) => setFilters({ dateFrom: e.target.value })}
+                  className="h-10 rounded-lg"
+                  aria-label="From date"
+                />
+              </FilterField>
+              <FilterField label="To">
+                <Input
+                  type="date"
+                  value={filters.dateTo}
+                  min={filters.dateFrom || undefined}
+                  onChange={(e) => setFilters({ dateTo: e.target.value })}
+                  className="h-10 rounded-lg"
+                  aria-label="To date"
+                />
+              </FilterField>
+              <FilterField label="Status">
+                <OptionSelect
+                  value={filters.status}
+                  onChange={(v) => setFilters({ status: v as AuditHistoryFilters["status"] })}
+                  allLabel="All statuses"
+                  options={STATUS_ORDER.map((id) => ({ id, name: AUDIT_HISTORY_STATUS_LABELS[id] }))}
+                  ariaLabel="Filter by status"
+                />
+              </FilterField>
+              <FilterField label="Assigned to">
+                <OptionSelect
+                  value={filters.assignee}
+                  onChange={(v) => setFilters({ assignee: v })}
+                  allLabel="Anyone"
+                  options={options.assignees}
+                  ariaLabel="Filter by assignee"
+                />
+              </FilterField>
+              <FilterField label="Conducted by">
+                <OptionSelect
+                  value={filters.conductedBy}
+                  onChange={(v) => setFilters({ conductedBy: v })}
+                  allLabel="Anyone"
+                  options={options.conductors}
+                  ariaLabel="Filter by who conducted the audit"
+                />
+              </FilterField>
+              <FilterField label="Type">
+                <OptionSelect
+                  value={filters.type}
+                  onChange={(v) => setFilters({ type: v as AuditHistoryFilters["type"] })}
+                  allLabel="Assigned and ad hoc"
+                  options={[
+                    { id: "assigned", name: "Assigned" },
+                    { id: "adhoc", name: "Ad hoc" },
+                  ]}
+                  ariaLabel="Filter by audit type"
+                />
+              </FilterField>
+              <FilterField label="Mode">
+                <OptionSelect
+                  value={filters.mode}
+                  onChange={(v) => setFilters({ mode: v as AuditHistoryFilters["mode"] })}
+                  allLabel="AI and Digital"
+                  options={[
+                    { id: "ai", name: "AI audit" },
+                    { id: "digital", name: "Digital audit" },
+                  ]}
+                  ariaLabel="Filter by audit mode"
+                />
+              </FilterField>
+            </div>
+          ) : null}
 
-            <Select
-              value={auditMode}
-              onValueChange={(v) => {
-                setAuditMode(v as AuditModeFilter);
-                resetPage();
-              }}
-            >
-              <SelectTrigger className="h-11 rounded-xl sm:w-[170px]" aria-label="Filter by audit mode">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All modes</SelectItem>
-                <SelectItem value="digital">Digital audit</SelectItem>
-                <SelectItem value="ai">AI audit</SelectItem>
-              </SelectContent>
-            </Select>
-          </FilterRow>
-          {(q || date || store !== "all" || type !== "all" || auditMode !== "all") && (
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>Filters active</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 rounded-lg px-2 text-xs"
-                onClick={() => {
-                  setQ("");
-                  setDate("");
-                  setStore("all");
-                  setType("all");
-                  setAuditMode("all");
-                  resetPage();
-                }}
-              >
+          {narrowed ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#667085]">
+              <span>
+                {filtered.length.toLocaleString()} of {rows.length.toLocaleString()} audits match
+              </span>
+              <Button variant="ghost" size="sm" className="h-7 rounded-lg px-2 text-xs" onClick={clearFilters}>
                 Clear all
               </Button>
             </div>
-          )}
-        </FilterBar>
+          ) : null}
+        </section>
 
-        {/* compare bar */}
-        <section className="card-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <section className="flex flex-col gap-3 rounded-xl border border-[#D9E2E8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight">Compare audits</p>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Select two audits to compare inventory changes between them.
+            <p className="text-sm font-semibold text-[#04203F]">Compare audits</p>
+            <p className="mt-1 text-xs text-[#667085] sm:text-sm">
+              Tick two finished audits to compare inventory changes between them.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            <span className="text-xs text-muted-foreground">{selected.length}/2 selected</span>
-            <Button
-              variant="brand"
-              size="sm"
-              className="rounded-xl"
-              disabled={selected.length !== 2}
-              onClick={compare}
-            >
+            <span className="text-xs text-[#667085]">{selected.length}/2 selected</span>
+            <Button variant="brand" size="sm" className="rounded-lg" disabled={selected.length !== 2} onClick={compare}>
               <ArrowLeftRight className="size-4" /> Compare
             </Button>
           </div>
         </section>
 
-        {/* results */}
-        <section className="card-surface p-4 sm:p-5">
+        <section className="rounded-xl border border-[#D9E2E8] bg-white">
           {isPending ? (
-            <TableSkeleton rows={6} cols={6} />
+            <div className="p-4">
+              <TableSkeleton rows={6} cols={6} />
+            </div>
           ) : isError ? (
-            <ErrorState
-              title="Couldn't load audit history"
-              description={error instanceof Error ? error.message : undefined}
-              onRetry={() => void refetch()}
-            />
-          ) : items.length === 0 ? (
-            <EmptyState
-              icon={q || date || store !== "all" ? <SearchX className="size-5" /> : undefined}
-              title={q || date || store !== "all" ? "No audits match your filters" : "No audits yet"}
-              description={
-                q || date || store !== "all"
-                  ? "Try a different audit ID, store or date."
-                  : "Run your first shelf audit and it will appear here."
-              }
-              action={
-                <Button variant="brand" size="sm" className="rounded-xl" asChild>
-                  <Link to="/new-audit">New audit</Link>
-                </Button>
-              }
-            />
+            <div className="p-4">
+              <ErrorState
+                title="Couldn't load audit history"
+                description={error instanceof Error ? error.message : undefined}
+                onRetry={() => void refetch()}
+              />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="p-4">
+              <EmptyState
+                icon={narrowed ? <SearchX className="size-5" /> : undefined}
+                title={narrowed ? "No audits match your filters" : "No audits yet"}
+                description={
+                  narrowed
+                    ? "Try another store, date range, status or person."
+                    : "Audits you run or assign will appear here."
+                }
+                action={
+                  narrowed ? (
+                    <Button variant="subtle" size="sm" className="rounded-lg" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  ) : (
+                    <Button variant="brand" size="sm" className="rounded-lg" asChild>
+                      <Link to="/new-audit">New audit</Link>
+                    </Button>
+                  )
+                }
+              />
+            </div>
           ) : (
             <>
-              {/* desktop table */}
               <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10" />
                       <TableHead>Audit</TableHead>
-                      <TableHead>Store</TableHead>
+                      <TableHead>Date</TableHead>
                       <TableHead>Assigned to</TableHead>
                       <TableHead>Conducted by</TableHead>
-                      <TableHead>Date &amp; time</TableHead>
-                      <TableHead className="text-right">Products</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Category</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Assignment</TableHead>
+                      <TableHead className="text-right">Products</TableHead>
                       <TableHead className="text-right">Compliance</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-10" />
-
+                      <TableHead className="text-right">
+                        <span className="sr-only">Actions</span>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {items.map((scan) => (
-                      <TableRow key={scan.scan_id} className="transition-colors hover:bg-surface">
+                    {pageRows.map((row) => (
+                      <TableRow key={row.key} className="transition-colors hover:bg-[#F4F7F9]">
                         <TableCell>
-                          <Checkbox
-                            checked={selected.includes(scan.scan_id)}
-                            onCheckedChange={() => toggleSelected(scan.scan_id)}
-                            aria-label={`Select ${scan.scan_id} for comparison`}
-                          />
+                          {canCompare(row) ? (
+                            <Checkbox
+                              checked={selected.includes(row.scan_id!)}
+                              onCheckedChange={() => toggleSelected(row.scan_id!)}
+                              aria-label={`Select audit ${row.scan_id!.slice(0, 8)} for comparison`}
+                            />
+                          ) : null}
                         </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          <Link
-                            to="/results"
-                            search={{ scan: scan.scan_id }}
-                            className="whitespace-nowrap font-medium text-foreground hover:text-brand"
-                            title={scan.scan_id}
-                          >
-                            {scan.scan_id.slice(0, 8)}
-                          </Link>
+                        <TableCell className="max-w-[260px]">
+                          <p className="truncate font-medium text-[#04203F]" title={row.store}>
+                            {row.store}
+                          </p>
+                          <p className="truncate text-xs text-[#667085]" title={row.scan_id ?? row.assignment_id ?? ""}>
+                            {auditSubtitle(row)}
+                          </p>
                         </TableCell>
-                        <TableCell className="max-w-[200px] truncate font-medium">{scan.store}</TableCell>
-                        <TableCell className="max-w-[160px] truncate text-sm">
-                          {scan.assignee_name ?? "—"}
+                        <TableCell className="whitespace-nowrap text-sm text-[#667085]">
+                          <DateCell row={row} />
                         </TableCell>
-                        <TableCell className="max-w-[160px] truncate text-sm">
-                          {scan.conducted_by_name ?? "—"}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                          {formatScanDate(scan.created_at)}
-                          <span className="ml-2 tabular-nums">{formatScanTime(scan.created_at)}</span>
+                        <TableCell className="max-w-[160px] truncate text-sm">{row.assignee_name ?? "—"}</TableCell>
+                        <TableCell className="max-w-[160px] truncate text-sm">{row.conducted_by_name ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap text-sm text-[#667085]">
+                          {row.assignment_id ? "Assigned" : "Ad hoc"} · {row.audit_mode === "digital" ? "Digital" : "AI"}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {formatCount(scan.products_detected)}
+                          {formatCount(row.products_detected ?? undefined)}
                         </TableCell>
-                        <TableCell className="max-w-[200px] truncate text-sm">
-                          {scan.location ?? "—"}
-                        </TableCell>
-                        <TableCell className="max-w-[180px] truncate text-sm">
-                          {scan.category ?? "—"}
+                        <TableCell className="text-right tabular-nums font-medium text-[#04203F]">
+                          {formatCompliance(row.compliance)}
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <Badge
-                              variant="secondary"
-                              className={`w-fit rounded-full border-0 font-medium ${
-                                scan.assignment_id
-                                  ? "bg-brand-soft text-brand"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {scan.assignment_id ? "Assigned" : "Ad hoc"}
-                            </Badge>
-                            <Badge variant="outline" className="w-fit text-[0.65rem]">
-                              {scan.audit_mode === "digital" ? "Digital" : "AI"}
-                            </Badge>
-                          </div>
+                          <StatusPill status={row.status} />
                         </TableCell>
-                        <TableCell className="text-sm">
-                          <AssignmentStatusBadge
-                            status={scan.assignment_status ?? null}
-                            approvalStatus={scan.assignment_approval_status}
-                          />
-                        </TableCell>
-                        <TableCell
-                          className={`text-right tabular-nums font-medium ${complianceTone(
-                            scan.planogram_compliance ?? null,
-                          )}`}
-                        >
-                          {formatCompliance(scan.planogram_compliance ?? null)}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge kind="scan" status={scan.status} />
-                        </TableCell>
-
                         <TableCell className="text-right">
-                          <RowActions scan={scan} onDelete={setPendingDelete} />
+                          <div className="flex items-center justify-end gap-1">
+                            <RowCta row={row} userId={data!.userId} />
+                            <RowActions row={row} onDelete={setPendingDelete} />
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -610,85 +676,63 @@ function HistoryPage() {
                 </Table>
               </div>
 
-              {/* mobile cards */}
-              <ul className="space-y-3 md:hidden">
-                {items.map((scan) => (
-                  <li key={scan.scan_id} className="rounded-2xl border border-border bg-surface p-4">
+              <ul className="divide-y divide-[#D9E2E8] md:hidden">
+                {pageRows.map((row) => (
+                  <li key={row.key} className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-start gap-3">
-                        <Checkbox
-                          className="mt-0.5"
-                          checked={selected.includes(scan.scan_id)}
-                          onCheckedChange={() => toggleSelected(scan.scan_id)}
-                          aria-label={`Select ${scan.scan_id} for comparison`}
-                        />
+                        {canCompare(row) ? (
+                          <Checkbox
+                            className="mt-0.5"
+                            checked={selected.includes(row.scan_id!)}
+                            onCheckedChange={() => toggleSelected(row.scan_id!)}
+                            aria-label={`Select audit ${row.scan_id!.slice(0, 8)} for comparison`}
+                          />
+                        ) : null}
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">{scan.store}</p>
-                          <p className="mt-0.5 font-mono text-xs text-muted-foreground">{scan.scan_id}</p>
+                          <p className="truncate text-sm font-semibold text-[#04203F]">{row.store}</p>
+                          <p className="mt-0.5 truncate text-xs text-[#667085]">{auditSubtitle(row)}</p>
                         </div>
                       </div>
-                      <RowActions scan={scan} onDelete={setPendingDelete} />
+                      <StatusPill status={row.status} />
                     </div>
 
-                    <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                    <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
                       {[
-                        { l: "Date", v: formatScanDate(scan.created_at) },
-                        { l: "Time", v: formatScanTime(scan.created_at) },
-                        { l: "Products", v: formatCount(scan.products_detected) },
-                        { l: "Location", v: scan.location ?? "—" },
-                        { l: "Category", v: scan.category ?? "—" },
-                        { l: "Type", v: scan.assignment_id ? "Assigned" : "Ad hoc" },
                         {
-                          l: "Compliance",
-                          v: formatCompliance(scan.planogram_compliance ?? null),
+                          l: row.scan_id ? "Date" : "Assigned",
+                          v: `${formatScanDate(row.date)}${row.scan_id ? ` ${formatScanTime(row.date)}` : ""}`,
                         },
-
-                      ].map((row) => (
-                        <div key={row.l} className="min-w-0">
-                          <dt className="text-muted-foreground">{row.l}</dt>
-                          <dd className="mt-0.5 truncate font-medium tabular-nums">{row.v}</dd>
+                        ...(row.scan_id ? [] : [{ l: isOverdue(row) ? "Overdue · due" : "Due", v: formatScanDate(row.due_at ?? undefined) }]),
+                        { l: "Assigned to", v: row.assignee_name ?? "—" },
+                        { l: "Conducted by", v: row.conducted_by_name ?? "—" },
+                        {
+                          l: "Type",
+                          v: `${row.assignment_id ? "Assigned" : "Ad hoc"} · ${row.audit_mode === "digital" ? "Digital" : "AI"}`,
+                        },
+                        { l: "Compliance", v: formatCompliance(row.compliance) },
+                      ].map((item) => (
+                        <div key={item.l} className="min-w-0">
+                          <dt className="text-[#667085]">{item.l}</dt>
+                          <dd className="mt-0.5 truncate font-medium tabular-nums text-[#04203F]">{item.v}</dd>
                         </div>
                       ))}
                     </dl>
 
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <StatusBadge kind="scan" status={scan.status} />
-                      <Button variant="subtle" size="sm" className="rounded-xl" asChild>
-                        <Link to="/results" search={{ scan: scan.scan_id }}>
-                          View results
-                        </Link>
-                      </Button>
+                    <div className="mt-3 flex items-center gap-2">
+                      <RowCta row={row} userId={data!.userId} className="flex-1" />
+                      <RowActions row={row} onDelete={setPendingDelete} />
                     </div>
                   </li>
                 ))}
               </ul>
 
-              {/* pagination */}
-              <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Page {page} of {pageCount} · {total.toLocaleString()} audits
+              <TablePager pager={pager} noun="audits" className="border-t border-[#D9E2E8]" />
+              {data?.truncated ? (
+                <p className="border-t border-[#D9E2E8] px-3 py-2 text-xs text-[#667085]">
+                  Showing the latest 5,000 audits.
                 </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="subtle"
-                    size="sm"
-                    className="rounded-xl"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    <ChevronLeft className="size-4" /> Previous
-                  </Button>
-                  <Button
-                    variant="subtle"
-                    size="sm"
-                    className="rounded-xl"
-                    disabled={page >= pageCount}
-                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                  >
-                    Next <ChevronRight className="size-4" />
-                  </Button>
-                </div>
-              </div>
+              ) : null}
             </>
           )}
         </section>
@@ -707,7 +751,7 @@ function HistoryPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this audit?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingDelete?.scan_id} for {pendingDelete?.store} will be permanently removed, along
+              Audit {pendingDelete?.scan_id?.slice(0, 8)} for {pendingDelete?.store} will be permanently removed, along
               with its report and exports. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

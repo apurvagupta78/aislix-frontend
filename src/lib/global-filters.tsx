@@ -107,7 +107,6 @@ export const GLOBAL_FILTER_PATHS = [
   "/corrective-actions",
   "/sla",
   "/assigned-scans",
-  "/history",
   "/intelligence/inventory-variance",
   "/expiry-control",
   "/reports",
