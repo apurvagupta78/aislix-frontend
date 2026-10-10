@@ -672,6 +672,37 @@ export async function fetchOrgAssignments(): Promise<Assignment[]> {
   return mapAssignments((data ?? []) as unknown as AssignmentRow[]);
 }
 
+/**
+ * Assignments overview: everything assigned to or by the signed-in user, plus
+ * the team's assignments — the whole org for owners/admins, the effective
+ * store scope for managers.
+ */
+export async function fetchAssignmentsOverview(): Promise<{
+  rows: Assignment[];
+  userId: string;
+  isManager: boolean;
+}> {
+  const orgId = await requireOrgId();
+  const userId = await requireUserId();
+  const { resolveEffectiveAccessScope } = await import("@/lib/access-scope");
+  const access = await resolveEffectiveAccessScope({ orgId });
+
+  let builder = supabase.from("scan_assignments").select(SELECT).eq("org_id", orgId);
+  if (!access.isOrgAdmin) {
+    const mine = `assignee_id.eq.${userId},assigner_id.eq.${userId}`;
+    const storeIds = access.isManager ? access.effectiveStoreIds : [];
+    builder = builder.or(storeIds.length ? `${mine},store_id.in.(${storeIds.join(",")})` : mine);
+  }
+
+  const { data, error } = await builder.order("created_at", { ascending: false });
+  if (error) dbError(error, "Could not load assignments.");
+  return {
+    rows: await mapAssignments((data ?? []) as unknown as AssignmentRow[]),
+    userId,
+    isManager: access.isManager,
+  };
+}
+
 export async function startAssignment(assignmentId: string): Promise<void> {
   const { error } = await supabase
     .from("scan_assignments")

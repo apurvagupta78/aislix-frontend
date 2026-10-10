@@ -106,7 +106,6 @@ export const GLOBAL_FILTER_PATHS = [
   "/sku-intelligence",
   "/corrective-actions",
   "/sla",
-  "/assigned-scans",
   "/intelligence/inventory-variance",
   "/expiry-control",
   "/reports",
