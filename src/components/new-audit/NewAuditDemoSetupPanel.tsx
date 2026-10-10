@@ -111,6 +111,7 @@ export function NewAuditDemoSetupPanel({
         planogramMode={planogramMode}
         lockedPlanogramMode={lockedMode}
         hideRolePicker
+        hideNoPlanogramIntro
         onPlanogramModeChange={setPlanogramMode}
         scanContext={scanContext}
         onScanContextChange={handleScanContextChange}
