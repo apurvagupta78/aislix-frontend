@@ -170,10 +170,25 @@ function isDueToday(dueAt: string | null): boolean {
   );
 }
 
-function isUpcoming(assignment: Assignment): boolean {
-  if (assignment.status === "completed" || assignment.status === "cancelled") return false;
-  if (!assignment.due_at) return assignment.status === "pending";
-  return new Date(assignment.due_at) > new Date() && !isOverdue(assignment);
+function isPastDue(dueAt: string | null): boolean {
+  return dueAt !== null && new Date(dueAt).getTime() < Date.now();
+}
+
+/** Today's work: due today, past its deadline, or no due date at all. */
+function isTodayWork(dueAt: string | null): boolean {
+  return !dueAt || isDueToday(dueAt) || isPastDue(dueAt);
+}
+
+function isLaterWork(dueAt: string | null): boolean {
+  return dueAt !== null && !isTodayWork(dueAt);
+}
+
+function GroupHeading({ label, count }: { label: string; count: number }) {
+  return (
+    <h2 className="text-sm font-semibold text-[#04203F]">
+      {label} <span className="font-normal text-[#667085]">({count})</span>
+    </h2>
+  );
 }
 
 function startLabel(assignment: Assignment): string {
@@ -291,13 +306,8 @@ function MyScansPage() {
       (item) => item.status !== "completed" && item.status !== "cancelled",
     );
     return {
-      today: active.filter(
-        (item) =>
-          item.status === "in_progress" ||
-          isDueToday(item.due_at) ||
-          (item.status === "pending" && isDueToday(item.due_at)),
-      ),
-      upcoming: active.filter((item) => isUpcoming(item)),
+      today: active.filter((item) => isTodayWork(item.due_at)),
+      upcoming: active.filter((item) => isLaterWork(item.due_at)),
       overdue: active.filter((item) => isOverdue(item)),
       needs_correction: all.filter((item) => item.status === "needs_correction"),
       unsynced: all.filter(
@@ -309,9 +319,21 @@ function MyScansPage() {
     } satisfies Record<AssignmentTabKey, Assignment[]>;
   }, [all, unsyncedIds, pendingByAssignment]);
 
-  const myActions = actionsQuery.data ?? [];
-  const tabCount = (key: TabKey) => (key === "actions" ? myActions.length : buckets[key].length);
+  const myActions = useMemo(() => actionsQuery.data ?? [], [actionsQuery.data]);
+  const actionBuckets = useMemo(
+    () => ({
+      today: myActions.filter((a) => a.status === "overdue" || isTodayWork(a.due_at)),
+      upcoming: myActions.filter((a) => a.status !== "overdue" && isLaterWork(a.due_at)),
+      overdue: myActions.filter((a) => a.status === "overdue" || isPastDue(a.due_at)),
+    }),
+    [myActions],
+  );
+  const tabActionsFor = (key: TabKey): LifecycleAction[] =>
+    key === "today" || key === "upcoming" || key === "overdue" ? actionBuckets[key] : [];
+  const tabCount = (key: TabKey) =>
+    key === "actions" ? myActions.length : buckets[key].length + tabActionsFor(key).length;
   const visible = tab === "actions" ? [] : buckets[tab];
+  const tabActions = tabActionsFor(tab);
   const actionable =
     tab === "today" ||
     tab === "upcoming" ||
@@ -369,126 +391,137 @@ function MyScansPage() {
             ) : (
               <MyActionsList actions={myActions} />
             )
-          ) : visible.length === 0 ? (
+          ) : visible.length === 0 && tabActions.length === 0 ? (
             <EmptyState
               icon={<ClipboardList className="size-6" />}
               title="Nothing here yet"
               description="When a manager assigns you an audit, it will appear here."
             />
           ) : (
-            <div className="space-y-3">
-              {visible.map((assignment) => (
-                <article
-                  key={assignment.id}
-                  className="rounded-2xl border border-border bg-card p-5"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-foreground">
-                          {assignment.scope_values.audit_name?.trim() || assignment.store_name}
-                        </p>
-                        {statusBadge(assignment.status)}
-                        <CollectionMethodBadge mode={assignment.audit_mode} />
-                        {(pendingByAssignment[assignment.id] ?? 0) > 0 ? (
-                          <SyncBadge
-                            state="pending"
-                            pendingCount={pendingByAssignment[assignment.id]}
-                          />
-                        ) : null}
-                        {assignment.status === "needs_correction" && (
-                          <Badge
-                            variant="secondary"
-                            className="rounded-full border-0 bg-destructive/10 text-destructive"
-                          >
-                            {assignment.open_issue_count} open issues
-                          </Badge>
-                        )}
-                        {isOverdue(assignment) && (
-                          <Badge
-                            variant="secondary"
-                            className="rounded-full border-0 bg-destructive/10 text-destructive"
-                          >
-                            Overdue
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="mt-1">
-                        <AssignmentIdChip id={assignment.id} />
-                      </div>
-                      <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <MapPin className="size-3.5" /> {assignmentLine(assignment)}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {scopeSummary(assignment.scope_type, assignment.scope_values)} · assigned by{" "}
-                        {assignment.assigner_name}
-                      </p>
-                      {assignment.status === "needs_correction" && (
-                        <p className="mt-1 text-xs">
-                          <span
-                            className={`font-semibold ${complianceTone(
-                              assignment.last_compliance_percent,
-                            )}`}
-                          >
-                            {assignment.last_compliance_percent === null
-                              ? "—"
-                              : `${Math.round(assignment.last_compliance_percent)}%`}{" "}
-                            compliance
-                          </span>
-                          <span className="text-muted-foreground">
-                            {" "}
-                            · attempt {assignment.scan_attempts} · fix the shelf, then re-audit
-                          </span>
-                        </p>
-                      )}
-                      {assignment.instructions && (
-                        <p className="mt-2 rounded-xl bg-surface px-3 py-2 text-xs text-muted-foreground">
-                          {assignment.instructions}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <CalendarClock className="size-3.5" /> {formatDate(assignment.due_at)}
-                      </span>
-                      {actionable ? (
-                        <Button
-                          variant="brand"
-                          className="rounded-xl"
-                          disabled={startMutation.isPending}
-                          onClick={() => startMutation.mutate(assignment)}
-                        >
-                          {startMutation.isPending ? (
-                            <Loader2 className="mr-2 size-4 animate-spin" />
-                          ) : (
-                            <ScanLine className="mr-2 size-4" />
+            <div className="space-y-6">
+              {visible.length ? (
+                <section className="space-y-3">
+                  {tabActions.length ? <GroupHeading label="Audits" count={visible.length} /> : null}
+                  {visible.map((assignment) => (
+                    <article
+                      key={assignment.id}
+                      className="rounded-2xl border border-border bg-card p-5"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-foreground">
+                              {assignment.scope_values.audit_name?.trim() || assignment.store_name}
+                            </p>
+                            {statusBadge(assignment.status)}
+                            <CollectionMethodBadge mode={assignment.audit_mode} />
+                            {(pendingByAssignment[assignment.id] ?? 0) > 0 ? (
+                              <SyncBadge
+                                state="pending"
+                                pendingCount={pendingByAssignment[assignment.id]}
+                              />
+                            ) : null}
+                            {assignment.status === "needs_correction" && (
+                              <Badge
+                                variant="secondary"
+                                className="rounded-full border-0 bg-destructive/10 text-destructive"
+                              >
+                                {assignment.open_issue_count} open issues
+                              </Badge>
+                            )}
+                            {isOverdue(assignment) && (
+                              <Badge
+                                variant="secondary"
+                                className="rounded-full border-0 bg-destructive/10 text-destructive"
+                              >
+                                Overdue
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="mt-1">
+                            <AssignmentIdChip id={assignment.id} />
+                          </div>
+                          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <MapPin className="size-3.5" /> {assignmentLine(assignment)}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {scopeSummary(assignment.scope_type, assignment.scope_values)} · assigned by{" "}
+                            {assignment.assigner_name}
+                          </p>
+                          {assignment.status === "needs_correction" && (
+                            <p className="mt-1 text-xs">
+                              <span
+                                className={`font-semibold ${complianceTone(
+                                  assignment.last_compliance_percent,
+                                )}`}
+                              >
+                                {assignment.last_compliance_percent === null
+                                  ? "—"
+                                  : `${Math.round(assignment.last_compliance_percent)}%`}{" "}
+                                compliance
+                              </span>
+                              <span className="text-muted-foreground">
+                                {" "}
+                                · attempt {assignment.scan_attempts} · fix the shelf, then re-audit
+                              </span>
+                            </p>
                           )}
-                          {startLabel(assignment)}
-                        </Button>
-                      ) : null}
-                      {assignment.scan_id && (
-                        <Button
-                          variant="subtle"
-                          className="rounded-xl"
-                          onClick={() =>
-                            void navigate({
-                              to: "/results",
-                              search: { scan: assignment.scan_id! },
-                            })
-                          }
-                        >
-                          {actionable ? "View last results" : "View results"}
-                        </Button>
-                      )}
-                      {assignment.status === "needs_correction" && (
-                        <Button asChild variant="subtle" className="rounded-xl">
-                          <Link to="/corrective-actions">View open actions</Link>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              ))}
+                          {assignment.instructions && (
+                            <p className="mt-2 rounded-xl bg-surface px-3 py-2 text-xs text-muted-foreground">
+                              {assignment.instructions}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <CalendarClock className="size-3.5" /> {formatDate(assignment.due_at)}
+                          </span>
+                          {actionable ? (
+                            <Button
+                              variant="brand"
+                              className="rounded-xl"
+                              disabled={startMutation.isPending}
+                              onClick={() => startMutation.mutate(assignment)}
+                            >
+                              {startMutation.isPending ? (
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                              ) : (
+                                <ScanLine className="mr-2 size-4" />
+                              )}
+                              {startLabel(assignment)}
+                            </Button>
+                          ) : null}
+                          {assignment.scan_id && (
+                            <Button
+                              variant="subtle"
+                              className="rounded-xl"
+                              onClick={() =>
+                                void navigate({
+                                  to: "/results",
+                                  search: { scan: assignment.scan_id! },
+                                })
+                              }
+                            >
+                              {actionable ? "View last results" : "View results"}
+                            </Button>
+                          )}
+                          {assignment.status === "needs_correction" && (
+                            <Button asChild variant="subtle" className="rounded-xl">
+                              <Link to="/corrective-actions">View open actions</Link>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </section>
+              ) : null}
+              {tabActions.length ? (
+                <section className="space-y-3">
+                  <GroupHeading label="Corrective actions" count={tabActions.length} />
+                  <MyActionsList actions={tabActions} />
+                </section>
+              ) : null}
             </div>
           )}
         </div>
