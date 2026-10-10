@@ -52,11 +52,14 @@ export type AuditHistoryRow = {
   assigner_id: string | null;
   conducted_by_id: string | null;
   conducted_by_name: string | null;
-  /** Recurring series this audit was created by. */
+  /** Schedule this audit was created by (recurring series or one-off scheduled audit). */
   schedule_id: string | null;
+  schedule_kind: AuditScheduleKind | null;
   /** Set on the row that stands for a recurring series itself (not one of its rounds). */
   series: AuditHistorySeries | null;
 };
+
+export type AuditScheduleKind = "recurring" | "scheduled";
 
 export type AuditHistorySeries = {
   id: string;
@@ -71,7 +74,12 @@ export type AuditHistorySeries = {
 
 /** True for a recurring series and for every round it created. */
 export function isRecurringRow(row: AuditHistoryRow): boolean {
-  return Boolean(row.series || row.schedule_id);
+  return Boolean(row.series) || row.schedule_kind === "recurring";
+}
+
+/** True for audits created by "Schedule once". */
+export function isScheduledRow(row: AuditHistoryRow): boolean {
+  return !row.series && row.schedule_kind === "scheduled";
 }
 
 export type AuditHistoryData = {
@@ -305,6 +313,18 @@ export async function fetchAuditHistory(scope: AuditHistoryScope): Promise<Audit
   );
   const nameOf = (id: string | null | undefined) => (id ? (personName.get(id) ?? null) : null);
 
+  const scheduleKind = new Map<string, AuditScheduleKind>();
+  const scheduleIds = Array.from(
+    new Set([...assignmentsById.values()].map((a) => a.schedule_id).filter((id): id is string => Boolean(id))),
+  );
+  for (const ids of chunk(scheduleIds, ID_CHUNK)) {
+    const { data } = await supabase.from("audit_schedules").select("id, assignment_mode").in("id", ids);
+    for (const s of (data ?? []) as { id: string; assignment_mode: string | null }[]) {
+      scheduleKind.set(s.id, s.assignment_mode === "schedule_once" ? "scheduled" : "recurring");
+    }
+  }
+  const kindOf = (scheduleId: string | null | undefined) => (scheduleId ? (scheduleKind.get(scheduleId) ?? null) : null);
+
   const rows: AuditHistoryRow[] = [];
 
   for (const scan of scans) {
@@ -333,6 +353,7 @@ export async function fetchAuditHistory(scope: AuditHistoryScope): Promise<Audit
       conducted_by_id: conductor,
       conducted_by_name: nameOf(conductor),
       schedule_id: assignment?.schedule_id ?? null,
+      schedule_kind: kindOf(assignment?.schedule_id),
       series: null,
     });
   }
@@ -359,6 +380,7 @@ export async function fetchAuditHistory(scope: AuditHistoryScope): Promise<Audit
       conducted_by_id: null,
       conducted_by_name: null,
       schedule_id: assignment.schedule_id,
+      schedule_kind: kindOf(assignment.schedule_id),
       series: null,
     });
   }
@@ -377,7 +399,7 @@ export type AuditHistoryFilters = {
   status: AuditHistoryStatus | "all";
   assignee: string;
   conductedBy: string;
-  type: "all" | "assigned" | "adhoc" | "recurring";
+  type: "all" | "assigned" | "adhoc" | "recurring" | "scheduled";
   mode: "all" | "ai" | "digital";
   sort: "newest" | "oldest";
 };
@@ -434,6 +456,7 @@ export function filterAuditHistory(rows: AuditHistoryRow[], filters: AuditHistor
     if (filters.type === "assigned" && !row.assignment_id) return false;
     if (filters.type === "adhoc" && (row.assignment_id || series)) return false;
     if (filters.type === "recurring" && !isRecurringRow(row)) return false;
+    if (filters.type === "scheduled" && !isScheduledRow(row)) return false;
     if (filters.mode !== "all" && row.audit_mode !== filters.mode) return false;
     const time = new Date(row.date).getTime();
     if (from !== null && time < from) return false;

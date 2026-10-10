@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeftRight,
+  CalendarClock,
   ChevronDown,
   Download,
   FileText,
@@ -54,6 +55,7 @@ import {
   fetchAuditHistory,
   filterAuditHistory,
   isRecurringRow,
+  isScheduledRow,
   type AuditHistoryFilters,
   type AuditHistoryRow,
   type AuditHistorySeries,
@@ -431,11 +433,19 @@ function RowActions({
   );
 }
 
-function RecurringLabel() {
+function ScheduleLabel({ row }: { row: AuditHistoryRow }) {
+  const recurring = isRecurringRow(row);
+  if (!recurring && !isScheduledRow(row)) return null;
+  const Icon = recurring ? Repeat : CalendarClock;
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-[#7DB7D6]/50 bg-[#7DB7D6]/15 px-1.5 py-0.5 text-[11px] font-medium leading-none text-[#04203F]">
-      <Repeat className="size-3" aria-hidden />
-      Recurring
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[11px] font-medium leading-none text-[#04203F]",
+        recurring ? "border-[#7DB7D6]/50 bg-[#7DB7D6]/15" : "border-[#9B86D9]/50 bg-[#9B86D9]/15",
+      )}
+    >
+      <Icon className="size-3" aria-hidden />
+      {recurring ? "Recurring" : "Scheduled"}
     </span>
   );
 }
@@ -487,6 +497,7 @@ function seriesToRow(series: RecurringSeries): AuditHistoryRow {
     conducted_by_id: null,
     conducted_by_name: null,
     schedule_id: series.id,
+    schedule_kind: "recurring",
     series: {
       id: series.id,
       name: series.name,
@@ -509,7 +520,13 @@ function rowSubtitle(row: AuditHistoryRow): string {
 }
 
 function rowType(row: AuditHistoryRow): string {
-  const kind = isRecurringRow(row) ? "Recurring" : row.assignment_id ? "Assigned" : "Ad hoc";
+  const kind = isRecurringRow(row)
+    ? "Recurring"
+    : isScheduledRow(row)
+      ? "Scheduled"
+      : row.assignment_id
+        ? "Assigned"
+        : "Ad hoc";
   return `${kind} · ${row.audit_mode === "digital" ? "Digital" : "AI"}`;
 }
 
@@ -806,6 +823,7 @@ function HistoryPage() {
                     { id: "assigned", name: "Assigned" },
                     { id: "adhoc", name: "Ad hoc" },
                     { id: "recurring", name: "Recurring" },
+                    { id: "scheduled", name: "Scheduled" },
                   ]}
                   ariaLabel="Filter by audit type"
                 />
@@ -927,7 +945,7 @@ function HistoryPage() {
                             <p className="truncate font-medium text-[#04203F]" title={rowTitle(row)}>
                               {rowTitle(row)}
                             </p>
-                            {isRecurringRow(row) ? <RecurringLabel /> : null}
+                            <ScheduleLabel row={row} />
                           </div>
                           <p className="truncate text-xs text-[#667085]" title={row.scan_id ?? row.assignment_id ?? ""}>
                             {rowSubtitle(row)}
@@ -980,7 +998,7 @@ function HistoryPage() {
                         <div className="min-w-0">
                           <div className="flex min-w-0 items-center gap-1.5">
                             <p className="truncate text-sm font-semibold text-[#04203F]">{rowTitle(row)}</p>
-                            {isRecurringRow(row) ? <RecurringLabel /> : null}
+                            <ScheduleLabel row={row} />
                           </div>
                           <p className="mt-0.5 truncate text-xs text-[#667085]">{rowSubtitle(row)}</p>
                         </div>

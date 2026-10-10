@@ -61,6 +61,9 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RackCheckRouteImport } from './routes/rack-check'
+import { Route as ShelfToCsvRouteImport } from './routes/shelf-to-csv'
+import { Route as FnvCheckRouteImport } from './routes/fnv-check'
+import { Route as HygieneCheckRouteImport } from './routes/hygiene-check'
 import { Route as RecurringIssuesRouteImport } from './routes/recurring-issues'
 import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportRouteImport } from './routes/report'
@@ -397,6 +400,21 @@ const ProfileRoute = ProfileRouteImport.update({
 const RackCheckRoute = RackCheckRouteImport.update({
   id: '/rack-check',
   path: '/rack-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShelfToCsvRoute = ShelfToCsvRouteImport.update({
+  id: '/shelf-to-csv',
+  path: '/shelf-to-csv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FnvCheckRoute = FnvCheckRouteImport.update({
+  id: '/fnv-check',
+  path: '/fnv-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HygieneCheckRoute = HygieneCheckRouteImport.update({
+  id: '/hygiene-check',
+  path: '/hygiene-check',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecurringIssuesRoute = RecurringIssuesRouteImport.update({
@@ -853,6 +871,9 @@ export interface FileRoutesByFullPath {
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
   '/rack-check': typeof RackCheckRoute
+  '/shelf-to-csv': typeof ShelfToCsvRoute
+  '/fnv-check': typeof FnvCheckRoute
+  '/hygiene-check': typeof HygieneCheckRoute
   '/recurring-issues': typeof RecurringIssuesRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
@@ -984,6 +1005,9 @@ export interface FileRoutesByTo {
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
   '/rack-check': typeof RackCheckRoute
+  '/shelf-to-csv': typeof ShelfToCsvRoute
+  '/fnv-check': typeof FnvCheckRoute
+  '/hygiene-check': typeof HygieneCheckRoute
   '/recurring-issues': typeof RecurringIssuesRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
@@ -1116,6 +1140,9 @@ export interface FileRoutesById {
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
   '/rack-check': typeof RackCheckRoute
+  '/shelf-to-csv': typeof ShelfToCsvRoute
+  '/fnv-check': typeof FnvCheckRoute
+  '/hygiene-check': typeof HygieneCheckRoute
   '/recurring-issues': typeof RecurringIssuesRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
@@ -1249,6 +1276,9 @@ export interface FileRouteTypes {
     | '/processing'
     | '/profile'
     | '/rack-check'
+    | '/shelf-to-csv'
+    | '/fnv-check'
+    | '/hygiene-check'
     | '/recurring-issues'
     | '/refunds'
     | '/report'
@@ -1380,6 +1410,9 @@ export interface FileRouteTypes {
     | '/processing'
     | '/profile'
     | '/rack-check'
+    | '/shelf-to-csv'
+    | '/fnv-check'
+    | '/hygiene-check'
     | '/recurring-issues'
     | '/refunds'
     | '/report'
@@ -1511,6 +1544,9 @@ export interface FileRouteTypes {
     | '/processing'
     | '/profile'
     | '/rack-check'
+    | '/shelf-to-csv'
+    | '/fnv-check'
+    | '/hygiene-check'
     | '/recurring-issues'
     | '/refunds'
     | '/report'
@@ -1643,6 +1679,9 @@ export interface RootRouteChildren {
   ProcessingRoute: typeof ProcessingRoute
   ProfileRoute: typeof ProfileRoute
   RackCheckRoute: typeof RackCheckRoute
+  ShelfToCsvRoute: typeof ShelfToCsvRoute
+  FnvCheckRoute: typeof FnvCheckRoute
+  HygieneCheckRoute: typeof HygieneCheckRoute
   RecurringIssuesRoute: typeof RecurringIssuesRoute
   RefundsRoute: typeof RefundsRoute
   ReportRoute: typeof ReportRoute
@@ -2055,6 +2094,27 @@ declare module '@tanstack/react-router' {
       path: '/rack-check'
       fullPath: '/rack-check'
       preLoaderRoute: typeof RackCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shelf-to-csv': {
+      id: '/shelf-to-csv'
+      path: '/shelf-to-csv'
+      fullPath: '/shelf-to-csv'
+      preLoaderRoute: typeof ShelfToCsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fnv-check': {
+      id: '/fnv-check'
+      path: '/fnv-check'
+      fullPath: '/fnv-check'
+      preLoaderRoute: typeof FnvCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hygiene-check': {
+      id: '/hygiene-check'
+      path: '/hygiene-check'
+      fullPath: '/hygiene-check'
+      preLoaderRoute: typeof HygieneCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recurring-issues': {
@@ -2813,6 +2873,9 @@ const rootRouteChildren: RootRouteChildren = {
   ProcessingRoute: ProcessingRoute,
   ProfileRoute: ProfileRoute,
   RackCheckRoute: RackCheckRoute,
+  ShelfToCsvRoute: ShelfToCsvRoute,
+  FnvCheckRoute: FnvCheckRoute,
+  HygieneCheckRoute: HygieneCheckRoute,
   RecurringIssuesRoute: RecurringIssuesRoute,
   RefundsRoute: RefundsRoute,
   ReportRoute: ReportRoute,

@@ -7,6 +7,7 @@ import {
   Settings,
   Store,
   Users,
+  Zap,
 } from "lucide-react";
 
 export type NavLeafConfig = {
@@ -51,11 +52,21 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     items: [
       { kind: "leaf", label: "My work", to: "/my-scans" },
       { kind: "leaf", label: "All audits", to: "/history" },
-      { kind: "leaf", label: "Display check", to: "/display-check" },
-      { kind: "leaf", label: "Rack check", to: "/rack-check" },
       { kind: "leaf", label: "Assignments", to: "/assigned-scans" },
       { kind: "leaf", label: "Audit calendar", to: "/audit-calendar" },
       { kind: "leaf", label: "Audit templates", to: "/audit-templates", managerOnly: true },
+    ],
+  },
+  {
+    id: "quick-checks",
+    label: "Quick checks",
+    icon: Zap,
+    items: [
+      { kind: "leaf", label: "Display check", to: "/display-check" },
+      { kind: "leaf", label: "Rack check", to: "/rack-check" },
+      { kind: "leaf", label: "Shelf to CSV", to: "/shelf-to-csv" },
+      { kind: "leaf", label: "FNV check", to: "/fnv-check" },
+      { kind: "leaf", label: "Hygiene check", to: "/hygiene-check" },
     ],
   },
   {
