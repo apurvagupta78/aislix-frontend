@@ -338,6 +338,7 @@ function HistoryPage() {
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["audit-history", scope],
     queryFn: () => fetchAuditHistory(scope),
+    placeholderData: (previous) => previous,
     retry: false,
   });
 
@@ -622,14 +623,14 @@ function HistoryPage() {
                       <TableHead className="text-right">Products</TableHead>
                       <TableHead className="text-right">Compliance</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">
+                      <TableHead className="sticky right-0 bg-white text-right">
                         <span className="sr-only">Actions</span>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pageRows.map((row) => (
-                      <TableRow key={row.key} className="transition-colors hover:bg-[#F4F7F9]">
+                      <TableRow key={row.key} className="group transition-colors hover:bg-[#F4F7F9]">
                         <TableCell>
                           {canCompare(row) ? (
                             <Checkbox
@@ -664,7 +665,7 @@ function HistoryPage() {
                         <TableCell>
                           <StatusPill status={row.status} />
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="sticky right-0 border-l border-[#D9E2E8] bg-white text-right transition-colors group-hover:bg-[#F4F7F9]">
                           <div className="flex items-center justify-end gap-1">
                             <RowCta row={row} userId={data!.userId} />
                             <RowActions row={row} onDelete={setPendingDelete} />
