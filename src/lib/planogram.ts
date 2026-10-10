@@ -384,7 +384,7 @@ export async function fetchPlanogramSnapshot(storeId: string): Promise<Planogram
   return { active, activeRows, draft, draftRows };
 }
 
-export type SourceType = "csv" | "manual" | "mixed";
+export type SourceType = "csv" | "manual" | "mixed" | "ai";
 
 /** Creates or reuses the store's draft version and replaces its items. */
 export async function savePlanogramDraft(input: {

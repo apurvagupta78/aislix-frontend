@@ -65,9 +65,15 @@ export function PlanogramEditorDialog({
   const [filename, setFilename] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
 
-  const sourceType: SourceType =
-    sources.csv && sources.manual ? "mixed" : sources.manual ? "manual" : "csv";
+  const sourceType: SourceType = aiGenerated
+    ? "ai"
+    : sources.csv && sources.manual
+      ? "mixed"
+      : sources.manual
+        ? "manual"
+        : "csv";
   const summary = dominantScopeFromRows(rows);
 
   useEffect(() => {
@@ -75,6 +81,7 @@ export function PlanogramEditorDialog({
     setError(null);
     setSources({ csv: false, manual: false });
     setFilename(null);
+    setAiGenerated(false);
     setAuditPackage({ ...EMPTY_AUDIT_PACKAGE });
     if (target.mode === "create") {
       setName("");
@@ -89,6 +96,7 @@ export function PlanogramEditorDialog({
         setName(data.name);
         setRows(data.rows);
         setAuditPackage(data.auditPackage ?? { ...EMPTY_AUDIT_PACKAGE });
+        setAiGenerated(data.source_type === "ai");
         setSources({ csv: data.source_type !== "manual", manual: data.source_type !== "csv" });
       })
       .catch((err) => setError(toUserMessage(err)))

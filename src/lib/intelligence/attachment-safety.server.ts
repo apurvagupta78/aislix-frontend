@@ -21,6 +21,8 @@ export type InspectedAttachment = {
   bytes: Uint8Array;
   /** Spreadsheet contents as CSV text for the AI. */
   text?: string;
+  /** First sheet as neutralised cells, for features that read columns. */
+  rows?: string[][];
 };
 
 const MAX_SHEETS = 5;
@@ -265,7 +267,15 @@ export async function inspectAttachment(name: string, input: Uint8Array): Promis
     } catch {
       throw new AttachmentRejected("could not be read as an Excel file.");
     }
-    return { kind: "xlsx", mime: type.mime, ext, bytes: input, text: spreadsheetText(XLSX, workbook) };
+    const first = workbook.Sheets[workbook.SheetNames[0] ?? ""];
+    return {
+      kind: "xlsx",
+      mime: type.mime,
+      ext,
+      bytes: input,
+      text: spreadsheetText(XLSX, workbook),
+      rows: first ? sheetRows(XLSX, first) : [],
+    };
   }
 
   const startsBinary =
@@ -285,5 +295,5 @@ export async function inspectAttachment(name: string, input: Uint8Array): Promis
   const rows = sheet ? sheetRows(XLSX, sheet) : [];
   if (!rows.length) throw new AttachmentRejected("has no rows.");
   const clean = new TextEncoder().encode(rowsToCsv(rows));
-  return { kind: "csv", mime: type.mime, ext, bytes: clean, text: spreadsheetText(XLSX, workbook) };
+  return { kind: "csv", mime: type.mime, ext, bytes: clean, text: spreadsheetText(XLSX, workbook), rows };
 }

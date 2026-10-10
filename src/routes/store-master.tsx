@@ -66,6 +66,13 @@ export const Route = createFileRoute("/store-master")({
 
 const card = "overflow-hidden rounded-xl border border-line bg-white p-5";
 
+const SOURCE_LABELS: Record<string, string> = {
+  csv: "CSV",
+  manual: "Manual",
+  mixed: "CSV + manual",
+  ai: "AI generated",
+};
+
 function formatDate(value: string | null): string {
   if (!value) return "—";
   return new Date(value).toLocaleDateString("en-IN", {
@@ -284,7 +291,7 @@ function StoreMasterPage() {
                           <p className="mt-1 text-xs text-muted-foreground">{scopeLine(version)}</p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             Uploaded {formatDate(version.created_at)} ·{" "}
-                            {version.source_type.toUpperCase()} · {version.status}
+                            {SOURCE_LABELS[version.source_type] ?? version.source_type} · {version.status}
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">

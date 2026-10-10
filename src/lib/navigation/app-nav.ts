@@ -57,7 +57,7 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
   },
   {
     id: "quick-checks",
-    label: "Quick checks",
+    label: "Quick tools",
     icon: Zap,
     items: [
       { kind: "leaf", label: "Display check", to: "/display-check" },
@@ -65,6 +65,7 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
       { kind: "leaf", label: "Shelf to CSV", to: "/shelf-to-csv" },
       { kind: "leaf", label: "FNV check", to: "/fnv-check" },
       { kind: "leaf", label: "Hygiene check", to: "/hygiene-check" },
+      { kind: "leaf", label: "AI planogram generator", to: "/planogram-generator" },
     ],
   },
   {

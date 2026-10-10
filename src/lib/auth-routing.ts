@@ -187,7 +187,8 @@ export function isPublicPath(path: string): boolean {
     PUBLIC_PATHS.has(path) ||
     path.startsWith("/legal") ||
     path.startsWith("/api") ||
-    path.startsWith("/share/")
+    path.startsWith("/share/") ||
+    path.startsWith("/shelf/")
   );
 }
 

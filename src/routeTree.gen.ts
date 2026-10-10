@@ -61,6 +61,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RackCheckRouteImport } from './routes/rack-check'
+import { Route as PlanogramGeneratorRouteImport } from './routes/planogram-generator'
 import { Route as ShelfToCsvRouteImport } from './routes/shelf-to-csv'
 import { Route as FnvCheckRouteImport } from './routes/fnv-check'
 import { Route as HygieneCheckRouteImport } from './routes/hygiene-check'
@@ -123,6 +124,7 @@ import { Route as OperationsDistributorsRouteImport } from './routes/operations.
 import { Route as OperationsWarehousesRouteImport } from './routes/operations.warehouses'
 import { Route as ResultsDebugRouteImport } from './routes/results.debug'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
+import { Route as ShelfTokenRouteImport } from './routes/shelf.$token'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
 import { Route as ApiCronReportSchedulesRouteImport } from './routes/api/cron/report-schedules'
@@ -401,6 +403,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const RackCheckRoute = RackCheckRouteImport.update({
   id: '/rack-check',
   path: '/rack-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanogramGeneratorRoute = PlanogramGeneratorRouteImport.update({
+  id: '/planogram-generator',
+  path: '/planogram-generator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShelfToCsvRoute = ShelfToCsvRouteImport.update({
@@ -720,6 +727,11 @@ const ShareTokenRoute = ShareTokenRouteImport.update({
   path: '/share/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShelfTokenRoute = ShelfTokenRouteImport.update({
+  id: '/shelf/$token',
+  path: '/shelf/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StoresIndexRoute = StoresIndexRouteImport.update({
   id: '/stores/',
   path: '/stores/',
@@ -877,6 +889,7 @@ export interface FileRoutesByFullPath {
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
   '/rack-check': typeof RackCheckRoute
+  '/planogram-generator': typeof PlanogramGeneratorRoute
   '/shelf-to-csv': typeof ShelfToCsvRoute
   '/fnv-check': typeof FnvCheckRoute
   '/hygiene-check': typeof HygieneCheckRoute
@@ -939,6 +952,7 @@ export interface FileRoutesByFullPath {
   '/operations/warehouses': typeof OperationsWarehousesRoute
   '/results/debug': typeof ResultsDebugRoute
   '/share/$token': typeof ShareTokenRoute
+  '/shelf/$token': typeof ShelfTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
   '/api/cron/report-schedules': typeof ApiCronReportSchedulesRoute
@@ -1012,6 +1026,7 @@ export interface FileRoutesByTo {
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
   '/rack-check': typeof RackCheckRoute
+  '/planogram-generator': typeof PlanogramGeneratorRoute
   '/shelf-to-csv': typeof ShelfToCsvRoute
   '/fnv-check': typeof FnvCheckRoute
   '/hygiene-check': typeof HygieneCheckRoute
@@ -1074,6 +1089,7 @@ export interface FileRoutesByTo {
   '/operations/warehouses': typeof OperationsWarehousesRoute
   '/results/debug': typeof ResultsDebugRoute
   '/share/$token': typeof ShareTokenRoute
+  '/shelf/$token': typeof ShelfTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
   '/api/cron/report-schedules': typeof ApiCronReportSchedulesRoute
@@ -1148,6 +1164,7 @@ export interface FileRoutesById {
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
   '/rack-check': typeof RackCheckRoute
+  '/planogram-generator': typeof PlanogramGeneratorRoute
   '/shelf-to-csv': typeof ShelfToCsvRoute
   '/fnv-check': typeof FnvCheckRoute
   '/hygiene-check': typeof HygieneCheckRoute
@@ -1210,6 +1227,7 @@ export interface FileRoutesById {
   '/operations/warehouses': typeof OperationsWarehousesRoute
   '/results/debug': typeof ResultsDebugRoute
   '/share/$token': typeof ShareTokenRoute
+  '/shelf/$token': typeof ShelfTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
   '/api/cron/report-schedules': typeof ApiCronReportSchedulesRoute
@@ -1285,6 +1303,7 @@ export interface FileRouteTypes {
     | '/processing'
     | '/profile'
     | '/rack-check'
+    | '/planogram-generator'
     | '/shelf-to-csv'
     | '/fnv-check'
     | '/hygiene-check'
@@ -1347,6 +1366,7 @@ export interface FileRouteTypes {
     | '/operations/warehouses'
     | '/results/debug'
     | '/share/$token'
+    | '/shelf/$token'
     | '/stores/$storeId'
     | '/stores/'
     | '/api/cron/report-schedules'
@@ -1420,6 +1440,7 @@ export interface FileRouteTypes {
     | '/processing'
     | '/profile'
     | '/rack-check'
+    | '/planogram-generator'
     | '/shelf-to-csv'
     | '/fnv-check'
     | '/hygiene-check'
@@ -1482,6 +1503,7 @@ export interface FileRouteTypes {
     | '/operations/warehouses'
     | '/results/debug'
     | '/share/$token'
+    | '/shelf/$token'
     | '/stores/$storeId'
     | '/stores'
     | '/api/cron/report-schedules'
@@ -1555,6 +1577,7 @@ export interface FileRouteTypes {
     | '/processing'
     | '/profile'
     | '/rack-check'
+    | '/planogram-generator'
     | '/shelf-to-csv'
     | '/fnv-check'
     | '/hygiene-check'
@@ -1617,6 +1640,7 @@ export interface FileRouteTypes {
     | '/operations/warehouses'
     | '/results/debug'
     | '/share/$token'
+    | '/shelf/$token'
     | '/stores/$storeId'
     | '/stores/'
     | '/api/cron/report-schedules'
@@ -1691,6 +1715,7 @@ export interface RootRouteChildren {
   ProcessingRoute: typeof ProcessingRoute
   ProfileRoute: typeof ProfileRoute
   RackCheckRoute: typeof RackCheckRoute
+  PlanogramGeneratorRoute: typeof PlanogramGeneratorRoute
   ShelfToCsvRoute: typeof ShelfToCsvRoute
   FnvCheckRoute: typeof FnvCheckRoute
   HygieneCheckRoute: typeof HygieneCheckRoute
@@ -1727,6 +1752,7 @@ export interface RootRouteChildren {
   OperationsDistributorsRoute: typeof OperationsDistributorsRoute
   OperationsWarehousesRoute: typeof OperationsWarehousesRoute
   ShareTokenRoute: typeof ShareTokenRoute
+  ShelfTokenRoute: typeof ShelfTokenRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
   ApiCronReportSchedulesRoute: typeof ApiCronReportSchedulesRoute
@@ -2107,6 +2133,13 @@ declare module '@tanstack/react-router' {
       path: '/rack-check'
       fullPath: '/rack-check'
       preLoaderRoute: typeof RackCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planogram-generator': {
+      id: '/planogram-generator'
+      path: '/planogram-generator'
+      fullPath: '/planogram-generator'
+      preLoaderRoute: typeof PlanogramGeneratorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shelf-to-csv': {
@@ -2543,6 +2576,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shelf/$token': {
+      id: '/shelf/$token'
+      path: '/shelf/$token'
+      fullPath: '/shelf/$token'
+      preLoaderRoute: typeof ShelfTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stores/': {
       id: '/stores/'
       path: '/stores'
@@ -2893,6 +2933,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProcessingRoute: ProcessingRoute,
   ProfileRoute: ProfileRoute,
   RackCheckRoute: RackCheckRoute,
+  PlanogramGeneratorRoute: PlanogramGeneratorRoute,
   ShelfToCsvRoute: ShelfToCsvRoute,
   FnvCheckRoute: FnvCheckRoute,
   HygieneCheckRoute: HygieneCheckRoute,
@@ -2929,6 +2970,7 @@ const rootRouteChildren: RootRouteChildren = {
   OperationsDistributorsRoute: OperationsDistributorsRoute,
   OperationsWarehousesRoute: OperationsWarehousesRoute,
   ShareTokenRoute: ShareTokenRoute,
+  ShelfTokenRoute: ShelfTokenRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
   ApiCronReportSchedulesRoute: ApiCronReportSchedulesRoute,

@@ -114,7 +114,7 @@ async function readPhoto(input: {
   timeoutMs: number;
 }): Promise<unknown> {
   const apiKey = (process.env.OPENAI_API_KEY ?? "").trim();
-  if (!apiKey) throw new Error("Quick checks are not available right now.");
+  if (!apiKey) throw new Error("Quick tools are not available right now.");
   const OpenAI = (await import("openai")).default;
   const client = new OpenAI({ apiKey, timeout: input.timeoutMs });
   const response = await client.responses.create({

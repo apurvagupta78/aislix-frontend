@@ -99,7 +99,7 @@ const PAGE_H = 842;
 const MARGIN = 50;
 
 /** Standard PDF fonts only cover Latin-1, so map common symbols and drop the rest. */
-function pdfSafe(text: string): string {
+export function pdfSafe(text: string): string {
   return text
     .replace(/₹/g, "INR ")
     .replace(/[“”„]/g, '"')
@@ -113,7 +113,7 @@ function pdfSafe(text: string): string {
     .replace(/[^\x20-\x7E\u00A0-\u00FF]/g, "");
 }
 
-function escapePdf(text: string): string {
+export function escapePdf(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 }
 
@@ -179,7 +179,11 @@ export function reportPdf(title: string, meta: string[], markdown: string): Uint
     );
   }
   newPage();
+  return assemblePdf(pages);
+}
 
+/** Builds an A4 PDF from page content streams; F1 = Helvetica, F2 = Helvetica-Bold. */
+export function assemblePdf(pages: string[]): Uint8Array {
   const fontObjs = 3;
   const objects: string[] = [];
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
