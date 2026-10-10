@@ -57,7 +57,7 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
   },
   {
     id: "quick-checks",
-    label: "Quick tools",
+    label: "Aislix toolkit",
     icon: Zap,
     items: [
       { kind: "leaf", label: "Display check", to: "/display-check" },
