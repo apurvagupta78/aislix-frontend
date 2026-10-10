@@ -108,7 +108,7 @@ function viewLabel(key: string, view: CalendarView): string {
   const d = parseDateKey(key);
   if (view === "month") return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   if (view === "day") {
-    return d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   }
   const start = parseDateKey(startOfWeek(key));
   const end = parseDateKey(addDays(startOfWeek(key), 6));
@@ -384,118 +384,123 @@ function TimeGrid({
     return byHour;
   });
 
+  const nowHour = new Date().getHours();
   const daysKey = days.join(",");
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    let firstHour = 8;
-    for (const byHour of timedByDayHour) for (const hour of byHour.keys()) firstHour = Math.min(firstHour, hour);
-    el.scrollTop = Math.max(0, firstHour - 1) * HOUR_ROW_PX;
+    let anchor: number | null = null;
+    for (const byHour of timedByDayHour) {
+      for (const hour of byHour.keys()) anchor = anchor === null ? hour : Math.min(anchor, hour);
+    }
+    if (anchor === null) anchor = days.includes(today) ? nowHour : 8;
+    el.scrollTop = Math.max(0, anchor - 1) * HOUR_ROW_PX;
     // Only re-anchor when the visible days change, not on every refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [daysKey]);
 
-  const nowHour = new Date().getHours();
-
   return (
     <div className={cn(days.length > 1 && "overflow-x-auto")}>
-      <div className={cn(days.length > 1 && "min-w-[720px]")}>
-        {showDayHeaders ? (
-          <div className="grid border-b border-[#D9E2E8]" style={cols}>
-            <div />
-            {days.map((key) => {
-              const d = parseDateKey(key);
-              const isToday = key === today;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => onOpenDay(key)}
-                  className="flex flex-col items-center gap-0.5 border-l border-[#D9E2E8] py-2 transition-colors hover:bg-[#F4F7F9]"
-                  aria-label={`Open ${d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}`}
-                >
-                  <span className="text-xs text-[#667085]">{WEEKDAYS[d.getDay()]}</span>
-                  <span
-                    className={cn(
-                      "inline-flex size-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums",
-                      isToday ? "bg-[#04203F] text-white" : "text-[#04203F]",
-                    )}
-                  >
-                    {d.getDate()}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {hasAllDay ? (
-          <div className="grid border-b border-[#D9E2E8]" style={cols}>
-            <div className="px-2 py-1.5 text-right text-[11px] leading-4 text-[#667085]">No set time</div>
-            {allDay.map((events, i) => (
-              <div key={days[i]} className="min-w-0 space-y-1 border-l border-[#D9E2E8] p-1">
-                {events.map((event) => (
-                  <EventChip key={event.key} event={event} onOpen={onOpenEvent} />
-                ))}
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        <div ref={scrollRef} className={cn("overflow-y-auto", days.length > 1 ? "max-h-[560px]" : "max-h-[336px]")}>
-          {HOURS.map((hour) => (
-            <div key={hour} className="grid" style={cols}>
-              <div className="relative pr-2 text-right text-[11px] tabular-nums text-[#667085]" style={{ height: HOUR_ROW_PX }}>
-                {hour === 0 ? null : <span className="relative -top-2">{hourLabel(hour)}</span>}
-              </div>
-              {days.map((key, i) => {
-                const events = timedByDayHour[i].get(hour) ?? [];
-                const createTime = slotDueTime(key, hour);
-                const isNow = key === today && hour === nowHour;
-                const slotLabel = `${parseDateKey(key).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })} ${hourLabel(hour)}`;
+      <div
+        ref={scrollRef}
+        className={cn("overflow-y-auto", days.length > 1 ? "max-h-[640px] min-w-[720px]" : "max-h-[336px]")}
+      >
+        <div className="sticky top-0 z-10 bg-white">
+          {showDayHeaders ? (
+            <div className="grid border-b border-[#D9E2E8]" style={cols}>
+              <div />
+              {days.map((key) => {
+                const d = parseDateKey(key);
+                const isToday = key === today;
                 return (
-                  <div
+                  <button
                     key={key}
-                    role={createTime ? "button" : undefined}
-                    tabIndex={createTime ? 0 : undefined}
-                    aria-label={createTime ? `New audit due ${slotLabel}` : undefined}
-                    onClick={createTime ? () => onCreate(key, createTime) : undefined}
-                    onKeyDown={createTime ? slotKeyDown(() => onCreate(key, createTime)) : undefined}
-                    style={{ height: HOUR_ROW_PX }}
-                    className={cn(
-                      "group/slot relative min-w-0 space-y-0.5 overflow-hidden border-l border-t border-[#D9E2E8] p-0.5",
-                      createTime
-                        ? "cursor-pointer transition-colors hover:bg-[#F4F7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#04203F]"
-                        : "bg-[#F4F7F9]/50",
-                      isNow && "border-t-[#04203F]",
-                    )}
+                    type="button"
+                    onClick={() => onOpenDay(key)}
+                    className="flex flex-col items-center gap-0.5 border-l border-[#D9E2E8] py-2 transition-colors hover:bg-[#F4F7F9]"
+                    aria-label={`Open ${d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}`}
                   >
-                    {events.slice(0, events.length > 2 ? 1 : 2).map((event) => (
-                      <EventChip key={event.key} event={event} onOpen={onOpenEvent} />
-                    ))}
-                    {events.length > 2 ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenDay(key);
-                        }}
-                        className="px-1 text-[11px] font-medium text-[#667085] hover:text-[#04203F]"
-                      >
-                        +{events.length - 1} more
-                      </button>
-                    ) : null}
-                    {createTime && events.length === 0 ? (
-                      <span className="pointer-events-none absolute inset-0 hidden items-center justify-center text-[11px] font-medium text-[#667085] group-hover/slot:flex">
-                        <Plus className="mr-1 size-3" aria-hidden /> New audit
-                      </span>
-                    ) : null}
-                  </div>
+                    <span className="text-xs text-[#667085]">{WEEKDAYS[d.getDay()]}</span>
+                    <span
+                      className={cn(
+                        "inline-flex size-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums",
+                        isToday ? "bg-[#04203F] text-white" : "text-[#04203F]",
+                      )}
+                    >
+                      {d.getDate()}
+                    </span>
+                  </button>
                 );
               })}
             </div>
-          ))}
+          ) : null}
+
+          {hasAllDay ? (
+            <div className="grid border-b border-[#D9E2E8]" style={cols}>
+              <div className="px-2 py-1.5 text-right text-[11px] leading-4 text-[#667085]">No set time</div>
+              {allDay.map((events, i) => (
+                <div key={days[i]} className="min-w-0 space-y-1 border-l border-[#D9E2E8] p-1">
+                  {events.map((event) => (
+                    <EventChip key={event.key} event={event} onOpen={onOpenEvent} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
+
+        {HOURS.map((hour) => (
+          <div key={hour} className="grid" style={cols}>
+            <div className="relative pr-2 text-right text-[11px] tabular-nums text-[#667085]" style={{ height: HOUR_ROW_PX }}>
+              {hour === 0 ? null : <span className="relative -top-2">{hourLabel(hour)}</span>}
+            </div>
+            {days.map((key, i) => {
+              const events = timedByDayHour[i].get(hour) ?? [];
+              const createTime = slotDueTime(key, hour);
+              const isNow = key === today && hour === nowHour;
+              const slotLabel = `${parseDateKey(key).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })} ${hourLabel(hour)}`;
+              return (
+                <div
+                  key={key}
+                  role={createTime ? "button" : undefined}
+                  tabIndex={createTime ? 0 : undefined}
+                  aria-label={createTime ? `New audit due ${slotLabel}` : undefined}
+                  onClick={createTime ? () => onCreate(key, createTime) : undefined}
+                  onKeyDown={createTime ? slotKeyDown(() => onCreate(key, createTime)) : undefined}
+                  style={{ height: HOUR_ROW_PX }}
+                  className={cn(
+                    "group/slot relative min-w-0 space-y-0.5 overflow-hidden border-l border-t border-[#D9E2E8] p-0.5",
+                    createTime
+                      ? "cursor-pointer transition-colors hover:bg-[#F4F7F9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#04203F]"
+                      : "bg-[#F4F7F9]/50",
+                    isNow && "border-t-[#04203F]",
+                  )}
+                >
+                  {events.slice(0, events.length > 2 ? 1 : 2).map((event) => (
+                    <EventChip key={event.key} event={event} onOpen={onOpenEvent} />
+                  ))}
+                  {events.length > 2 ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenDay(key);
+                      }}
+                      className="px-1 text-[11px] font-medium text-[#667085] hover:text-[#04203F]"
+                    >
+                      +{events.length - 1} more
+                    </button>
+                  ) : null}
+                  {createTime && events.length === 0 ? (
+                    <span className="pointer-events-none absolute inset-0 hidden items-center justify-center text-[11px] font-medium text-[#667085] group-hover/slot:flex">
+                      <Plus className="mr-1 size-3" aria-hidden /> New audit
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -768,6 +773,83 @@ function AuditCalendarPage() {
                 </div>
               </div>
 
+              {view === "day" ? (
+                <div className="border-b border-[#D9E2E8]">
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#04203F]">
+                        Audits on{" "}
+                        {parseDateKey(dateKey).toLocaleDateString(undefined, { day: "numeric", month: "long" })} (
+                        {dayItems.length})
+                      </p>
+                      <p className="mt-0.5 text-xs text-[#667085]">
+                        Due this day, or assigned this day when there is no due date.
+                      </p>
+                    </div>
+                    {dayCreateTime ? (
+                      <Button
+                        variant="subtle"
+                        size="sm"
+                        className="rounded-lg"
+                        onClick={() => openCreate(dateKey, dayCreateTime)}
+                      >
+                        <Plus className="mr-1.5 size-4" /> New audit on this day
+                      </Button>
+                    ) : null}
+                  </div>
+                  {dayItems.length ? (
+                    <div className="border-t border-[#D9E2E8]">
+                      <AssignmentRowsTable
+                        items={dayItems}
+                        userId={userId}
+                        isManager={isManager}
+                        onView={setViewing}
+                        showTime
+                      />
+                    </div>
+                  ) : (
+                    <div className="px-4 pb-4">
+                      <EmptyState
+                        icon={<CalendarDays className="size-5" />}
+                        title="No audits on this day"
+                        description={
+                          dayCreateTime
+                            ? "Click an hour below or use New audit to plan one."
+                            : "Nothing was due on this day with the current filters."
+                        }
+                      />
+                    </div>
+                  )}
+
+                  {daySchedules.length ? (
+                    <div className="border-t border-[#D9E2E8] px-4 py-3">
+                      <p className="text-xs text-[#667085]">Recurring schedules running this day</p>
+                      <ul className="mt-2 divide-y divide-[#D9E2E8] rounded-lg border border-[#D9E2E8]">
+                        {daySchedules.map((event) => (
+                          <li key={event.key}>
+                            <Link
+                              to="/audit-schedules"
+                              className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-[#F4F7F9]"
+                            >
+                              <span className="flex min-w-0 items-center gap-2">
+                                <span className={cn("size-1.5 shrink-0 rounded-full", RECURRING_DOT)} aria-hidden />
+                                <span className="truncate font-medium text-[#04203F]">{event.title}</span>
+                                <span className="hidden truncate text-[#667085] sm:inline">{event.subtitle}</span>
+                              </span>
+                              <span className="shrink-0 tabular-nums text-[#667085]">{timeLabel(event.start)}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  <p className="border-t border-[#D9E2E8] px-4 py-2 text-xs text-[#667085]">
+                    Timeline{dayCreateTime ? " · click an open hour to plan a new audit due then" : ""}
+                  </p>
+                </div>
+              ) : null}
+
               {view === "month" ? (
                 <MonthView
                   dateKey={dateKey}
@@ -802,75 +884,6 @@ function AuditCalendarPage() {
                 ) : null}
               </div>
             </section>
-
-            {view === "day" ? (
-              <section className="rounded-xl border border-[#D9E2E8] bg-white">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9E2E8] px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold text-[#04203F]">
-                      Audits due on{" "}
-                      {parseDateKey(dateKey).toLocaleDateString(undefined, { day: "numeric", month: "long" })} (
-                      {dayItems.length})
-                    </p>
-                    <p className="mt-0.5 text-xs text-[#667085]">Open a report, review, start or manage each audit.</p>
-                  </div>
-                  {dayCreateTime ? (
-                    <Button
-                      variant="subtle"
-                      size="sm"
-                      className="rounded-lg"
-                      onClick={() => openCreate(dateKey, dayCreateTime)}
-                    >
-                      <Plus className="mr-1.5 size-4" /> New audit on this day
-                    </Button>
-                  ) : null}
-                </div>
-                {dayItems.length ? (
-                  <AssignmentRowsTable
-                    items={dayItems}
-                    userId={userId}
-                    isManager={isManager}
-                    onView={setViewing}
-                    showTime
-                  />
-                ) : (
-                  <div className="p-4">
-                    <EmptyState
-                      icon={<CalendarDays className="size-5" />}
-                      title="No audits due on this day"
-                      description={
-                        dayCreateTime
-                          ? "Click an hour above or use New audit to plan one."
-                          : "Nothing was due on this day with the current filters."
-                      }
-                    />
-                  </div>
-                )}
-
-                {daySchedules.length ? (
-                  <div className="border-t border-[#D9E2E8] px-4 py-3">
-                    <p className="text-xs text-[#667085]">Recurring schedules running this day</p>
-                    <ul className="mt-2 divide-y divide-[#D9E2E8] rounded-lg border border-[#D9E2E8]">
-                      {daySchedules.map((event) => (
-                        <li key={event.key}>
-                          <Link
-                            to="/audit-schedules"
-                            className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-[#F4F7F9]"
-                          >
-                            <span className="flex min-w-0 items-center gap-2">
-                              <span className={cn("size-1.5 shrink-0 rounded-full", RECURRING_DOT)} aria-hidden />
-                              <span className="truncate font-medium text-[#04203F]">{event.title}</span>
-                              <span className="hidden truncate text-[#667085] sm:inline">{event.subtitle}</span>
-                            </span>
-                            <span className="shrink-0 tabular-nums text-[#667085]">{timeLabel(event.start)}</span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
           </>
         )}
       </div>
