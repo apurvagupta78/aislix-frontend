@@ -347,7 +347,7 @@ export function rackPlanogramRows(rack: LayoutRack): DraftRow[] {
           product_name: p.name.trim(),
           variant: "",
           expected_qty: p.quantity ?? p.facings ?? 1,
-          expected_facings: p.facings ?? 1,
+          expected_facings: p.facings ?? undefined,
           expected_shelf_units: p.quantity ?? undefined,
           sku: p.sku.trim(),
           shelf_position: `SH${pad2(shelf.shelf)}-SP${pad2(space.space)}`,

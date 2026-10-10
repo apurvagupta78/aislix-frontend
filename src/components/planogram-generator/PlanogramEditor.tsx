@@ -192,7 +192,7 @@ function RackDiagram({
                           !space.products.length && "bg-[#F4F7F9]",
                         )}
                         aria-pressed={isSelected}
-                        aria-label={`${space.locationId}, ${space.products.length} products`}
+                        aria-label={`${space.locationId}, ${space.products.length} ${space.products.length === 1 ? "product" : "products"}`}
                       >
                         <span className="block text-[11px] text-[#667085]">Space {space.space}</span>
                         {shown.length ? (

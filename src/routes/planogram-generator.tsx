@@ -636,6 +636,30 @@ function PlanogramGeneratorPage() {
                   AI suggested · Location IDs by Aislix{approved ? " · Approved" : " · Edit anything before approving"}
                 </p>
                 <PlanogramEditor key={openId} layout={layout} readOnly={approved} onChange={editLayout} />
+                {approved ? null : (
+                  <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-[#EEF1F4] pt-4">
+                    <span className="mr-auto text-xs text-[#667085]">{dirty ? "You have unsaved changes." : "All changes saved."}</span>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl"
+                      disabled={!dirty || save.isPending || approve.isPending}
+                      onClick={() => save.mutate()}
+                    >
+                      {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Save draft
+                    </Button>
+                    {isManager.data === true ? (
+                      <Button
+                        variant="brand"
+                        className="rounded-xl"
+                        disabled={approve.isPending || save.isPending}
+                        onClick={() => approve.mutate()}
+                      >
+                        {approve.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}{" "}
+                        Approve
+                      </Button>
+                    ) : null}
+                  </div>
+                )}
               </div>
               {approved ? (
                 <ShelfLabels
