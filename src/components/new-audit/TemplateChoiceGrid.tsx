@@ -62,8 +62,8 @@ function TemplateRow({ row }: { row: Row }) {
           <span className="size-4 shrink-0 rounded-full border border-[#D9E2E8]" aria-hidden />
         )}
         <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-sm font-medium text-[#04203F]">{row.name}</span>
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2">
+            <span className="min-w-0 text-sm font-medium leading-snug text-[#04203F]">{row.name}</span>
             {row.recommended ? (
               <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#667085]">
                 <span className="size-1.5 rounded-full bg-[#79E2A8]" aria-hidden />
