@@ -616,13 +616,13 @@ function HistoryPage() {
                     <TableRow>
                       <TableHead className="w-10" />
                       <TableHead>Audit</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Assigned to</TableHead>
                       <TableHead>Conducted by</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead className="text-right">Products</TableHead>
                       <TableHead className="text-right">Compliance</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead className="sticky right-0 bg-white text-right">
                         <span className="sr-only">Actions</span>
                       </TableHead>
@@ -648,6 +648,9 @@ function HistoryPage() {
                             {auditSubtitle(row)}
                           </p>
                         </TableCell>
+                        <TableCell>
+                          <StatusPill status={row.status} />
+                        </TableCell>
                         <TableCell className="whitespace-nowrap text-sm text-[#667085]">
                           <DateCell row={row} />
                         </TableCell>
@@ -661,9 +664,6 @@ function HistoryPage() {
                         </TableCell>
                         <TableCell className="text-right tabular-nums font-medium text-[#04203F]">
                           {formatCompliance(row.compliance)}
-                        </TableCell>
-                        <TableCell>
-                          <StatusPill status={row.status} />
                         </TableCell>
                         <TableCell className="sticky right-0 border-l border-[#D9E2E8] bg-white text-right transition-colors group-hover:bg-[#F4F7F9]">
                           <div className="flex items-center justify-end gap-1">
