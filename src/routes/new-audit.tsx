@@ -23,6 +23,7 @@ import {
   type KeptAuditSetup,
 } from "@/lib/audit-edit";
 import { NewAuditCurrentSetup, NewAuditLockedStore } from "@/components/new-audit/NewAuditCurrentSetup";
+import { AuditDetailsEdit } from "@/components/new-audit/AuditDetailsEdit";
 import { fetchAuditTemplate, fetchAuditTemplates, templateToDefinition } from "@/lib/audit-templates";
 import { hydrateFromSavedTemplate } from "@/lib/audit-builder/load-saved-template-audit";
 import {
@@ -177,6 +178,8 @@ type NewAuditSearch = {
   rerun?: string;
   /** New audit pre-filled from a finished audit that had no assignment. */
   rerunScan?: string;
+  /** Edit the label and notes of an audit that had no assignment. */
+  editScan?: string;
 };
 
 export const Route = createFileRoute("/new-audit")({
@@ -186,6 +189,7 @@ export const Route = createFileRoute("/new-audit")({
     editSeries: idParam(search.editSeries),
     rerun: idParam(search.rerun),
     rerunScan: idParam(search.rerunScan),
+    editScan: idParam(search.editScan),
     templateId: typeof search.templateId === "string" ? search.templateId : undefined,
     systemKey: typeof search.systemKey === "string" ? search.systemKey : undefined,
     assign:
@@ -202,8 +206,24 @@ export const Route = createFileRoute("/new-audit")({
         ? search.dueTime
         : undefined,
   }),
-  component: NewAuditPage,
+  component: NewAuditRoute,
 });
+
+/** Started or finished audits (and audits run without an assignment) get the focused edit page. */
+function NewAuditRoute() {
+  const { edit, editScan } = Route.useSearch();
+  const assignmentQuery = useQuery({
+    queryKey: ["audit-edit", "assignment", edit],
+    queryFn: () => fetchEditableAudit({ kind: "assignment", id: edit! }),
+    enabled: Boolean(edit) && !editScan,
+    retry: false,
+  });
+  if (editScan) return <AuditDetailsEdit key={editScan} target={{ kind: "scan", id: editScan }} />;
+  if (edit && assignmentQuery.data?.started) {
+    return <AuditDetailsEdit key={edit} target={{ kind: "assignment", id: edit }} />;
+  }
+  return <NewAuditPage />;
+}
 
 type TemplateChoice = "general" | "fnv" | "expiry" | "planogram" | string;
 

@@ -217,7 +217,9 @@ export type RecurringSeries = {
   nextRunAt: string | null;
   paused: boolean;
   createdBy: string | null;
+  createdAt: string;
   assigneeIds: string[];
+  storeIds: string[];
 };
 
 const ENDED_SCHEDULE_STATUSES = ["completed", "cancelled", "expired"];
@@ -228,7 +230,7 @@ export async function fetchRecurringSeries(): Promise<RecurringSeries[]> {
   const { data, error } = await supabase
     .from("audit_schedules")
     .select(
-      "id, name, audit_mode, store_id, store_ids, assignee_id, assignee_ids, cadence, day_of_week, day_of_month, next_run_at, timezone, recurrence_config, status, active, assignment_mode, created_by, scope_values",
+      "id, name, audit_mode, store_id, store_ids, assignee_id, assignee_ids, cadence, day_of_week, day_of_month, next_run_at, timezone, recurrence_config, status, active, assignment_mode, created_by, created_at, scope_values",
     )
     .eq("org_id", orgId)
     .order("created_at", { ascending: false });
@@ -265,16 +267,19 @@ export async function fetchRecurringSeries(): Promise<RecurringSeries[]> {
     const paused = row.status === "paused" || (row.active === false && row.status !== "scheduled");
     const scopeName = (row.scope_values as ScopeValues | null)?.audit_name as string | undefined;
     const assigneeIds = idsOf(row, "assignee_ids", "assignee_id");
+    const seriesStoreIds = idsOf(row, "store_ids", "store_id");
     return {
       id: row.id as string,
       name: (row.name as string | null)?.trim() || scopeName?.trim() || "Recurring audit",
       auditMode: (row.audit_mode as AuditMode) ?? "digital",
-      storeNames: idsOf(row, "store_ids", "store_id").map((id) => storeName.get(id) ?? "Store"),
+      storeIds: seriesStoreIds,
+      storeNames: seriesStoreIds.map((id) => storeName.get(id) ?? "Store"),
       assigneeNames: assigneeIds.map((id) => personName.get(id) ?? "Member"),
       repeatLabel: formatScheduleLabel(scheduleRecurrenceRule(row as ScheduleRuleRow)),
       nextRunAt: paused ? null : ((row.next_run_at as string | null) ?? null),
       paused,
       createdBy: (row.created_by as string | null) ?? null,
+      createdAt: String(row.created_at ?? ""),
       assigneeIds,
     };
   });

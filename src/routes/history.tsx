@@ -53,8 +53,10 @@ import {
   auditHistoryOptions,
   fetchAuditHistory,
   filterAuditHistory,
+  isRecurringRow,
   type AuditHistoryFilters,
   type AuditHistoryRow,
+  type AuditHistorySeries,
   type AuditHistoryScope,
   type AuditHistoryStatus,
 } from "@/lib/audit-history";
@@ -162,6 +164,7 @@ function auditSubtitle(row: AuditHistoryRow): string {
 }
 
 function DateCell({ row }: { row: AuditHistoryRow }) {
+  if (row.series) return <>{seriesSchedule(row.series)}</>;
   if (row.scan_id) {
     return (
       <>
@@ -186,7 +189,27 @@ function DateCell({ row }: { row: AuditHistoryRow }) {
   );
 }
 
-function RowCta({ row, userId, className }: { row: AuditHistoryRow; userId: string; className?: string }) {
+function RowCta({
+  row,
+  userId,
+  canManageSeries,
+  className,
+}: {
+  row: AuditHistoryRow;
+  userId: string;
+  canManageSeries: boolean;
+  className?: string;
+}) {
+  if (row.series) {
+    if (!canManageSeries) return null;
+    return (
+      <Button variant="subtle" size="sm" className={cn("rounded-lg", className)} asChild>
+        <Link to="/new-audit" search={{ ...NEW_AUDIT_SEARCH, editSeries: row.series.id }}>
+          <Pencil className="size-4" /> Edit
+        </Link>
+      </Button>
+    );
+  }
   if (row.scan_id) {
     const done = row.scan_status === "completed";
     const label = done ? "View report" : row.scan_status === "failed" ? "View details" : "View progress";
@@ -249,11 +272,40 @@ function RowActions({
   const [busy, setBusy] = useState<"pdf" | "csv" | "image" | null>(null);
   const scanId = row.scan_id;
   const canChange = canChangeRow(row, access);
-  const editable = canChange && Boolean(row.assignment_id) && OPEN_STATUSES.includes(row.status);
+  const editable = canChange && Boolean(row.assignment_id ?? scanId);
   const rerunnable = canChange && !OPEN_STATUSES.includes(row.status) && Boolean(row.assignment_id ?? scanId);
-  const series = row.schedule_id ? access.seriesById.get(row.schedule_id) : undefined;
+  const seriesId = row.series?.id ?? row.schedule_id;
+  const series = seriesId ? access.seriesById.get(seriesId) : undefined;
   const seriesControl =
     series && (access.isManager || series.createdBy === access.userId) ? series : undefined;
+  if (row.series) {
+    if (!seriesControl) return <span className="inline-block size-9" aria-hidden />;
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-lg"
+            aria-label={`More actions for recurring audit ${row.series.name}`}
+          >
+            <MoreHorizontal className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56 rounded-xl">
+          <DropdownMenuItem asChild>
+            <Link to="/new-audit" search={{ ...NEW_AUDIT_SEARCH, editSeries: seriesControl.id }}>
+              <Pencil className="size-4" /> Edit recurring audit
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => access.onToggleSeries(seriesControl)}>
+            {seriesControl.paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+            {seriesControl.paused ? "Resume recurring audit" : "Pause recurring audit"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
   if (!scanId && !editable && !rerunnable && !seriesControl) {
     return <span className="inline-block size-9" aria-hidden />;
   }
@@ -288,7 +340,14 @@ function RowActions({
       <DropdownMenuContent align="end" className="w-56 rounded-xl">
         {editable ? (
           <DropdownMenuItem asChild>
-            <Link to="/new-audit" search={{ ...NEW_AUDIT_SEARCH, edit: row.assignment_id! }}>
+            <Link
+              to="/new-audit"
+              search={
+                row.assignment_id
+                  ? { ...NEW_AUDIT_SEARCH, edit: row.assignment_id }
+                  : { ...NEW_AUDIT_SEARCH, editScan: scanId! }
+              }
+            >
               <Pencil className="size-4" /> Edit audit
             </Link>
           </DropdownMenuItem>
@@ -308,10 +367,18 @@ function RowActions({
           </DropdownMenuItem>
         ) : null}
         {seriesControl ? (
-          <DropdownMenuItem onSelect={() => access.onToggleSeries(seriesControl)}>
-            {seriesControl.paused ? <Play className="size-4" /> : <Pause className="size-4" />}
-            {seriesControl.paused ? "Resume recurring audit" : "Pause recurring audit"}
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/new-audit" search={{ ...NEW_AUDIT_SEARCH, editSeries: seriesControl.id }}>
+                <Repeat className="size-4" /> Edit recurring audit
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => access.onToggleSeries(seriesControl)}>
+              {seriesControl.paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+              {seriesControl.paused ? "Resume recurring audit" : "Pause recurring audit"}
+            </DropdownMenuItem>
+          </>
         ) : null}
         {scanId ? (
           <>
@@ -364,104 +431,86 @@ function RowActions({
   );
 }
 
-const SERIES_PREVIEW = 5;
-
-function seriesMeta(series: RecurringSeries): string {
-  const stores =
-    series.storeNames.length > 2
-      ? `${series.storeNames.length} stores`
-      : series.storeNames.join(", ") || "No store";
-  const people =
-    series.assigneeNames.length > 2
-      ? `${series.assigneeNames.length} people`
-      : series.assigneeNames.join(", ") || "No one assigned";
-  return [series.repeatLabel, stores, people].join(" · ");
+function RecurringLabel() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-[#7DB7D6]/50 bg-[#7DB7D6]/15 px-1.5 py-0.5 text-[11px] font-medium leading-none text-[#04203F]">
+      <Repeat className="size-3" aria-hidden />
+      Recurring
+    </span>
+  );
 }
 
-function RecurringSection({
-  series,
-  canManage,
-  pendingId,
-  onToggle,
-}: {
-  series: RecurringSeries[];
-  canManage: (series: RecurringSeries) => boolean;
-  pendingId: string | null;
-  onToggle: (series: RecurringSeries) => void;
-}) {
-  const [showAll, setShowAll] = useState(false);
-  const shown = showAll ? series : series.slice(0, SERIES_PREVIEW);
+function SeriesStatusPill({ paused }: { paused: boolean }) {
   return (
-    <section className="rounded-xl border border-[#D9E2E8] bg-white">
-      <div className="flex items-start gap-3 border-b border-[#D9E2E8] p-4">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#F4F7F9]">
-          <Repeat className="size-4 text-[#04203F]" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-[#04203F]">Recurring audits ({series.length})</p>
-          <p className="mt-0.5 text-xs text-[#667085] sm:text-sm">
-            Each one creates a new round on schedule. Pausing stops new rounds; rounds already assigned stay open.
-          </p>
-        </div>
-      </div>
-      <ul className="divide-y divide-[#D9E2E8]">
-        {shown.map((item) => {
-          const manage = canManage(item);
-          const busy = pendingId === item.id;
-          return (
-            <li key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-sm font-medium text-[#04203F]">{item.name}</p>
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#D9E2E8] bg-white px-2 py-0.5 text-xs font-medium text-[#04203F]">
-                    <span
-                      className={cn("size-1.5 rounded-full", item.paused ? "bg-[#D9E2E8]" : "bg-[#79E2A8]")}
-                      aria-hidden
-                    />
-                    {item.paused ? "Paused" : "Active"}
-                  </span>
-                </div>
-                <p className="mt-1 truncate text-xs text-[#667085]">{seriesMeta(item)}</p>
-                <p className="mt-0.5 text-xs text-[#667085]">
-                  {item.paused
-                    ? "No new rounds until resumed"
-                    : item.nextRunAt
-                      ? `Next round ${formatScanDate(item.nextRunAt)} ${formatScanTime(item.nextRunAt)}`
-                      : "Next round not scheduled"}
-                </p>
-              </div>
-              {manage ? (
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg"
-                    disabled={busy}
-                    onClick={() => onToggle(item)}
-                  >
-                    {item.paused ? <Play className="size-4" /> : <Pause className="size-4" />}
-                    {busy ? (item.paused ? "Resuming…" : "Pausing…") : item.paused ? "Resume" : "Pause"}
-                  </Button>
-                  <Button variant="subtle" size="sm" className="rounded-lg" asChild>
-                    <Link to="/new-audit" search={{ ...NEW_AUDIT_SEARCH, editSeries: item.id }}>
-                      <Pencil className="size-4" /> Edit
-                    </Link>
-                  </Button>
-                </div>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-      {series.length > SERIES_PREVIEW ? (
-        <div className="border-t border-[#D9E2E8] px-4 py-2">
-          <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-xs" onClick={() => setShowAll((v) => !v)}>
-            {showAll ? "Show fewer" : `Show all recurring audits (${series.length})`}
-          </Button>
-        </div>
-      ) : null}
-    </section>
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#D9E2E8] bg-white px-2 py-0.5 text-xs font-medium text-[#04203F]">
+      <span className={cn("size-1.5 rounded-full", paused ? "bg-[#D9E2E8]" : "bg-[#79E2A8]")} aria-hidden />
+      {paused ? "Paused" : "Active"}
+    </span>
   );
+}
+
+function RowStatus({ row }: { row: AuditHistoryRow }) {
+  return row.series ? <SeriesStatusPill paused={row.series.paused} /> : <StatusPill status={row.status} />;
+}
+
+function listLabel(names: string[], noun: string): string {
+  return names.length > 2 ? `${names.length} ${noun}` : names.join(", ");
+}
+
+function seriesSchedule(series: AuditHistorySeries): string {
+  if (series.paused) return "Paused · no new rounds";
+  return series.nextRunAt
+    ? `Next round ${formatScanDate(series.nextRunAt)} ${formatScanTime(series.nextRunAt)}`
+    : "Next round not scheduled";
+}
+
+/** A recurring series shown as its own row, alongside the audits it created. */
+function seriesToRow(series: RecurringSeries): AuditHistoryRow {
+  return {
+    key: `series:${series.id}`,
+    scan_id: null,
+    assignment_id: null,
+    store_id: null,
+    store: listLabel(series.storeNames, "stores") || "—",
+    date: series.nextRunAt ?? series.createdAt,
+    due_at: null,
+    location: null,
+    category: null,
+    products_detected: null,
+    audit_mode: series.auditMode === "ai" ? "ai" : "digital",
+    scan_status: null,
+    status: "not_started",
+    compliance: null,
+    assignee_id: null,
+    assignee_name: listLabel(series.assigneeNames, "people") || null,
+    assigner_id: series.createdBy,
+    conducted_by_id: null,
+    conducted_by_name: null,
+    schedule_id: series.id,
+    series: {
+      id: series.id,
+      name: series.name,
+      paused: series.paused,
+      nextRunAt: series.nextRunAt,
+      repeatLabel: series.repeatLabel,
+      createdBy: series.createdBy,
+      storeIds: series.storeIds,
+      assigneeIds: series.assigneeIds,
+    },
+  };
+}
+
+function rowTitle(row: AuditHistoryRow): string {
+  return row.series ? row.series.name : row.store;
+}
+
+function rowSubtitle(row: AuditHistoryRow): string {
+  return row.series ? [row.series.repeatLabel, row.store].filter((v) => v && v !== "—").join(" · ") : auditSubtitle(row);
+}
+
+function rowType(row: AuditHistoryRow): string {
+  const kind = isRecurringRow(row) ? "Recurring" : row.assignment_id ? "Assigned" : "Ad hoc";
+  return `${kind} · ${row.audit_mode === "digital" ? "Digital" : "AI"}`;
 }
 
 function FilterField({ label, children }: { label: string; children: ReactNode }) {
@@ -537,14 +586,15 @@ function HistoryPage() {
   const userId = data?.userId ?? "";
   const allSeries = seriesQuery.data ?? [];
   const seriesById = useMemo(() => new Map(allSeries.map((s) => [s.id, s])), [allSeries]);
-  const visibleSeries = useMemo(
+  const seriesRows = useMemo(
     () =>
-      scope === "team"
+      (scope === "team"
         ? allSeries
-        : allSeries.filter((s) => s.createdBy === userId || s.assigneeIds.includes(userId)),
+        : allSeries.filter((s) => s.createdBy === userId || s.assigneeIds.includes(userId))
+      ).map(seriesToRow),
     [allSeries, scope, userId],
   );
-  const canManageSeries = (series: RecurringSeries) => isManager || series.createdBy === userId;
+  const canManageSeries = (series: { createdBy: string | null }) => isManager || series.createdBy === userId;
 
   const seriesToggle = useMutation({
     mutationFn: (series: RecurringSeries) =>
@@ -566,7 +616,12 @@ function HistoryPage() {
     onToggleSeries: (series) => seriesToggle.mutate(series),
   };
 
-  const rows = data?.rows ?? [];
+  const auditRows = data?.rows;
+  const rows = useMemo(
+    () =>
+      [...seriesRows, ...(auditRows ?? [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [seriesRows, auditRows],
+  );
   const options = useMemo(() => auditHistoryOptions(rows), [rows]);
   const filtered = useMemo(() => filterAuditHistory(rows, filters), [rows, filters]);
   const pager = usePager(filtered.length);
@@ -652,15 +707,6 @@ function HistoryPage() {
           }
           actions={scopeToggle}
         />
-
-        {visibleSeries.length ? (
-          <RecurringSection
-            series={visibleSeries}
-            canManage={canManageSeries}
-            pendingId={seriesToggle.isPending ? (seriesToggle.variables?.id ?? null) : null}
-            onToggle={(series) => seriesToggle.mutate(series)}
-          />
-        ) : null}
 
         <section className="space-y-3 rounded-xl border border-[#D9E2E8] bg-white p-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -755,10 +801,11 @@ function HistoryPage() {
                 <OptionSelect
                   value={filters.type}
                   onChange={(v) => setFilters({ type: v as AuditHistoryFilters["type"] })}
-                  allLabel="Assigned and ad hoc"
+                  allLabel="All types"
                   options={[
                     { id: "assigned", name: "Assigned" },
                     { id: "adhoc", name: "Ad hoc" },
+                    { id: "recurring", name: "Recurring" },
                   ]}
                   ariaLabel="Filter by audit type"
                 />
@@ -875,25 +922,26 @@ function HistoryPage() {
                             />
                           ) : null}
                         </TableCell>
-                        <TableCell className="max-w-[260px]">
-                          <p className="truncate font-medium text-[#04203F]" title={row.store}>
-                            {row.store}
-                          </p>
+                        <TableCell className="max-w-[300px]">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <p className="truncate font-medium text-[#04203F]" title={rowTitle(row)}>
+                              {rowTitle(row)}
+                            </p>
+                            {isRecurringRow(row) ? <RecurringLabel /> : null}
+                          </div>
                           <p className="truncate text-xs text-[#667085]" title={row.scan_id ?? row.assignment_id ?? ""}>
-                            {auditSubtitle(row)}
+                            {rowSubtitle(row)}
                           </p>
                         </TableCell>
                         <TableCell>
-                          <StatusPill status={row.status} />
+                          <RowStatus row={row} />
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-sm text-[#667085]">
                           <DateCell row={row} />
                         </TableCell>
                         <TableCell className="max-w-[160px] truncate text-sm">{row.assignee_name ?? "—"}</TableCell>
                         <TableCell className="max-w-[160px] truncate text-sm">{row.conducted_by_name ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap text-sm text-[#667085]">
-                          {row.assignment_id ? "Assigned" : "Ad hoc"} · {row.audit_mode === "digital" ? "Digital" : "AI"}
-                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm text-[#667085]">{rowType(row)}</TableCell>
                         <TableCell className="text-right tabular-nums">
                           {formatCount(row.products_detected ?? undefined)}
                         </TableCell>
@@ -902,7 +950,11 @@ function HistoryPage() {
                         </TableCell>
                         <TableCell className="sticky right-0 border-l border-[#D9E2E8] bg-white text-right transition-colors group-hover:bg-[#F4F7F9]">
                           <div className="flex items-center justify-end gap-1">
-                            <RowCta row={row} userId={data!.userId} />
+                            <RowCta
+                              row={row}
+                              userId={userId}
+                              canManageSeries={Boolean(row.series && canManageSeries(row.series))}
+                            />
                             <RowActions row={row} access={rowAccess} onDelete={setPendingDelete} />
                           </div>
                         </TableCell>
@@ -926,28 +978,37 @@ function HistoryPage() {
                           />
                         ) : null}
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[#04203F]">{row.store}</p>
-                          <p className="mt-0.5 truncate text-xs text-[#667085]">{auditSubtitle(row)}</p>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <p className="truncate text-sm font-semibold text-[#04203F]">{rowTitle(row)}</p>
+                            {isRecurringRow(row) ? <RecurringLabel /> : null}
+                          </div>
+                          <p className="mt-0.5 truncate text-xs text-[#667085]">{rowSubtitle(row)}</p>
                         </div>
                       </div>
-                      <StatusPill status={row.status} />
+                      <RowStatus row={row} />
                     </div>
 
                     <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                      {[
-                        {
-                          l: row.scan_id ? "Date" : "Assigned",
-                          v: `${formatScanDate(row.date)}${row.scan_id ? ` ${formatScanTime(row.date)}` : ""}`,
-                        },
-                        ...(row.scan_id ? [] : [{ l: isOverdue(row) ? "Overdue · due" : "Due", v: formatScanDate(row.due_at ?? undefined) }]),
-                        { l: "Assigned to", v: row.assignee_name ?? "—" },
-                        { l: "Conducted by", v: row.conducted_by_name ?? "—" },
-                        {
-                          l: "Type",
-                          v: `${row.assignment_id ? "Assigned" : "Ad hoc"} · ${row.audit_mode === "digital" ? "Digital" : "AI"}`,
-                        },
-                        { l: "Compliance", v: formatCompliance(row.compliance) },
-                      ].map((item) => (
+                      {(row.series
+                        ? [
+                            { l: "Schedule", v: seriesSchedule(row.series) },
+                            { l: "Assigned to", v: row.assignee_name ?? "—" },
+                            { l: "Type", v: rowType(row) },
+                          ]
+                        : [
+                            {
+                              l: row.scan_id ? "Date" : "Assigned",
+                              v: `${formatScanDate(row.date)}${row.scan_id ? ` ${formatScanTime(row.date)}` : ""}`,
+                            },
+                            ...(row.scan_id
+                              ? []
+                              : [{ l: isOverdue(row) ? "Overdue · due" : "Due", v: formatScanDate(row.due_at ?? undefined) }]),
+                            { l: "Assigned to", v: row.assignee_name ?? "—" },
+                            { l: "Conducted by", v: row.conducted_by_name ?? "—" },
+                            { l: "Type", v: rowType(row) },
+                            { l: "Compliance", v: formatCompliance(row.compliance) },
+                          ]
+                      ).map((item) => (
                         <div key={item.l} className="min-w-0">
                           <dt className="text-[#667085]">{item.l}</dt>
                           <dd className="mt-0.5 truncate font-medium tabular-nums text-[#04203F]">{item.v}</dd>
@@ -956,7 +1017,12 @@ function HistoryPage() {
                     </dl>
 
                     <div className="mt-3 flex items-center gap-2">
-                      <RowCta row={row} userId={data!.userId} className="flex-1" />
+                      <RowCta
+                        row={row}
+                        userId={userId}
+                        canManageSeries={Boolean(row.series && canManageSeries(row.series))}
+                        className="flex-1"
+                      />
                       <RowActions row={row} access={rowAccess} onDelete={setPendingDelete} />
                     </div>
                   </li>

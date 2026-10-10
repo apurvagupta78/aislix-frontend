@@ -54,7 +54,25 @@ export type AuditHistoryRow = {
   conducted_by_name: string | null;
   /** Recurring series this audit was created by. */
   schedule_id: string | null;
+  /** Set on the row that stands for a recurring series itself (not one of its rounds). */
+  series: AuditHistorySeries | null;
 };
+
+export type AuditHistorySeries = {
+  id: string;
+  name: string;
+  paused: boolean;
+  nextRunAt: string | null;
+  repeatLabel: string;
+  createdBy: string | null;
+  storeIds: string[];
+  assigneeIds: string[];
+};
+
+/** True for a recurring series and for every round it created. */
+export function isRecurringRow(row: AuditHistoryRow): boolean {
+  return Boolean(row.series || row.schedule_id);
+}
 
 export type AuditHistoryData = {
   rows: AuditHistoryRow[];
@@ -315,6 +333,7 @@ export async function fetchAuditHistory(scope: AuditHistoryScope): Promise<Audit
       conducted_by_id: conductor,
       conducted_by_name: nameOf(conductor),
       schedule_id: assignment?.schedule_id ?? null,
+      series: null,
     });
   }
 
@@ -340,6 +359,7 @@ export async function fetchAuditHistory(scope: AuditHistoryScope): Promise<Audit
       conducted_by_id: null,
       conducted_by_name: null,
       schedule_id: assignment.schedule_id,
+      series: null,
     });
   }
 
@@ -357,7 +377,7 @@ export type AuditHistoryFilters = {
   status: AuditHistoryStatus | "all";
   assignee: string;
   conductedBy: string;
-  type: "all" | "assigned" | "adhoc";
+  type: "all" | "assigned" | "adhoc" | "recurring";
   mode: "all" | "ai" | "digital";
   sort: "newest" | "oldest";
 };
@@ -399,18 +419,29 @@ export function filterAuditHistory(rows: AuditHistoryRow[], filters: AuditHistor
   const to = filters.dateTo ? localDayStart(filters.dateTo) + 24 * 60 * 60 * 1000 : null;
 
   const out = rows.filter((row) => {
-    if (filters.store !== "all" && row.store_id !== filters.store) return false;
-    if (filters.status !== "all" && row.status !== filters.status) return false;
-    if (filters.assignee !== "all" && row.assignee_id !== filters.assignee) return false;
+    const series = row.series;
+    if (filters.store !== "all" && !(series ? series.storeIds.includes(filters.store) : row.store_id === filters.store)) {
+      return false;
+    }
+    if (filters.status !== "all" && (series || row.status !== filters.status)) return false;
+    if (
+      filters.assignee !== "all" &&
+      !(series ? series.assigneeIds.includes(filters.assignee) : row.assignee_id === filters.assignee)
+    ) {
+      return false;
+    }
     if (filters.conductedBy !== "all" && row.conducted_by_id !== filters.conductedBy) return false;
     if (filters.type === "assigned" && !row.assignment_id) return false;
-    if (filters.type === "adhoc" && row.assignment_id) return false;
+    if (filters.type === "adhoc" && (row.assignment_id || series)) return false;
+    if (filters.type === "recurring" && !isRecurringRow(row)) return false;
     if (filters.mode !== "all" && row.audit_mode !== filters.mode) return false;
     const time = new Date(row.date).getTime();
     if (from !== null && time < from) return false;
     if (to !== null && time >= to) return false;
     if (q) {
       const haystack = [
+        series?.name,
+        series?.repeatLabel,
         row.store,
         row.scan_id,
         row.assignment_id,

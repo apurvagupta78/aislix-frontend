@@ -10,7 +10,7 @@ import type { DistributionEntry, DueConfig, RecurrenceRule } from "@/lib/assignm
 import { scheduleRecurrenceRule } from "@/lib/audit-schedules";
 import { notifyMember } from "@/lib/notifications.functions";
 
-export type AuditEditKind = "assignment" | "series" | "rerun" | "rerun_scan";
+export type AuditEditKind = "assignment" | "series" | "rerun" | "rerun_scan" | "scan";
 
 export type AuditEditTarget = { kind: AuditEditKind; id: string };
 
@@ -47,9 +47,12 @@ export type EditableAudit = {
   setup: KeptAuditSetup | null;
   /** Work has begun, so store and setup are fixed. */
   started: boolean;
-  /** Submitted, approved, completed or cancelled — only "run again" applies. */
+  /** Submitted, approved, completed or cancelled. */
   finished: boolean;
   canEdit: boolean;
+  storeName: string | null;
+  /** Audits run without an assignment: only their label and notes can change. */
+  scan: { shelfLabel: string; notes: string; category: string; createdAt: string } | null;
 };
 
 const ASSIGNMENT_EDIT_COLUMNS =
@@ -118,6 +121,12 @@ async function canManage(ownerId: string | null): Promise<boolean> {
   return isOrgManager();
 }
 
+async function storeNameOf(storeId: unknown): Promise<string | null> {
+  if (typeof storeId !== "string" || !storeId) return null;
+  const { data } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
+  return (data?.name as string | undefined) ?? null;
+}
+
 export async function fetchEditableAudit(target: AuditEditTarget): Promise<EditableAudit> {
   const orgId = await requireOrgId();
 
@@ -159,19 +168,22 @@ export async function fetchEditableAudit(target: AuditEditTarget): Promise<Edita
       started: false,
       finished: ["completed", "cancelled", "expired"].includes(String(row.status ?? "")),
       canEdit: await canManage(ownerId),
+      storeName: null,
+      scan: null,
     };
   }
 
-  if (target.kind === "rerun_scan") {
+  if (target.kind === "rerun_scan" || target.kind === "scan") {
     const { data, error } = await supabase
       .from("shelf_scans")
-      .select("id, store_id, audit_mode, shelf_label, category, created_by")
+      .select("id, store_id, audit_mode, shelf_label, category, notes, created_by, created_at")
       .eq("org_id", orgId)
       .eq("id", target.id)
       .maybeSingle();
     if (error) dbError(error, "Could not load this audit.");
     if (!data) throw new Error("This audit no longer exists.");
     const row = data as Record<string, unknown>;
+    const isEdit = target.kind === "scan";
     return {
       target,
       name: text(row.shelf_label) || text(row.category),
@@ -189,9 +201,18 @@ export async function fetchEditableAudit(target: AuditEditTarget): Promise<Edita
       requireRca: true,
       reviewerId: null,
       setup: null,
-      started: false,
+      started: isEdit,
       finished: true,
-      canEdit: true,
+      canEdit: isEdit ? await canManage((row.created_by as string | null) ?? null) : true,
+      storeName: await storeNameOf(row.store_id),
+      scan: isEdit
+        ? {
+            shelfLabel: text(row.shelf_label),
+            notes: text(row.notes),
+            category: text(row.category),
+            createdAt: String(row.created_at ?? ""),
+          }
+        : null,
     };
   }
 
@@ -228,6 +249,8 @@ export async function fetchEditableAudit(target: AuditEditTarget): Promise<Edita
     started: status !== "pending" || Boolean(row.scan_id),
     finished: isFinishedAssignment(status, (row.approval_status as string | null) ?? null),
     canEdit: target.kind === "rerun" ? true : await canManage(ownerId),
+    storeName: await storeNameOf(row.store_id),
+    scan: null,
   };
 }
 
@@ -326,6 +349,66 @@ export async function saveAssignmentEdit(input: {
       payload,
     });
   }
+}
+
+/**
+ * Update an audit that has started or finished. The database keeps its name,
+ * scope, setup and evidence rules fixed, so only scheduling fields change.
+ */
+export async function saveStartedAssignmentEdit(input: {
+  assignmentId: string;
+  auditName: string;
+  storeName: string | null;
+  previousAssigneeId: string | null;
+  /** Null once the audit is finished — the person who did it stays on record. */
+  assigneeId: string | null;
+  dueAt: string | null;
+  instructions: string;
+  reviewerId: string | null;
+}): Promise<void> {
+  const orgId = await requireOrgId();
+  const patch: Record<string, unknown> = {
+    due_at: input.dueAt,
+    instructions: input.instructions.trim() || null,
+    reviewer_id: input.reviewerId,
+    updated_at: new Date().toISOString(),
+  };
+  if (input.assigneeId) patch.assignee_id = input.assigneeId;
+
+  const { data, error } = await supabase
+    .from("scan_assignments")
+    .update(patch as never)
+    .eq("org_id", orgId)
+    .eq("id", input.assignmentId)
+    .select("id");
+  if (error) dbError(error, "Could not save the audit.");
+  if (!data?.length) throw new Error("You don't have permission to edit this audit.");
+
+  if (!input.assigneeId) return;
+  const where = input.storeName ? ` · ${input.storeName}` : "";
+  const name = input.auditName.trim() || "An audit";
+  const payload = { assignment_id: input.assignmentId };
+  const reassigned = input.previousAssigneeId !== input.assigneeId;
+  await notify({
+    orgId,
+    userId: input.assigneeId,
+    title: reassigned ? "Audit assigned to you" : "Audit updated",
+    body: reassigned ? `${name}${where}` : `${name}${where} was updated. Check the latest due date and instructions.`,
+    payload,
+  });
+}
+
+/** Rename or annotate an audit that was run without an assignment. */
+export async function saveScanDetails(input: { scanId: string; shelfLabel: string; notes: string }): Promise<void> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("shelf_scans")
+    .update({ shelf_label: input.shelfLabel.trim() || null, notes: input.notes.trim() || null })
+    .eq("org_id", orgId)
+    .eq("id", input.scanId)
+    .select("id");
+  if (error) dbError(error, "Could not save the audit.");
+  if (!data?.length) throw new Error("You don't have permission to edit this audit.");
 }
 
 /** Update a recurring series; changes apply to rounds created from now on. */
