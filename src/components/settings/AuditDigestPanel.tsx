@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorState } from "@/components/States";
-import { SaveBar, SettingsCard } from "@/components/settings/SettingsParts";
+import { ComingSoonBadge, SaveBar, SettingsCard } from "@/components/settings/SettingsParts";
 import { toUserMessage } from "@/lib/api/errors";
 import {
   fetchAuditDigestSettings,
@@ -94,8 +94,9 @@ export function AuditDigestPanel() {
     <SettingsCard
       title="Audit digests"
       description="Scheduled email and WhatsApp summaries of exceptions, variance and pending approvals."
+      action={<ComingSoonBadge />}
     >
-      <div className="space-y-6">
+      <fieldset disabled className="min-w-0 space-y-6 opacity-60">
         <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <Mail className="size-4 text-muted-foreground" />
@@ -105,6 +106,7 @@ export function AuditDigestPanel() {
             </div>
           </div>
           <Switch
+            aria-label="Email digest"
             checked={form.email_enabled}
             onCheckedChange={(v) => setForm({ ...form, email_enabled: v })}
           />
@@ -120,6 +122,7 @@ export function AuditDigestPanel() {
               </div>
             </div>
             <Switch
+              aria-label="WhatsApp digest"
               checked={form.whatsapp_enabled}
               onCheckedChange={(v) => setForm({ ...form, whatsapp_enabled: v })}
             />
@@ -225,7 +228,7 @@ export function AuditDigestPanel() {
             saved={saveMutation.isSuccess}
           />
         </form>
-      </div>
+      </fieldset>
     </SettingsCard>
   );
 }

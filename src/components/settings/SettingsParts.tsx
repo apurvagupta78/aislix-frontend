@@ -1,9 +1,18 @@
 import type { ReactNode } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+
+export function ComingSoonBadge() {
+  return (
+    <Badge className="shrink-0 rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
+      <Sparkles className="mr-1 size-3" /> Coming soon
+    </Badge>
+  );
+}
 
 export function SettingsCard({
   title,

@@ -15,6 +15,7 @@ export type FindingType =
   | "inventory_shortage"
   | "inventory_excess"
   | "out_of_stock"
+  | "low_stock"
   | "wrong_placement"
   | "planogram_violation"
   | "pricing_issue"
@@ -94,6 +95,7 @@ export const FINDING_TYPES: { value: FindingType; label: string }[] = [
   { value: "inventory_shortage", label: "Inventory shortage" },
   { value: "inventory_excess", label: "Inventory excess" },
   { value: "out_of_stock", label: "Out of stock" },
+  { value: "low_stock", label: "Low stock" },
   { value: "wrong_placement", label: "Wrong placement" },
   { value: "planogram_violation", label: "Planogram violation" },
   { value: "pricing_issue", label: "Pricing issue" },

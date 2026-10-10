@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { KeyRound, Loader2, LogOut, MonitorSmartphone, ShieldCheck, Sparkles } from "lucide-react";
+import { KeyRound, Loader2, LogOut, MonitorSmartphone, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/States";
-import { Field, SettingsCard, ToggleRow } from "@/components/settings/SettingsParts";
+import { ComingSoonBadge, Field, SettingsCard, ToggleRow } from "@/components/settings/SettingsParts";
 import { changePassword, fetchSessions, formatDateTime, signOutOtherDevices } from "@/lib/account";
 
 export function SecurityPanel() {
@@ -118,9 +118,7 @@ export function SecurityPanel() {
           title="Authenticator app (TOTP)"
           description="Time-based one-time codes from Google Authenticator, Authy or 1Password."
         >
-          <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
-            <Sparkles className="mr-1 size-3" /> Coming soon
-          </Badge>
+          <ComingSoonBadge />
         </ToggleRow>
       </SettingsCard>
 

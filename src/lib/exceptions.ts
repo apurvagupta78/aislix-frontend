@@ -63,7 +63,7 @@ export function exceptionLifecycleLabel(lifecycle: ExceptionLifecycle): string {
   return LIFECYCLE_LABELS[lifecycle] ?? lifecycle;
 }
 
-const OPEN_ACTION_STATUSES = [
+export const OPEN_ACTION_STATUSES = [
   "open",
   "assigned",
   "in_progress",

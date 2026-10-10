@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId } from "@/lib/db/context";
 import type { ExceptionTier } from "@/lib/audit-intelligence";
+import { OPEN_ACTION_STATUSES } from "@/lib/exceptions";
 
 export type ExecutiveScorecards = {
   assigned: number;
@@ -121,7 +122,7 @@ export async function fetchExecutiveScorecards(days = 7): Promise<ExecutiveScore
     .from("corrective_actions")
     .select("id", { count: "exact", head: true })
     .eq("org_id", orgId)
-    .in("status", ["open", "in_progress", "pending"]);
+    .in("status", [...OPEN_ACTION_STATUSES]);
 
   return {
     assigned: rows.length,

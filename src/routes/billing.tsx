@@ -441,6 +441,7 @@ function Billing() {
                   </div>
                   <Switch
                     id="auto-renew"
+                    aria-label="Auto renewal"
                     checked={overview.auto_renew}
                     disabled={autoRenew.isPending}
                     onCheckedChange={(v) => autoRenew.mutate(v)}

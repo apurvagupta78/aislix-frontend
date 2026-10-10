@@ -5,6 +5,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/** The "Email notifications" master switch in Settings; unset means emails are on. */
+function emailsEnabled(profile: { notification_prefs?: unknown } | null): boolean {
+  const prefs = (profile?.notification_prefs ?? null) as { email_notifications?: boolean } | null;
+  return prefs?.email_notifications !== false;
+}
+
 export type SendAuditAssignedEmailInput = {
   assignmentId: string;
   assigneeId: string;
@@ -27,13 +33,18 @@ export const sendAuditAssignedEmail = createServerFn({ method: "POST" })
     const { serverAppOrigin } = await import("@/lib/app-origin");
 
     const [{ data: assignee }, { data: assigner }, { data: store }] = await Promise.all([
-      supabase.from("profiles").select("email, full_name").eq("id", data.assigneeId).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("email, full_name, notification_prefs")
+        .eq("id", data.assigneeId)
+        .maybeSingle(),
       supabase.from("profiles").select("email, full_name").eq("id", data.assignerId).maybeSingle(),
       supabase.from("stores").select("name").eq("id", data.storeId).maybeSingle(),
     ]);
 
     const email = ((assignee as { email?: string | null } | null)?.email ?? "").trim().toLowerCase();
     if (!email) return { sent: false as const, reason: "no_email" as const };
+    if (!emailsEnabled(assignee)) return { sent: false as const, reason: "opted_out" as const };
     // Self-assign: still useful for reminder, but skip if same person requested silence — send anyway for My Work cue.
 
     const scope = (data.scopeValues ?? {}) as Record<string, unknown>;
@@ -245,13 +256,13 @@ export const submitAiAudit = createServerFn({ method: "POST" })
       try {
         const { data: assigner } = await supabase
           .from("profiles")
-          .select("email")
+          .select("email, notification_prefs")
           .eq("id", assignerId)
           .maybeSingle();
         const email = ((assigner as { email?: string | null } | null)?.email ?? "")
           .trim()
           .toLowerCase();
-        if (email) {
+        if (email && emailsEnabled(assigner)) {
           const { scanShareSummary } = await import("@/lib/scan-share.server");
           const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
           const { serverAppOrigin } = await import("@/lib/app-origin");
@@ -310,11 +321,11 @@ export const sendDigitalAssignerCompletionEmail = createServerFn({ method: "POST
 
     const { data: assigner } = await supabase
       .from("profiles")
-      .select("email")
+      .select("email, notification_prefs")
       .eq("id", assignerId)
       .maybeSingle();
     const email = ((assigner as { email?: string | null } | null)?.email ?? "").trim().toLowerCase();
-    if (!email) return { sent: false as const };
+    if (!email || !emailsEnabled(assigner)) return { sent: false as const };
 
     const { scanShareSummary } = await import("@/lib/scan-share.server");
     const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");

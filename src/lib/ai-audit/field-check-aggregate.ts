@@ -82,6 +82,7 @@ export function aggregateAiAccuracy(verifications: FieldVerification[]): FieldAc
 const FINDING_FIELD: Record<string, string> = {
   missing_product: "Product found",
   out_of_stock: "Product found",
+  low_stock: "Facings / quantity",
   planogram_violation: "Facings / quantity",
   wrong_placement: "Location",
   pricing_issue: "Price",

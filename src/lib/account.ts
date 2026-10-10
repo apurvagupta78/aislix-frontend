@@ -479,12 +479,49 @@ export async function updateNotificationPreferences(
 
 // ---------- security ----------
 
-/** Updates the signed-in user's password via Supabase Auth. */
+/** Checks the password with a one-off sign-in whose session is revoked straight away. */
+async function verifyCurrentPassword(email: string, password: string): Promise<void> {
+  const url = import.meta.env.VITE_SUPABASE_URL as string;
+  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+  const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: key, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (res.status === 429) {
+    throw new ApiError({ message: "Too many attempts. Wait a minute and try again.", kind: "rate_limited", status: 429 });
+  }
+  if (!res.ok) {
+    throw new ApiError({ message: "Current password is incorrect.", kind: "validation", status: 400 });
+  }
+  const body = (await res.json().catch(() => null)) as { access_token?: string } | null;
+  if (body?.access_token) {
+    await fetch(`${url}/auth/v1/logout?scope=local`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${body.access_token}` },
+    }).catch(() => undefined);
+  }
+}
+
+/** Updates the signed-in user's password after confirming the current one. */
 export async function changePassword(input: {
   current_password: string;
   new_password: string;
 }): Promise<{ ok: true }> {
-  void input.current_password;
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  if (!user?.email) {
+    throw new ApiError({ message: "Sign in again to change your password.", kind: "unauthorized", status: 401 });
+  }
+  const hasPassword = (user.identities ?? []).some((identity) => identity.provider === "email");
+  if (!hasPassword) {
+    throw new ApiError({
+      message: "Your account signs in with Google, Apple or Microsoft. Use “Forgot password” on the sign-in page to add a password by email.",
+      kind: "validation",
+      status: 400,
+    });
+  }
+  await verifyCurrentPassword(user.email, input.current_password);
   const { error } = await supabase.auth.updateUser({ password: input.new_password });
   if (error) {
     throw new ApiError({ message: error.message, kind: "server", status: 500 });
@@ -501,16 +538,50 @@ export {
   resendVerificationEmail,
 } from "./api/auth";
 
+function describeDevice(userAgent: string): { device?: string; browser?: string } {
+  const ua = userAgent.toLowerCase();
+  const device = ua.includes("android")
+    ? "Android"
+    : /iphone|ipod/.test(ua)
+      ? "iPhone"
+      : ua.includes("ipad")
+        ? "iPad"
+        : ua.includes("windows")
+          ? "Windows"
+          : ua.includes("mac os")
+            ? "Mac"
+            : ua.includes("linux")
+              ? "Linux"
+              : undefined;
+  const browser = ua.includes("edg/")
+    ? "Edge"
+    : ua.includes("opr/")
+      ? "Opera"
+      : ua.includes("samsungbrowser")
+        ? "Samsung Internet"
+        : ua.includes("firefox") || ua.includes("fxios")
+          ? "Firefox"
+          : ua.includes("chrome") || ua.includes("crios")
+            ? "Chrome"
+            : ua.includes("safari")
+              ? "Safari"
+              : undefined;
+  return { device, browser };
+}
+
 /** Only the current session is real — there is no server-side device list. */
 export async function fetchSessions(signal?: AbortSignal): Promise<{ items: LoginSession[] }> {
   void signal;
   const { data } = await supabase.auth.getSession();
   const session = data.session;
   if (!session) return { items: [] };
+  const { device, browser } = typeof navigator === "undefined" ? {} : describeDevice(navigator.userAgent);
   return {
     items: [
       {
         id: session.access_token.slice(0, 12),
+        device,
+        browser,
         last_active_at: new Date().toISOString(),
         current: true,
       },
@@ -519,12 +590,12 @@ export async function fetchSessions(signal?: AbortSignal): Promise<{ items: Logi
 }
 
 /** Signs out every session except the current one. */
-export async function signOutOtherDevices(): Promise<{ revoked: number }> {
+export async function signOutOtherDevices(): Promise<{ revoked?: number }> {
   const { error } = await supabase.auth.signOut({ scope: "others" });
   if (error) {
     throw new ApiError({ message: error.message, kind: "server", status: 500 });
   }
-  return { revoked: 1 };
+  return {};
 }
 
 // ---------- api keys ----------

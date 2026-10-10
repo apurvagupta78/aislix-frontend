@@ -4,7 +4,7 @@ import { Bell } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { ErrorState } from "@/components/States";
-import { SaveBar, SettingsCard, ToggleRow } from "@/components/settings/SettingsParts";
+import { ComingSoonBadge, SaveBar, SettingsCard, ToggleRow } from "@/components/settings/SettingsParts";
 import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
@@ -20,36 +20,41 @@ const empty: NotificationPreferences = {
   product_updates: false,
 };
 
-const rows: { key: keyof NotificationPreferences; title: string; description: string }[] = [
+const rows: { key: keyof NotificationPreferences; title: string; description: string; comingSoon?: boolean }[] = [
   {
     key: "email_notifications",
     title: "Email notifications",
-    description: "Master switch for all Aislix emails sent to your address.",
+    description: "Emails when an audit is assigned to you or an audit you assigned is submitted.",
   },
   {
     key: "low_stock_alerts",
     title: "Low stock alerts",
     description: "Notify me as soon as an audit detects out-of-stock or depleted facings.",
+    comingSoon: true,
   },
   {
     key: "weekly_reports",
     title: "Weekly reports",
     description: "A Monday digest of shelf health, share of shelf and audit volume.",
+    comingSoon: true,
   },
   {
     key: "monthly_reports",
     title: "Monthly reports",
     description: "Month-end performance summary across all stores.",
+    comingSoon: true,
   },
   {
     key: "billing_notifications",
     title: "Billing notifications",
     description: "Invoices, renewals, failed payments and quota warnings.",
+    comingSoon: true,
   },
   {
     key: "product_updates",
     title: "Product updates",
-    description: "New detection models, features and platform announcements.",
+    description: "New features and platform announcements.",
+    comingSoon: true,
   },
 ];
 
@@ -110,14 +115,18 @@ export function NotificationsPanel() {
           <div className="space-y-3">
             {rows.map((row) => (
               <ToggleRow key={row.key} title={row.title} description={row.description}>
-                <Switch
-                  checked={form[row.key]}
-                  aria-label={row.title}
-                  onCheckedChange={(checked) => {
-                    setSaved(false);
-                    setForm((prev) => ({ ...prev, [row.key]: checked }));
-                  }}
-                />
+                {row.comingSoon ? (
+                  <ComingSoonBadge />
+                ) : (
+                  <Switch
+                    checked={form[row.key] === true}
+                    aria-label={row.title}
+                    onCheckedChange={(checked) => {
+                      setSaved(false);
+                      setForm((prev) => ({ ...prev, [row.key]: checked }));
+                    }}
+                  />
+                )}
               </ToggleRow>
             ))}
           </div>

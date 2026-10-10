@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ImageUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ const empty: CompanySettings = {
 };
 
 export function CompanyPanel() {
+  const queryClient = useQueryClient();
   const companyQuery = useQuery({
     queryKey: ["account", "company"],
     queryFn: ({ signal }) => fetchCompany(signal),
@@ -61,6 +62,7 @@ export function CompanyPanel() {
   const save = useMutation({
     mutationFn: () => updateCompany(form),
     onSuccess: (data) => {
+      queryClient.setQueryData(["account", "company"], data);
       setForm({ ...empty, ...data });
       setSaved(true);
       toast.success("Company settings saved");
@@ -177,8 +179,8 @@ export function CompanyPanel() {
                 onChange={(event) => set("address", event.target.value)}
               />
             </Field>
-            <Field label="Preferred currency">
-              <Select value={form.currency} onValueChange={(value) => set("currency", value)}>
+            <Field label="Preferred currency" hint="Coming soon">
+              <Select disabled value={form.currency} onValueChange={(value) => value && set("currency", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
@@ -191,8 +193,8 @@ export function CompanyPanel() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Preferred date format">
-              <Select value={form.date_format} onValueChange={(value) => set("date_format", value)}>
+            <Field label="Preferred date format" hint="Coming soon">
+              <Select disabled value={form.date_format} onValueChange={(value) => value && set("date_format", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select format" />
                 </SelectTrigger>
@@ -205,8 +207,8 @@ export function CompanyPanel() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Preferred language">
-              <Select value={form.language} onValueChange={(value) => set("language", value)}>
+            <Field label="Preferred language" hint="Coming soon">
+              <Select disabled value={form.language} onValueChange={(value) => value && set("language", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
