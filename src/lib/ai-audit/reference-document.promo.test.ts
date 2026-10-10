@@ -2,12 +2,64 @@ import { describe, expect, it } from "vitest";
 
 import { availableAiChecks, parseAiAnalysisRequest, parseLunaAnalysis } from "@/lib/ai-audit/ai-analysis";
 import {
+  addReferenceColumn,
   blankProductList,
   emptyReferenceRow,
+  referenceColumnLabel,
+  referenceCsvHeaders,
   referenceItemsForScan,
+  referencePayload,
   referencePromo,
+  removeReferenceColumn,
+  renameReferenceColumn,
   usableReferenceRows,
+  type ReferenceDocumentState,
 } from "@/lib/ai-audit/reference-document";
+
+function applied(result: ReturnType<typeof renameReferenceColumn>): ReferenceDocumentState {
+  if ("error" in result) throw new Error(result.error);
+  return result.state;
+}
+
+describe("editable product list columns", () => {
+  it("renames a standard column without changing what it checks", () => {
+    const list = blankProductList(1);
+    list.rows[0] = { ...list.rows[0]!, product: "MaxFresh", price: 99 };
+    const renamed = applied(renameReferenceColumn(list, { field: "price" }, "MRP"));
+    expect(referenceColumnLabel(renamed.meta, "price")).toBe("MRP");
+    expect(referenceItemsForScan(renamed.rows, {})[0]).toMatchObject({ expected_price: 99 });
+    expect(referenceCsvHeaders([], renamed.meta.column_labels)).toContain("MRP");
+  });
+
+  it("rejects empty and duplicate names", () => {
+    const list = blankProductList(1);
+    expect("error" in renameReferenceColumn(list, { field: "brand" }, "  ")).toBe(true);
+    expect("error" in renameReferenceColumn(list, { field: "brand" }, "product")).toBe(true);
+    expect("error" in renameReferenceColumn(list, { extra: "Promo" }, "Qty")).toBe(true);
+  });
+
+  it("keeps the promotion check when the Promo column is renamed", () => {
+    const list = blankProductList(1);
+    list.rows[0] = { ...list.rows[0]!, product: "MaxFresh", extra: { Promo: "Buy 2 Get 1" } };
+    const renamed = applied(renameReferenceColumn(list, { extra: "Promo" }, "Notes"));
+    expect(renamed.meta.extra_columns).toEqual(["Notes"]);
+    expect(renamed.rows[0]!.extra).toEqual({ Notes: "Buy 2 Get 1" });
+    expect(referencePayload(renamed, {}).items[0]).toMatchObject({ expected_promo: "Buy 2 Get 1" });
+  });
+
+  it("adds uniquely named columns and removes them with their values", () => {
+    const first = addReferenceColumn(blankProductList(1));
+    const second = addReferenceColumn(first.state);
+    expect([first.header, second.header]).toEqual(["New column", "New column 2"]);
+    const filled = {
+      ...second.state,
+      rows: second.state.rows.map((row) => ({ ...row, extra: { ...row.extra, "New column": "x" } })),
+    };
+    const removed = removeReferenceColumn(filled, "New column");
+    expect(removed.meta.extra_columns).toEqual(["Promo", "New column 2"]);
+    expect(removed.rows[0]!.extra).toEqual({});
+  });
+});
 
 describe("typed product list (AI Audit · Start from scratch)", () => {
   it("starts empty with a Promo column and counts as saved", () => {

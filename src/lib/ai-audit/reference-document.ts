@@ -47,8 +47,25 @@ export type ReferenceDocumentMeta = {
   total_quantity: number | null;
   /** Headers of the extra columns, in document order. */
   extra_columns: string[];
+  /** User-renamed headers for the standard columns; the field keeps its meaning for the shelf check. */
+  column_labels?: Partial<Record<ReferenceField, string>>;
+  /** Extra column holding the expected promotion, once the user has renamed it. */
+  promo_column?: string | null;
   warnings: string[];
 };
+
+export const REFERENCE_FIELD_HEADERS: Record<ReferenceField, string> = {
+  brand: "Brand",
+  product: "Product",
+  variant: "Variant",
+  pack_size: "Pack",
+  qty: "Qty",
+  unit: "Unit",
+  price: "Price ₹",
+  location: "Location",
+};
+
+export const REFERENCE_FIELDS = Object.keys(REFERENCE_FIELD_HEADERS) as ReferenceField[];
 
 export type ReferenceDocumentState = {
   meta: ReferenceDocumentMeta;
@@ -466,8 +483,12 @@ export const REFERENCE_CSV_HEADERS = [
   "Confidence",
 ] as const;
 
-export function referenceCsvHeaders(extraColumns: string[]): string[] {
-  return [...REFERENCE_CSV_HEADERS.slice(0, -2), ...extraColumns, ...REFERENCE_CSV_HEADERS.slice(-2)];
+export function referenceCsvHeaders(
+  extraColumns: string[],
+  labels: Partial<Record<ReferenceField, string>> = {},
+): string[] {
+  const standard = REFERENCE_FIELDS.map((field, i) => labels[field]?.trim() || REFERENCE_CSV_HEADERS[i + 1]);
+  return [REFERENCE_CSV_HEADERS[0], ...standard, ...extraColumns, ...REFERENCE_CSV_HEADERS.slice(-2)];
 }
 
 export function referenceRowsToCsvCells(
@@ -578,18 +599,103 @@ export function referenceRowsToPlanogramRows(
 export const PROMO_COLUMN = "Promo";
 const PROMO_HEADER = /promo|offer|scheme|deal/i;
 
-/** The line's promotion from a Promo / Offer / Scheme column, if the document has one. */
-export function referencePromo(row: Pick<ReferenceRow, "extra">): string | null {
+/** The line's promotion: the user's promo column when set, else a Promo / Offer / Scheme column. */
+export function referencePromo(row: Pick<ReferenceRow, "extra">, promoColumn?: string | null): string | null {
+  if (promoColumn) return text(row.extra?.[promoColumn]) || null;
   for (const [header, value] of Object.entries(row.extra ?? {})) {
     if (PROMO_HEADER.test(header) && text(value)) return text(value);
   }
   return null;
 }
 
+/** Header shown for a standard column (the user's name, else the default). */
+export function referenceColumnLabel(meta: ReferenceDocumentMeta | undefined, field: ReferenceField): string {
+  return meta?.column_labels?.[field]?.trim() || REFERENCE_FIELD_HEADERS[field];
+}
+
+function promoColumnOf(meta: ReferenceDocumentMeta): string | null {
+  if (meta.promo_column && meta.extra_columns.includes(meta.promo_column)) return meta.promo_column;
+  return null;
+}
+
+function headerTaken(meta: ReferenceDocumentMeta, label: string, except?: string): boolean {
+  const key = label.trim().toLowerCase();
+  const headers = [...REFERENCE_FIELDS.map((f) => referenceColumnLabel(meta, f)), ...meta.extra_columns];
+  return headers.some((h) => h !== except && h.trim().toLowerCase() === key);
+}
+
+export type ColumnEditResult = { state: ReferenceDocumentState } | { error: string };
+
+/** Rename a standard column (label only — it is still checked as that field) or an extra column. */
+export function renameReferenceColumn(
+  state: ReferenceDocumentState,
+  column: { field: ReferenceField } | { extra: string },
+  name: string,
+): ColumnEditResult {
+  const label = name.trim();
+  if (!label) return { error: "Column name cannot be empty." };
+  const meta = state.meta;
+  if ("field" in column) {
+    const current = referenceColumnLabel(meta, column.field);
+    if (label === current) return { state };
+    if (headerTaken(meta, label, current)) return { error: `There is already a column called "${label}".` };
+    const labels = { ...meta.column_labels };
+    if (label === REFERENCE_FIELD_HEADERS[column.field]) delete labels[column.field];
+    else labels[column.field] = label;
+    return { state: { ...state, meta: { ...meta, column_labels: labels } } };
+  }
+  const from = column.extra;
+  if (label === from) return { state };
+  if (headerTaken(meta, label, from)) return { error: `There is already a column called "${label}".` };
+  const isPromo = promoColumnOf(meta) === from || (!promoColumnOf(meta) && PROMO_HEADER.test(from));
+  return {
+    state: {
+      ...state,
+      meta: {
+        ...meta,
+        extra_columns: meta.extra_columns.map((h) => (h === from ? label : h)),
+        promo_column: isPromo ? label : meta.promo_column,
+      },
+      rows: state.rows.map((row) => {
+        if (!(from in (row.extra ?? {}))) return row;
+        const extra = { ...row.extra, [label]: row.extra[from] };
+        delete extra[from];
+        return { ...row, extra };
+      }),
+    },
+  };
+}
+
+/** Append an empty extra column with a unique placeholder name. */
+export function addReferenceColumn(state: ReferenceDocumentState): { state: ReferenceDocumentState; header: string } {
+  let header = "New column";
+  for (let n = 2; headerTaken(state.meta, header); n += 1) header = `New column ${n}`;
+  return { state: { ...state, meta: { ...state.meta, extra_columns: [...state.meta.extra_columns, header] } }, header };
+}
+
+/** Drop an extra column and its values (standard columns cannot be removed). */
+export function removeReferenceColumn(state: ReferenceDocumentState, header: string): ReferenceDocumentState {
+  return {
+    ...state,
+    meta: {
+      ...state.meta,
+      extra_columns: state.meta.extra_columns.filter((h) => h !== header),
+      promo_column: state.meta.promo_column === header ? null : state.meta.promo_column,
+    },
+    rows: state.rows.map((row) => {
+      if (!(header in (row.extra ?? {}))) return row;
+      const extra = { ...row.extra };
+      delete extra[header];
+      return { ...row, extra };
+    }),
+  };
+}
+
 /** Per-line document expectations sent to the backend reference comparison. */
 export function referenceItemsForScan(
   rows: ReferenceRow[],
   scope: { category?: string | null; subCategory?: string | null },
+  promoColumn?: string | null,
 ): Record<string, unknown>[] {
   return usableReferenceRows(rows).map((row) => ({
     line_no: row.line_no,
@@ -604,7 +710,7 @@ export function referenceItemsForScan(
     quantity_unit: row.unit.trim() || null,
     expected_price: row.price,
     expected_location: row.location.trim() || null,
-    expected_promo: referencePromo(row),
+    expected_promo: referencePromo(row, promoColumn),
     confidence: row.confidence,
     ...(row.extra && Object.keys(row.extra).length ? { extra_fields: row.extra } : {}),
   }));
@@ -618,7 +724,7 @@ export function referencePayload(
   return {
     comparison_basis: "reference",
     document: state.meta,
-    items: referenceItemsForScan(state.rows, scope),
+    items: referenceItemsForScan(state.rows, scope, promoColumnOf(state.meta)),
   };
 }
 

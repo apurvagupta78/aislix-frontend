@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Download, FileSpreadsheet, FileText, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Download, FileSpreadsheet, FileText, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,17 @@ import {
 import { parseAuditSpreadsheet } from "@/lib/audit-input-dataset";
 import { AISLIX_PALETTE, ACCENT_TINT } from "@/lib/ai-audit/kpi-palette";
 import {
+  addReferenceColumn,
   documentTypeLabel,
   emptyReferenceMeta,
   emptyReferenceRow,
   LOW_CONFIDENCE,
+  referenceColumnLabel,
   referenceCsvHeaders,
   referenceRowsFromTable,
   referenceRowsToCsvCells,
+  removeReferenceColumn,
+  renameReferenceColumn,
   usableReferenceRows,
   type ReferenceDocumentState,
   type ReferenceField,
@@ -46,25 +50,69 @@ const SPREADSHEET_ACCEPT = ".csv,.xlsx,.xls,text/csv";
 
 type Column = {
   field: ReferenceField;
-  header: string;
   width: string;
   numeric?: boolean;
 };
 
 const COLUMNS: Column[] = [
-  { field: "brand", header: "Brand", width: "min-w-[110px]" },
-  { field: "product", header: "Product", width: "min-w-[180px]" },
-  { field: "variant", header: "Variant", width: "min-w-[100px]" },
-  { field: "pack_size", header: "Pack", width: "min-w-[80px]" },
-  { field: "qty", header: "Qty", width: "w-[72px]", numeric: true },
-  { field: "unit", header: "Unit", width: "min-w-[84px]" },
-  { field: "price", header: "Price ₹", width: "min-w-[104px]", numeric: true },
-  { field: "location", header: "Location", width: "min-w-[100px]" },
+  { field: "brand", width: "min-w-[110px]" },
+  { field: "product", width: "min-w-[180px]" },
+  { field: "variant", width: "min-w-[100px]" },
+  { field: "pack_size", width: "min-w-[80px]" },
+  { field: "qty", width: "min-w-[72px]", numeric: true },
+  { field: "unit", width: "min-w-[84px]" },
+  { field: "price", width: "min-w-[104px]", numeric: true },
+  { field: "location", width: "min-w-[100px]" },
 ];
 
 function cellValue(row: ReferenceRow, field: ReferenceField): string {
   const value = row[field];
   return value === null || value === undefined ? "" : String(value);
+}
+
+/** Column name typed in place; applied on blur / Enter so the column doesn't re-key mid-typing. */
+function HeaderInput({
+  value,
+  onCommit,
+  autoFocus,
+}: {
+  value: string;
+  onCommit: (next: string) => boolean;
+  autoFocus?: boolean;
+}) {
+  const [draft, setDraft] = useState(value);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => setDraft(value), [value]);
+  useEffect(() => {
+    if (autoFocus) ref.current?.select();
+  }, [autoFocus]);
+
+  function commit() {
+    if (draft.trim() === value) {
+      setDraft(value);
+      return;
+    }
+    if (!onCommit(draft)) setDraft(value);
+  }
+
+  return (
+    <input
+      ref={ref}
+      aria-label={`Column name: ${value}`}
+      title="Rename column"
+      className="w-full min-w-0 rounded-md border border-transparent bg-transparent px-1 py-0.5 font-semibold text-[#667085] outline-none transition-colors hover:border-[#D9E2E8] focus:border-[#04203F] focus:bg-white focus:text-[#04203F]"
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+        if (event.key === "Escape") {
+          setDraft(value);
+          requestAnimationFrame(() => ref.current?.blur());
+        }
+      }}
+    />
+  );
 }
 
 export function ReferenceSourcePanel({
@@ -81,6 +129,7 @@ export function ReferenceSourcePanel({
   const [busy, setBusy] = useState<null | "upload" | "read" | "csv">(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [newHeader, setNewHeader] = useState<string | null>(null);
 
   const rows = value?.rows ?? [];
   const meta = value?.meta;
@@ -163,6 +212,31 @@ export function ReferenceSourcePanel({
     });
   }
 
+  function renameColumn(column: { field: ReferenceField } | { extra: string }, name: string): boolean {
+    if (!value) return false;
+    const result = renameReferenceColumn(value, column, name);
+    if ("error" in result) {
+      toast.error(result.error);
+      return false;
+    }
+    if (result.state !== value) onChange({ ...result.state, saved: manual });
+    return true;
+  }
+
+  function addColumn() {
+    const base = value ?? { meta: emptyReferenceMeta(manual ? "manual" : "csv", null), rows: [] };
+    const { state, header } = addReferenceColumn(base);
+    setNewHeader(header);
+    onChange({ ...state, saved: manual });
+  }
+
+  function removeColumn(header: string) {
+    if (!value) return;
+    const filled = value.rows.some((row) => (row.extra?.[header] ?? "").trim());
+    if (filled && !window.confirm(`Remove the "${header}" column and its values?`)) return;
+    onChange({ ...removeReferenceColumn(value, header), saved: manual });
+  }
+
   function removeRow(id: string) {
     if (!value) return;
     onChange({ ...value, saved: manual, rows: value.rows.filter((row) => row.id !== id) });
@@ -184,7 +258,7 @@ export function ReferenceSourcePanel({
     downloadSectionCsv(
       meta?.document_number || "reference",
       "document-lines",
-      referenceCsvHeaders(extraColumns),
+      referenceCsvHeaders(extraColumns, meta?.column_labels),
       referenceRowsToCsvCells(rows, extraColumns),
     );
   }
@@ -270,7 +344,7 @@ export function ReferenceSourcePanel({
               className="mr-1.5 inline-block size-2.5 rounded-sm border align-middle"
               style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.border }}
             />
-            Every blue box is editable — click any cell to correct it.
+            Every blue box is editable — click any cell to correct it. Click a column name to rename it.
             {checkCount ? (
               <>
                 {" "}
@@ -293,13 +367,31 @@ export function ReferenceSourcePanel({
                 <tr>
                   <th className="px-2 py-2 font-semibold">#</th>
                   {COLUMNS.map((c) => (
-                    <th key={c.field} className={cn("px-2 py-2 font-semibold", c.width)}>
-                      {c.header}
+                    <th key={c.field} className={cn("px-1 py-1.5 font-semibold", c.width)}>
+                      <HeaderInput
+                        value={referenceColumnLabel(meta, c.field)}
+                        onCommit={(name) => renameColumn({ field: c.field }, name)}
+                      />
                     </th>
                   ))}
                   {extraColumns.map((header) => (
-                    <th key={header} className="min-w-[110px] px-2 py-2 font-semibold">
-                      {header}
+                    <th key={header} className="min-w-[120px] px-1 py-1.5 font-semibold">
+                      <div className="flex items-center gap-0.5">
+                        <HeaderInput
+                          value={header}
+                          autoFocus={header === newHeader}
+                          onCommit={(name) => renameColumn({ extra: header }, name)}
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Remove column ${header}`}
+                          title="Remove column"
+                          className="flex size-5 shrink-0 items-center justify-center rounded text-[#667085] transition-colors hover:bg-[#F4F7F9] hover:text-[#04203F]"
+                          onClick={() => removeColumn(header)}
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
                     </th>
                   ))}
                   {manual ? null : <th className="px-2 py-2 font-semibold">As printed</th>}
@@ -312,11 +404,12 @@ export function ReferenceSourcePanel({
                     <td className="px-2 py-1.5 tabular-nums text-[#667085]">{row.line_no}</td>
                     {COLUMNS.map((c) => {
                       const flagged = row.check_fields.includes(c.field);
+                      const label = referenceColumnLabel(meta, c.field);
                       return (
                         <td key={c.field} className={cn("px-1 py-1", c.width)}>
                           <input
-                            aria-label={`${c.header} line ${row.line_no}`}
-                            title={flagged ? "AI was not sure about this value — please check" : `Edit ${c.header.toLowerCase()}`}
+                            aria-label={`${label} line ${row.line_no}`}
+                            title={flagged ? "AI was not sure about this value — please check" : `Edit ${label.toLowerCase()}`}
                             inputMode={c.numeric ? "decimal" : undefined}
                             className={cn(CELL_INPUT, c.numeric && "tabular-nums", flagged && "font-medium")}
                             style={{
@@ -370,9 +463,14 @@ export function ReferenceSourcePanel({
             </table>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={addRow}>
-              <Plus className="size-3.5" /> Add line
-            </Button>
+            <div className="flex flex-wrap gap-1">
+              <Button type="button" variant="ghost" size="sm" onClick={addRow}>
+                <Plus className="size-3.5" /> Add line
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={addColumn}>
+                <Plus className="size-3.5" /> Add column
+              </Button>
+            </div>
             <p className="text-[11px] text-[#667085]">
               {manual
                 ? `${usable} product${usable === 1 ? "" : "s"} listed · each is checked on the shelf: is it there, how many, at what price, where, and any offer.`

@@ -92,28 +92,29 @@ function itemExtra(item: DocumentItem): Record<string, unknown> {
 }
 
 /** The uploaded lines as a table: standard columns, then every extra column as printed. Empty columns are hidden. */
-function documentColumns(items: DocumentItem[], extraColumns: string[]): DocumentColumn[] {
-  const extraHeaders = extraColumns.length
-    ? extraColumns
+function documentColumns(items: DocumentItem[], doc: ReferenceMatch["document"]): DocumentColumn[] {
+  const extraHeaders = doc.extra_columns.length
+    ? doc.extra_columns
     : [...new Set(items.flatMap((item) => Object.keys(itemExtra(item))))];
+  const label = (field: string, fallback: string) => doc.column_labels[field] ?? fallback;
   const columns: DocumentColumn[] = [
-    { key: "brand", header: "Brand", value: (i) => cellText(i.brand) },
-    { key: "product", header: "Product", value: (i) => cellText(i.product_name) },
-    { key: "variant", header: "Variant", value: (i) => cellText(i.variant) },
+    { key: "brand", header: label("brand", "Brand"), value: (i) => cellText(i.brand) },
+    { key: "product", header: label("product", "Product"), value: (i) => cellText(i.product_name) },
+    { key: "variant", header: label("variant", "Variant"), value: (i) => cellText(i.variant) },
     {
       key: "qty",
-      header: "Qty",
+      header: label("qty", "Qty"),
       value: (i) => [cellText(i.invoice_qty), cellText(i.quantity_unit)].filter(Boolean).join(" "),
     },
     {
       key: "price",
-      header: "Price",
+      header: label("price", "Price"),
       value: (i) => (cellText(i.expected_price) ? `₹${cellText(i.expected_price)}` : ""),
     },
-    { key: "location", header: "Location", value: (i) => cellText(i.expected_location) },
-    { key: "promo", header: "Promo", value: (i) => cellText(i.expected_promo) },
+    { key: "location", header: label("location", "Location"), value: (i) => cellText(i.expected_location) },
+    { key: "promo", header: doc.promo_column ?? "Promo", value: (i) => cellText(i.expected_promo) },
     ...extraHeaders
-      .filter((header) => !/^(promo|offer|scheme|deal)/i.test(header))
+      .filter((header) => header !== doc.promo_column && !/^(promo|offer|scheme|deal)/i.test(header))
       .map((header) => ({
         key: `extra:${header}`,
         header,
@@ -185,7 +186,7 @@ export function ReferenceMatchSection({
   const { metrics: m, document: doc, count_pending: countPending } = match;
   const documentUrl = useDocumentUrl(doc.storage_path);
   const isPdf = (doc.mime_type ?? "").includes("pdf");
-  const docColumns = documentColumns(documentItems, doc.extra_columns);
+  const docColumns = documentColumns(documentItems, doc);
   const showDocumentTable = docColumns.length > 0 && (!documentUrl || isPdf);
   const verdict = match.verdict ? VERDICT[match.verdict] : null;
   const docLabel = doc.source === "csv" ? "CSV / Excel" : documentTypeLabel(doc.document_type);

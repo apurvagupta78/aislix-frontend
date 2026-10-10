@@ -99,6 +99,10 @@ export type ReferenceMatch = {
     mime_type?: string | null;
     /** Extra document / CSV column headers, in document order. */
     extra_columns: string[];
+    /** User-renamed headers for the standard columns (e.g. price → "MRP"). */
+    column_labels: Record<string, string>;
+    /** Extra column the user's promotion lives in, after a rename. */
+    promo_column: string | null;
   };
   count_pending: boolean;
   verdict: ReferenceVerdict | null;
@@ -230,6 +234,12 @@ export function normalizeReferenceMatch(raw: unknown): ReferenceMatch | undefine
       extra_columns: Array.isArray(doc.extra_columns)
         ? doc.extra_columns.map((h) => String(h ?? "").trim()).filter(Boolean)
         : [],
+      column_labels: Object.fromEntries(
+        Object.entries(rec(doc.column_labels) ?? {})
+          .map(([field, label]) => [field, String(label ?? "").trim()])
+          .filter(([, label]) => label),
+      ),
+      promo_column: strOrNull(doc.promo_column),
     },
     count_pending: r.count_pending === true,
     verdict: VERDICTS.has(verdict) ? verdict : null,
