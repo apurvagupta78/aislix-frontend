@@ -35,6 +35,7 @@ function finding(partial: Partial<Finding> & Pick<Finding, "id" | "status" | "se
     sku: "QA-01",
     product_name: "QA SKU",
     category: null,
+    sub_category: null,
     shelf_label: null,
     expected_value: 10,
     actual_value: 8,

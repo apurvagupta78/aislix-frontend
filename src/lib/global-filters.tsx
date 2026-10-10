@@ -120,6 +120,8 @@ export function pathShowsGlobalFilterBarInShell(pathname: string): boolean {
   if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return false;
   if (pathname === "/" || pathname === "") return false;
   const path = pathname.replace(/\/+$/, "");
+  // Findings has its own in-page filters (like History), so the workspace bar would be a second filter row.
+  if (path === "/findings") return false;
   // List pages only; detail pages (e.g. /findings/$id) stay uncluttered.
   return (GLOBAL_FILTER_PATHS as readonly string[]).includes(path);
 }

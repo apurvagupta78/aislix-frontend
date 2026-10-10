@@ -58,6 +58,7 @@ export type Finding = {
   sku: string | null;
   product_name: string | null;
   category: string | null;
+  sub_category: string | null;
   shelf_label: string | null;
   expected_value: number | null;
   actual_value: number | null;
@@ -172,6 +173,41 @@ function applyDashboardFilters<T extends { eq: (c: string, v: string) => T }>(
   return query;
 }
 
+/** Quick checks are not audits: their legacy findings stay out of the findings register. */
+const QUICK_CHECK_SOURCES = "(display_check,rack_check,fnv_check,hygiene_check)";
+const PAGE_ROWS = 1000;
+const IN_CHUNK = 100;
+
+type ScanCategory = { category: string | null; sub_category: string | null };
+
+function chunks<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+function cleanText(value: unknown): string | null {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || null;
+}
+
+async function loadScanCategories(scanIds: string[]): Promise<Map<string, ScanCategory>> {
+  const out = new Map<string, ScanCategory>();
+  for (const ids of chunks(scanIds, IN_CHUNK)) {
+    const { data } = await supabase
+      .from("shelf_scans")
+      .select("id, category, sub_category, sub_category_label, sub_category_custom")
+      .in("id", ids);
+    for (const s of (data ?? []) as Record<string, unknown>[]) {
+      out.set(String(s.id), {
+        category: cleanText(s.category),
+        sub_category: cleanText(s.sub_category_label) ?? cleanText(s.sub_category_custom) ?? cleanText(s.sub_category),
+      });
+    }
+  }
+  return out;
+}
+
 export async function fetchFindings(input: {
   storeId?: string;
   sku?: string;
@@ -183,63 +219,75 @@ export async function fetchFindings(input: {
   overdue?: boolean;
   scanId?: string;
   filters?: DashboardFilterState;
+  /** Load every finding instead of the newest 400 (findings register). */
+  all?: boolean;
 } = {}): Promise<Finding[]> {
   const orgId = await requireOrgId();
   const { resolveEffectiveAccessScope } = await import("@/lib/access-scope");
   const scope = await resolveEffectiveAccessScope({ orgId });
   if (!scope.isOrgAdmin && !scope.hasStoreScope) return [];
-
-  let query = supabase
-    .from("findings")
-    .select("*")
-    .eq("org_id", orgId)
-    .order("created_at", { ascending: false })
-    .limit(400);
-
-  if (!scope.isOrgAdmin) {
-    query = query.in("store_id", scope.effectiveStoreIds);
+  if (input.storeId && input.storeId !== "all" && !scope.isOrgAdmin && !scope.effectiveStoreIds.includes(input.storeId)) {
+    return [];
   }
 
-  query = applyDashboardFilters(query, input.filters);
-  if (input.storeId && input.storeId !== "all") {
-    if (!scope.isOrgAdmin && !scope.effectiveStoreIds.includes(input.storeId)) return [];
-    query = query.eq("store_id", input.storeId);
-  }
-  if (input.sku) query = query.ilike("sku", `%${input.sku}%`);
-  if (input.findingType && input.findingType !== "all") query = query.eq("finding_type", input.findingType);
-  if (input.severity && input.severity !== "all") query = query.eq("severity", input.severity);
-  if (input.status && input.status !== "all") query = query.eq("status", input.status);
-  if (input.rca && input.rca !== "all") query = query.eq("rca_code", input.rca);
-  if (input.assignedTo && input.assignedTo !== "all") query = query.eq("assigned_to", input.assignedTo);
-  if (input.scanId) query = query.eq("scan_id", input.scanId);
+  const buildQuery = () => {
+    let query = supabase
+      .from("findings")
+      .select("*")
+      .eq("org_id", orgId)
+      .not("source_type", "in", QUICK_CHECK_SOURCES)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true });
 
-  const { data, error } = await query;
-  if (error) {
-    if (error.code === "42P01") return [];
-    dbError(error, "Could not load findings.");
+    if (!scope.isOrgAdmin) {
+      query = query.in("store_id", scope.effectiveStoreIds);
+    }
+
+    query = applyDashboardFilters(query, input.filters);
+    if (input.storeId && input.storeId !== "all") query = query.eq("store_id", input.storeId);
+    if (input.sku) query = query.ilike("sku", `%${input.sku}%`);
+    if (input.findingType && input.findingType !== "all") query = query.eq("finding_type", input.findingType);
+    if (input.severity && input.severity !== "all") query = query.eq("severity", input.severity);
+    if (input.status && input.status !== "all") query = query.eq("status", input.status);
+    if (input.rca && input.rca !== "all") query = query.eq("rca_code", input.rca);
+    if (input.assignedTo && input.assignedTo !== "all") query = query.eq("assigned_to", input.assignedTo);
+    if (input.scanId) query = query.eq("scan_id", input.scanId);
+    return query;
+  };
+
+  let rows: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += PAGE_ROWS) {
+    const size = input.all ? PAGE_ROWS : 400;
+    const { data, error } = await buildQuery().range(from, from + size - 1);
+    if (error) {
+      if (error.code === "42P01") return [];
+      dbError(error, "Could not load findings.");
+    }
+    const page = (data ?? []) as Record<string, unknown>[];
+    rows = rows.concat(page);
+    if (!input.all || page.length < size) break;
   }
 
-  let rows = (data ?? []) as Record<string, unknown>[];
   if (input.overdue) {
     rows = rows.filter((row) => isOverdue(row.due_at as string | null, String(row.status)));
   }
 
   const storeIds = [...new Set(rows.map((r) => r.store_id).filter(Boolean))] as string[];
   const userIds = [...new Set(rows.map((r) => r.assigned_to).filter(Boolean))] as string[];
-  const [{ data: stores }, { data: profiles }] = await Promise.all([
-    storeIds.length
-      ? supabase.from("stores").select("id, name").in("id", storeIds)
-      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-    userIds.length
-      ? supabase.from("profiles").select("id, full_name, email").in("id", userIds)
-      : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string | null }[] }),
+  const scanIds = [...new Set(rows.map((r) => r.scan_id).filter(Boolean))] as string[];
+  const [stores, profiles, scans] = await Promise.all([
+    Promise.all(chunks(storeIds, IN_CHUNK).map((ids) => supabase.from("stores").select("id, name").in("id", ids))),
+    Promise.all(
+      chunks(userIds, IN_CHUNK).map((ids) => supabase.from("profiles").select("id, full_name, email").in("id", ids)),
+    ),
+    loadScanCategories(scanIds),
   ]);
-  const storeNames = new Map((stores ?? []).map((s) => [s.id, s.name]));
+  const storeNames = new Map(stores.flatMap((r) => r.data ?? []).map((s) => [s.id, s.name]));
   const names = new Map(
-    (profiles ?? []).map((p) => [p.id, p.full_name?.trim() || p.email || "Assigned"]),
+    profiles.flatMap((r) => r.data ?? []).map((p) => [p.id, p.full_name?.trim() || p.email || "Assigned"]),
   );
 
-  return rows.map((row) => mapFinding(row, storeNames, names));
+  return rows.map((row) => mapFinding(row, storeNames, names, scans.get(row.scan_id as string)));
 }
 
 export async function fetchFinding(id: string): Promise<Finding | null> {
@@ -269,7 +317,9 @@ export async function fetchFinding(id: string): Promise<Finding | null> {
       ? [[profile.id as string, (profile.full_name as string)?.trim() || (profile.email as string) || "Assigned"]]
       : [],
   );
-  return mapFinding(data as Record<string, unknown>, storeNames, names);
+  const scanId = data.scan_id as string | null;
+  const scans = scanId ? await loadScanCategories([scanId]) : new Map<string, ScanCategory>();
+  return mapFinding(data as Record<string, unknown>, storeNames, names, scanId ? scans.get(scanId) : undefined);
 }
 
 export function findingsKpis(rows: Finding[]): FindingsKpis {
@@ -344,10 +394,18 @@ export async function assignFinding(id: string, userId: string, dueAt?: string |
   if (error) dbError(error, "Could not assign finding.");
 }
 
+/** AI compliance alerts store a pseudo category ("compliance"); the audit's own category is the real one. */
+function findingCategory(row: Record<string, unknown>, scan?: ScanCategory): string | null {
+  const own = cleanText(row.category);
+  if (own && own.toLowerCase() !== "compliance") return own;
+  return scan?.category ?? null;
+}
+
 function mapFinding(
   row: Record<string, unknown>,
   storeNames: Map<string, string>,
   names: Map<string, string>,
+  scan?: ScanCategory,
 ): Finding {
   return {
     id: String(row.id),
@@ -366,7 +424,8 @@ function mapFinding(
     description: (row.description as string) ?? null,
     sku: (row.sku as string) ?? null,
     product_name: row.product_name ? collapseRepeatedWords(String(row.product_name)) : null,
-    category: (row.category as string) ?? null,
+    category: findingCategory(row, scan),
+    sub_category: scan?.sub_category ?? null,
     shelf_label: (row.shelf_label as string) ?? null,
     expected_value: row.expected_value == null ? null : Number(row.expected_value),
     actual_value: row.actual_value == null ? null : Number(row.actual_value),
