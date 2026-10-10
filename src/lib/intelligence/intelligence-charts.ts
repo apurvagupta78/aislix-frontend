@@ -30,6 +30,8 @@ export type ChartSourceAudit = {
   storeName: string;
   mode: "ai" | "digital";
   scan: Row;
+  /** AI audit metrics (scan_results.metrics); scan columns only hold confirmed counts. */
+  metrics?: Row;
 };
 
 export type ChartSources = {
@@ -178,23 +180,27 @@ export function buildIntelligenceCharts(src: ChartSources): IntelligenceChart[] 
   const stockData = ai
     .map((a) => ({
       label: a.label,
-      oos: num(a.scan.out_of_stock_count) ?? 0,
+      oos: num(a.scan.out_of_stock_count) || num(a.metrics?.confirmed_oos_count) || 0,
+      possible: num(a.metrics?.possible_oos_count) ?? 0,
       low: num(a.scan.low_stock_count) ?? 0,
       misplaced: num(a.scan.misplaced_count) ?? 0,
     }))
-    .filter((d) => d.oos + d.low + d.misplaced > 0);
+    .filter((d) => d.oos + d.possible + d.low + d.misplaced > 0);
   if (stockData.length) {
+    const series = [
+      { key: "oos", label: "Out of stock", color: AISLIX_PALETTE.pink },
+      { key: "possible", label: "Possibly out of stock", color: AISLIX_PALETTE.grey },
+      { key: "low", label: "Low stock", color: AISLIX_PALETTE.cyan },
+      { key: "misplaced", label: "Misplaced", color: AISLIX_PALETTE.purple },
+    ].filter((s) => stockData.some((d) => d[s.key as "oos"] > 0));
     charts.push({
       id: "stock_issues_by_audit",
       title: "Stock problems by audit",
-      about: "Out-of-stock, low-stock and misplaced product counts for each selected AI audit.",
+      about:
+        "Confirmed out-of-stock, possibly out-of-stock, low-stock and misplaced product counts for each selected AI audit.",
       type: "stacked_bar",
       unit: "count",
-      series: [
-        { key: "oos", label: "Out of stock", color: AISLIX_PALETTE.pink },
-        { key: "low", label: "Low stock", color: AISLIX_PALETTE.cyan },
-        { key: "misplaced", label: "Misplaced", color: AISLIX_PALETTE.purple },
-      ],
+      series,
       data: stockData,
     });
   }

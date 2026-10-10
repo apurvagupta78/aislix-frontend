@@ -278,6 +278,7 @@ async function gatherAudits(
       storeName,
       mode,
       scan,
+      metrics: (results.get(id)?.metrics ?? undefined) as Row | undefined,
     });
 
     const audit: Row = {

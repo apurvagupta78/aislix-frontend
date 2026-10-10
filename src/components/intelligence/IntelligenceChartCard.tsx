@@ -65,8 +65,19 @@ export function formatChartValue(value: number, unit: IntelligenceChartUnit): st
   return value.toLocaleString("en-IN");
 }
 
+/** Keeps the start and end of long names so product variants stay distinguishable. */
 function shortTick(value: string): string {
-  return value.length > 22 ? `${value.slice(0, 21)}…` : value;
+  return value.length > 26 ? `${value.slice(0, 14).trimEnd()}…${value.slice(-11).trimStart()}` : value;
+}
+
+function CategoryTick({ x, y, payload }: { x?: number; y?: number; payload?: { value?: unknown } }) {
+  const full = String(payload?.value ?? "");
+  return (
+    <text x={x} y={y} dy={4} textAnchor="end" fontSize={AXIS.fontSize} fill={AXIS.fill}>
+      <title>{full}</title>
+      {shortTick(full)}
+    </text>
+  );
 }
 
 function ChartTooltip({
@@ -169,12 +180,18 @@ function ChartBody({ chart, accent }: { chart: IntelligenceChart; accent: string
     );
   }
 
-  const height = Math.max(140, chart.data.length * 34 + 36);
+  const height = Math.max(96, chart.data.length * 34 + 36);
   const stacked = chart.type === "stacked_bar";
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chart.data} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 4 }} barCategoryGap={8}>
+        <BarChart
+          data={chart.data}
+          layout="vertical"
+          margin={{ top: 4, right: 16, bottom: 0, left: 4 }}
+          barCategoryGap={8}
+          maxBarSize={26}
+        >
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={GRID} />
           <XAxis
             type="number"
@@ -188,11 +205,11 @@ function ChartBody({ chart, accent }: { chart: IntelligenceChart; accent: string
           <YAxis
             type="category"
             dataKey="label"
-            width={150}
-            tick={AXIS}
+            width={160}
+            tick={<CategoryTick />}
             tickLine={false}
             axisLine={false}
-            tickFormatter={shortTick}
+            interval={0}
           />
           <Tooltip cursor={{ fill: "#F4F7F9" }} content={<ChartTooltip unit={unit} />} />
           {stacked ? (
