@@ -62,6 +62,7 @@ import {
 import { Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
 import { countryOptions, timezoneOptions } from "@/lib/account";
+import { STORE_TYPES, normalizeStoreType } from "@/lib/store-types";
 import {
   accountStatusLabels,
   archiveOrgStore,
@@ -589,7 +590,7 @@ export function StoreFormDialog({
             manager_name: store.manager_name ?? "",
             contact_number: store.contact_number ?? "",
             timezone: store.timezone ?? "Asia/Kolkata",
-            store_type: store.store_type ?? defaultStoreType ?? null,
+            store_type: normalizeStoreType(store.store_type) ?? store.store_type ?? defaultStoreType ?? null,
             territory_id: store.territory_id ?? null,
             latitude: store.latitude ?? null,
             longitude: store.longitude ?? null,
@@ -597,7 +598,7 @@ export function StoreFormDialog({
           }
         : {
             ...blankStore,
-            store_type: defaultStoreType?.trim() || "local_store",
+            store_type: normalizeStoreType(defaultStoreType) ?? "local_store",
           },
     );
   }, [open, store, defaultStoreType]);
@@ -681,6 +682,21 @@ export function StoreFormDialog({
               placeholder="MoreMart Indiranagar"
               required
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Type</Label>
+            <Select value={form.store_type ?? ""} onValueChange={(v) => set("store_type", v)}>
+              <SelectTrigger aria-label="Type">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {STORE_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="store-code">Store ID</Label>
@@ -1088,7 +1104,7 @@ export function BulkOperationsPanel({
       <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
         <span>
-          CSV columns: name, store_code, store_type (supermarket, dark_store, local_store, outlet,
+          CSV columns: name, store_code, store_type (supermarket, fmcg_brand, dark_store, local_store, outlet,
           warehouse, distributor), address, city, state, pincode, country, latitude, longitude,
           contact_name, contact_number. Latitude and longitude let Aislix confirm visits happened at
           the store. Duplicates by name + city are skipped.{" "}

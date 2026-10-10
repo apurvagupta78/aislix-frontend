@@ -100,6 +100,8 @@ const STORE_TYPE_ALIASES: Record<string, string> = {
   distributor: "fmcg_distributor",
   fmcg_distributor: "fmcg_distributor",
   fmcg: "fmcg_distributor",
+  fmcg_brand: "fmcg_brand",
+  brand: "fmcg_brand",
   outlet: "outlet",
   retailer: "outlet",
   retail_outlet: "outlet",

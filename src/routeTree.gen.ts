@@ -117,6 +117,7 @@ import { Route as ExpiryControlQuarantineRouteImport } from './routes/expiry-con
 import { Route as ExpiryControlReviewRouteImport } from './routes/expiry-control.review'
 import { Route as FindingsFindingIdRouteImport } from './routes/findings.$findingId'
 import { Route as IntelligenceInventoryVarianceRouteImport } from './routes/intelligence.inventory-variance'
+import { Route as IntelligenceIndexRouteImport } from './routes/intelligence.index'
 import { Route as ManageRulesRouteImport } from './routes/manage.rules'
 import { Route as OperationsDistributorsRouteImport } from './routes/operations.distributors'
 import { Route as OperationsWarehousesRouteImport } from './routes/operations.warehouses'
@@ -689,6 +690,11 @@ const IntelligenceInventoryVarianceRoute =
     path: '/intelligence/inventory-variance',
     getParentRoute: () => rootRouteImport,
   } as any)
+const IntelligenceIndexRoute = IntelligenceIndexRouteImport.update({
+  id: '/intelligence/',
+  path: '/intelligence/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManageRulesRoute = ManageRulesRouteImport.update({
   id: '/rules',
   path: '/rules',
@@ -927,6 +933,7 @@ export interface FileRoutesByFullPath {
   '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/findings/$findingId': typeof FindingsFindingIdRoute
   '/intelligence/inventory-variance': typeof IntelligenceInventoryVarianceRoute
+  '/intelligence/': typeof IntelligenceIndexRoute
   '/manage/rules': typeof ManageRulesRoute
   '/operations/distributors': typeof OperationsDistributorsRoute
   '/operations/warehouses': typeof OperationsWarehousesRoute
@@ -1061,6 +1068,7 @@ export interface FileRoutesByTo {
   '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/findings/$findingId': typeof FindingsFindingIdRoute
   '/intelligence/inventory-variance': typeof IntelligenceInventoryVarianceRoute
+  '/intelligence': typeof IntelligenceIndexRoute
   '/manage/rules': typeof ManageRulesRoute
   '/operations/distributors': typeof OperationsDistributorsRoute
   '/operations/warehouses': typeof OperationsWarehousesRoute
@@ -1196,6 +1204,7 @@ export interface FileRoutesById {
   '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/findings/$findingId': typeof FindingsFindingIdRoute
   '/intelligence/inventory-variance': typeof IntelligenceInventoryVarianceRoute
+  '/intelligence/': typeof IntelligenceIndexRoute
   '/manage/rules': typeof ManageRulesRoute
   '/operations/distributors': typeof OperationsDistributorsRoute
   '/operations/warehouses': typeof OperationsWarehousesRoute
@@ -1332,6 +1341,7 @@ export interface FileRouteTypes {
     | '/expiry-control/review'
     | '/findings/$findingId'
     | '/intelligence/inventory-variance'
+    | '/intelligence/'
     | '/manage/rules'
     | '/operations/distributors'
     | '/operations/warehouses'
@@ -1466,6 +1476,7 @@ export interface FileRouteTypes {
     | '/expiry-control/review'
     | '/findings/$findingId'
     | '/intelligence/inventory-variance'
+    | '/intelligence'
     | '/manage/rules'
     | '/operations/distributors'
     | '/operations/warehouses'
@@ -1600,6 +1611,7 @@ export interface FileRouteTypes {
     | '/expiry-control/review'
     | '/findings/$findingId'
     | '/intelligence/inventory-variance'
+    | '/intelligence/'
     | '/manage/rules'
     | '/operations/distributors'
     | '/operations/warehouses'
@@ -1711,6 +1723,7 @@ export interface RootRouteChildren {
   AuditAssignmentIdRoute: typeof AuditAssignmentIdRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   IntelligenceInventoryVarianceRoute: typeof IntelligenceInventoryVarianceRoute
+  IntelligenceIndexRoute: typeof IntelligenceIndexRoute
   OperationsDistributorsRoute: typeof OperationsDistributorsRoute
   OperationsWarehousesRoute: typeof OperationsWarehousesRoute
   ShareTokenRoute: typeof ShareTokenRoute
@@ -2481,6 +2494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FindingsFindingIdRouteImport
       parentRoute: typeof FindingsRoute
     }
+    '/intelligence/': {
+      id: '/intelligence/'
+      path: '/intelligence'
+      fullPath: '/intelligence/'
+      preLoaderRoute: typeof IntelligenceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/intelligence/inventory-variance': {
       id: '/intelligence/inventory-variance'
       path: '/intelligence/inventory-variance'
@@ -2905,6 +2925,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuditAssignmentIdRoute: AuditAssignmentIdRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   IntelligenceInventoryVarianceRoute: IntelligenceInventoryVarianceRoute,
+  IntelligenceIndexRoute: IntelligenceIndexRoute,
   OperationsDistributorsRoute: OperationsDistributorsRoute,
   OperationsWarehousesRoute: OperationsWarehousesRoute,
   ShareTokenRoute: ShareTokenRoute,

@@ -19,6 +19,7 @@ import {
   toCsv,
   type StoreImportIssue,
 } from "@/lib/store-import";
+import { storeTypeVariants } from "@/lib/store-types";
 
 // ---------- types ----------
 
@@ -48,6 +49,10 @@ export type StoreMetrics = {
   shelf_health_score?: number; // 0-100
   last_scan_at?: string | null;
   total_scans?: number;
+  /** Completed AI audits (photo children not counted separately). */
+  ai_audits?: number;
+  /** Completed Digital audits. */
+  digital_audits?: number;
   low_stock_alerts?: number;
   out_of_stock_alerts?: number;
   average_confidence?: number; // 0-1 or 0-100
@@ -248,9 +253,38 @@ function storeInputToRow(input: StoreInput) {
 
 const STORE_SELECT = "*, territories:territory_id (name)";
 
+type AuditCounts = { ai_audits: number; digital_audits: number };
+
+/** Completed AI and Digital audits per store, paged so busy stores are counted in full. */
+async function fetchAuditCounts(storeIds: string[]): Promise<Map<string, AuditCounts>> {
+  const counts = new Map<string, AuditCounts>(storeIds.map((id) => [id, { ai_audits: 0, digital_audits: 0 }]));
+  if (!storeIds.length) return counts;
+  const PAGE = 1000;
+  for (let from = 0; from < 50_000; from += PAGE) {
+    const { data, error } = await supabase
+      .from("shelf_scans")
+      .select("id, store_id, audit_mode")
+      .in("store_id", storeIds)
+      .eq("status", "completed")
+      .is("parent_scan_id", null)
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) dbError(error, "Could not load audit counts.");
+    for (const row of data ?? []) {
+      const entry = row.store_id ? counts.get(row.store_id) : undefined;
+      if (!entry) continue;
+      if (row.audit_mode === "digital") entry.digital_audits += 1;
+      else entry.ai_audits += 1;
+    }
+    if ((data ?? []).length < PAGE) break;
+  }
+  return counts;
+}
+
 async function attachStoreMetrics(stores: OrgStore[]): Promise<OrgStore[]> {
   if (stores.length === 0) return stores;
   const ids = stores.map((s) => s.id);
+  const auditCounts = await fetchAuditCounts(ids).catch(() => null);
   const { data: scans, error } = await supabase
     .from("shelf_scans")
     .select(
@@ -270,7 +304,8 @@ async function attachStoreMetrics(stores: OrgStore[]): Promise<OrgStore[]> {
 
   return stores.map((store) => {
     const rows = byStore.get(store.id) ?? [];
-    if (rows.length === 0) return store;
+    const counts = auditCounts?.get(store.id);
+    if (rows.length === 0) return counts ? { ...store, metrics: { ...counts } } : store;
     const scoreRows = rows.filter((r) => typeof r.shelf_health_score === "number");
     const avgScore =
       scoreRows.length > 0
@@ -280,6 +315,8 @@ async function attachStoreMetrics(stores: OrgStore[]): Promise<OrgStore[]> {
       shelf_health_score: avgScore,
       last_scan_at: rows[0]?.created_at ?? null,
       total_scans: rows.length,
+      ai_audits: counts?.ai_audits,
+      digital_audits: counts?.digital_audits,
       low_stock_alerts: rows.reduce((sum, r) => sum + (r.low_stock_count ?? 0), 0),
       out_of_stock_alerts: rows.reduce((sum, r) => sum + (r.out_of_stock_count ?? 0), 0),
     });
@@ -386,7 +423,7 @@ export async function fetchStoreList(
   if (query.filter === "active") builder = builder.eq("status", "active");
   if (query.filter === "archived") builder = builder.eq("status", "inactive");
   if (query.model && query.model !== "all") {
-    builder = builder.eq("store_type", query.model);
+    builder = builder.in("store_type", storeTypeVariants(query.model));
   }
 
   builder = builder.order("created_at", { ascending: false }).range(from, to);
@@ -501,17 +538,23 @@ export async function fetchStoreMetrics(
   _signal?: AbortSignal,
 ): Promise<StoreMetrics> {
   const orgId = await requireOrgId();
-  const { data, error } = await supabase
-    .from("shelf_scans")
-    .select("shelf_health_score, low_stock_count, out_of_stock_count, created_at")
-    .eq("org_id", orgId)
-    .eq("store_id", id)
-    .order("created_at", { ascending: false });
+  const [{ data, error }, auditCounts] = await Promise.all([
+    supabase
+      .from("shelf_scans")
+      .select("shelf_health_score, low_stock_count, out_of_stock_count, created_at")
+      .eq("org_id", orgId)
+      .eq("store_id", id)
+      .order("created_at", { ascending: false }),
+    fetchAuditCounts([id]).catch(() => null),
+  ]);
   if (error) dbError(error, "Could not load store metrics.");
 
   const rows = data ?? [];
   const scoreRows = rows.filter((r) => typeof r.shelf_health_score === "number");
+  const counts = auditCounts?.get(id);
   return compact({
+    ai_audits: counts?.ai_audits,
+    digital_audits: counts?.digital_audits,
     shelf_health_score:
       scoreRows.length > 0
         ? scoreRows.reduce((sum, r) => sum + (r.shelf_health_score ?? 0), 0) / scoreRows.length

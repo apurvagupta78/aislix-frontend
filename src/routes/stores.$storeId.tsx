@@ -10,6 +10,7 @@ import {
   Pencil,
   Phone,
   ScanLine,
+  Store as StoreIcon,
   User,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -29,13 +30,13 @@ import {
 import {
   fetchStore,
   fetchStoreMetrics,
-  formatConfidence,
   formatDateTime,
   formatNumber,
   formatScore,
   storeLocation,
 } from "@/lib/organization";
 import { StoreGovernanceHistory } from "@/components/store/StoreGovernanceHistory";
+import { storeTypeLabel } from "@/lib/store-types";
 
 export const Route = createFileRoute("/stores/$storeId")({
   head: () => ({
@@ -157,6 +158,9 @@ function StoreDashboard() {
                     .filter(Boolean)
                     .join(", ") || "—"}
                 </Detail>
+                <Detail icon={<StoreIcon className="size-4" />} label="Type">
+                  {storeTypeLabel(store?.store_type)}
+                </Detail>
                 <Detail icon={<User className="size-4" />} label="Store manager">
                   {store?.manager_name || "—"}
                 </Detail>
@@ -189,13 +193,13 @@ function StoreDashboard() {
               accent
             />
             <OrgStat
-              label="Total audits"
-              value={formatNumber(metrics?.total_scans)}
+              label="AI audits"
+              value={formatNumber(metrics?.ai_audits)}
               loading={metricsQuery.isPending}
             />
             <OrgStat
-              label="Avg AI confidence"
-              value={formatConfidence(metrics?.average_confidence)}
+              label="Digital audits"
+              value={formatNumber(metrics?.digital_audits)}
               loading={metricsQuery.isPending}
             />
             <OrgStat

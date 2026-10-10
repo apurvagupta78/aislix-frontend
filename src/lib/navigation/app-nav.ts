@@ -5,8 +5,6 @@ import {
   FileBarChart,
   LayoutDashboard,
   Settings,
-  Store,
-  Users,
   Zap,
 } from "lucide-react";
 
@@ -78,31 +76,13 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
       { kind: "leaf", label: "Corrective actions", to: "/corrective-actions" },
       { kind: "leaf", label: "SLA dashboard", to: "/sla" },
       { kind: "leaf", label: "SLA & escalations", to: "/escalation-settings", managerOnly: true },
-      { kind: "leaf", label: "Exception queue", to: "/exceptions", managerOnly: true },
     ],
   },
   {
     id: "intelligence",
     label: "Intelligence",
     icon: BarChart3,
-    items: [
-      { kind: "leaf", label: "Inventory & variance", to: "/intelligence/inventory-variance" },
-      { kind: "leaf", label: "Expiry control", to: "/expiry-control" },
-      { kind: "leaf", label: "Analytics", to: "/audit-intelligence", managerOnly: true },
-    ],
-  },
-  {
-    id: "operations",
-    label: "Operations",
-    icon: Store,
-    items: [
-      { kind: "leaf", label: "Stores / outlets", to: "/stores" },
-      { kind: "leaf", label: "Supermarkets", to: "/stores", search: { model: "supermarket" } },
-      { kind: "leaf", label: "Warehouses", to: "/operations/warehouses" },
-      { kind: "leaf", label: "Distributors", to: "/operations/distributors" },
-      { kind: "leaf", label: "SKUs", to: "/sku-intelligence" },
-      { kind: "leaf", label: "Master data", to: "/store-master", managerOnly: true },
-    ],
+    items: [{ kind: "leaf", label: "Intelligence", to: "/intelligence" }],
   },
   {
     id: "reports",
@@ -111,18 +91,13 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     items: [{ kind: "leaf", label: "Reports", to: "/report" }],
   },
   {
-    id: "team",
-    label: "Team",
-    icon: Users,
-    managerOnly: true,
-    items: [{ kind: "leaf", label: "Team", to: "/team" }],
-  },
-  {
     id: "manage",
     label: "Manage",
     icon: Settings,
     managerOnly: true,
     items: [
+      { kind: "leaf", label: "Stores", to: "/stores" },
+      { kind: "leaf", label: "Team", to: "/team" },
       { kind: "leaf", label: "Workspace settings", to: "/settings", search: { tab: "company" } },
       { kind: "leaf", label: "Notifications", to: "/settings", search: { tab: "notifications" } },
       { kind: "leaf", label: "Security", to: "/settings", search: { tab: "security" } },
