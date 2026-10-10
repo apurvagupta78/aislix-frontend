@@ -81,9 +81,9 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
   },
   {
     id: "intelligence",
-    label: "Intelligence",
+    label: "Aislix intelligence",
     icon: BarChart3,
-    items: [{ kind: "leaf", label: "Intelligence", to: "/intelligence" }],
+    items: [{ kind: "leaf", label: "Aislix intelligence", to: "/intelligence" }],
   },
   {
     id: "reports",
