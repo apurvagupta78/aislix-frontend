@@ -713,16 +713,9 @@ function NewAuditPage() {
   }, [editData, editPrefilled, storesQuery.data, userId]);
 
   useEffect(() => {
-    if (assignToSelf && assigneeId) return;
-    if (assigneeId && !teamScope.assigneeIds.includes(assigneeId)) {
-      setTeamScope({ assigneeIds: [assigneeId] });
-    }
-  }, [assigneeId, assignToSelf, teamScope.assigneeIds]);
-
-  useEffect(() => {
     if (assignToSelf) return;
-    const primary = teamScope.assigneeIds[0];
-    if (primary && primary !== assigneeId) {
+    const primary = teamScope.assigneeIds[0] ?? "";
+    if (primary !== assigneeId) {
       setAssigneeId(primary);
     }
   }, [assignToSelf, teamScope.assigneeIds, assigneeId]);
