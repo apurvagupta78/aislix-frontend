@@ -98,7 +98,7 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     items: [
       { kind: "leaf", label: "Stores", to: "/stores" },
       { kind: "leaf", label: "Team", to: "/team" },
-      { kind: "leaf", label: "Workspace settings", to: "/settings", search: { tab: "company" } },
+      { kind: "leaf", label: "Workspace", to: "/settings", search: { tab: "company" } },
       { kind: "leaf", label: "Notifications", to: "/settings", search: { tab: "notifications" } },
       { kind: "leaf", label: "Security", to: "/settings", search: { tab: "security" } },
       { kind: "leaf", label: "Billing & plan", to: "/billing" },

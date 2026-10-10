@@ -1,27 +1,56 @@
 /**
- * Intelligence: the user picks up to 20 completed audits and asks a question. The server reads
- * those audits under the user's own access, sends the instructions, the question and a compact
- * copy of the audit data to the AI, and saves the report for "Past analyses".
+ * Intelligence: the user picks up to 20 completed audits, may attach files, and asks a question.
+ * The server reads those audits under the user's own access, re-checks every attached file, sends
+ * the instructions, question, compact audit data and files to the AI, and saves the report for
+ * "Past analyses". Charts are drawn by Aislix from stored audit data; the AI only picks them.
  */
 
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { hideModelNames } from "@/lib/ai-display-text";
-import { INTELLIGENCE_INSTRUCTIONS, buildIntelligenceInput } from "@/lib/intelligence/intelligence.prompt";
+import {
+  INTELLIGENCE_INSTRUCTIONS,
+  buildIntelligenceInput,
+  type IntelligenceFileInput,
+} from "@/lib/intelligence/intelligence.prompt";
+import {
+  ATTACHMENT_MAX_BYTES,
+  ATTACHMENT_MAX_FILES,
+  INTELLIGENCE_ATTACHMENT_BUCKET,
+  type IntelligenceAttachment,
+} from "@/lib/intelligence/attachments";
+import { assignedAuditName, auditDescription, auditName, auditShortId } from "@/lib/intelligence/audit-label";
+import {
+  buildIntelligenceCharts,
+  extractChartPicks,
+  type ChartSourceAudit,
+  type IntelligenceChart,
+} from "@/lib/intelligence/intelligence-charts";
 
 export const INTELLIGENCE_MAX_AUDITS = 20;
 export const INTELLIGENCE_MAX_QUESTION = 1000;
+/** PDFs and images travel inline to the AI; keep one request well inside its size limit. */
+const MAX_INLINE_FILE_BYTES = 30 * 1024 * 1024;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ATTACHMENT_PATH_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f-]{36}\.(csv|xlsx|pdf|jpg|jpeg|png|webp)$/i;
 
-export type IntelligenceInput = { activeOrgId: string; scanIds: string[]; question: string };
+export type IntelligenceInput = {
+  activeOrgId: string;
+  scanIds: string[];
+  question: string;
+  attachments?: Array<{ path: string; name: string }>;
+};
 
 export type IntelligenceAuditRef = {
   id: string;
   label: string;
   mode: "ai" | "digital";
   date: string;
+  code?: string;
+  description?: string | null;
 };
 
 export type IntelligenceReport = {
@@ -29,21 +58,41 @@ export type IntelligenceReport = {
   question: string;
   report: string;
   audits: IntelligenceAuditRef[];
+  charts: IntelligenceChart[];
+  attachments: IntelligenceAttachment[];
   created_at: string;
 };
 
-function validate(input: IntelligenceInput): IntelligenceInput {
+function validate(input: IntelligenceInput): Required<IntelligenceInput> {
   const activeOrgId = String(input?.activeOrgId ?? "");
   if (!UUID_RE.test(activeOrgId)) throw new Error("Missing workspace.");
   const ids = Array.isArray(input?.scanIds) ? input.scanIds.map((s) => String(s)) : [];
   const scanIds = [...new Set(ids)].filter((id) => UUID_RE.test(id));
-  if (!scanIds.length) throw new Error("Select at least one audit.");
   if (scanIds.length > INTELLIGENCE_MAX_AUDITS) {
     throw new Error(`Select up to ${INTELLIGENCE_MAX_AUDITS} audits.`);
   }
+  const rawFiles = Array.isArray(input?.attachments) ? input.attachments : [];
+  if (rawFiles.length > ATTACHMENT_MAX_FILES) throw new Error(`Attach up to ${ATTACHMENT_MAX_FILES} files.`);
+  const attachments = rawFiles.map((f) => {
+    const path = String(f?.path ?? "");
+    if (!ATTACHMENT_PATH_RE.test(path)) throw new Error("An attached file is not valid. Attach it again.");
+    return { path, name: String(f?.name ?? "file").slice(0, 200) };
+  });
+  if (!scanIds.length && !attachments.length) throw new Error("Select at least one audit or attach a file.");
   const question = String(input?.question ?? "").trim().slice(0, INTELLIGENCE_MAX_QUESTION);
   if (question.length < 5) throw new Error("Write what you would like to analyse.");
-  return { activeOrgId, scanIds, question };
+  return { activeOrgId, scanIds, question, attachments };
+}
+
+async function requireMember(supabase: SupabaseClient, orgId: string, userId: string): Promise<void> {
+  const { data: member } = await supabase
+    .from("organization_members")
+    .select("user_id")
+    .eq("org_id", orgId)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!member) throw new Error("You are not a member of this workspace.");
 }
 
 function lunaModel(): string {
@@ -134,11 +183,12 @@ async function gatherAudits(
   supabase: SupabaseClient,
   orgId: string,
   scanIds: string[],
-): Promise<{ refs: IntelligenceAuditRef[]; data: Row[] }> {
+): Promise<{ refs: IntelligenceAuditRef[]; data: Row[]; charts: IntelligenceChart[] }> {
+  if (!scanIds.length) return { refs: [], data: [], charts: [] };
   const { data: scanRows, error } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, store_id, status, audit_mode, created_at, category, sub_category, sub_category_label, sub_category_custom, shelf_label, osa_percent, planogram_compliance_percent, shelf_health_score, share_of_shelf_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count",
+      "id, org_id, store_id, status, audit_mode, created_at, category, sub_category, sub_category_label, sub_category_custom, shelf_label, notes, assignment_id, osa_percent, planogram_compliance_percent, shelf_health_score, share_of_shelf_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count",
     )
     .in("id", scanIds);
   if (error) throw new Error("Could not load the selected audits.");
@@ -153,8 +203,9 @@ async function gatherAudits(
   const aiIds = scans.filter((s) => s.audit_mode !== "digital").map((s) => s.id as string);
   const digitalIds = scans.filter((s) => s.audit_mode === "digital").map((s) => s.id as string);
   const perAudit = Math.max(40, Math.floor(1200 / scans.length));
+  const assignmentIds = [...new Set(scans.map((s) => s.assignment_id).filter(Boolean) as string[])];
 
-  const [storesRes, resultsRes, productsRes, linesRes, planoRes, findingsRes] = await Promise.all([
+  const [storesRes, resultsRes, productsRes, linesRes, planoRes, findingsRes, assignmentsRes] = await Promise.all([
     storeIds.length
       ? supabase.from("stores").select("id, name, city, state, store_type").in("id", storeIds)
       : Promise.resolve({ data: [] }),
@@ -185,6 +236,9 @@ async function gatherAudits(
       )
       .in("scan_id", scanIds)
       .limit(3000),
+    assignmentIds.length
+      ? supabase.from("scan_assignments").select("id, scope_values, instructions").in("id", assignmentIds)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const stores = new Map(((storesRes.data ?? []) as Row[]).map((s) => [String(s.id), s]));
@@ -193,10 +247,12 @@ async function gatherAudits(
   const lines = groupBy((linesRes.data ?? []) as Row[], "scan_id");
   const plano = new Map(((planoRes.data ?? []) as Row[]).map((p) => [String(p.scan_id), p]));
   const findings = groupBy((findingsRes.data ?? []) as Row[], "scan_id");
+  const assignments = new Map(((assignmentsRes.data ?? []) as Row[]).map((a) => [String(a.id), a]));
 
   const ordered = scanIds.map((id) => scans.find((s) => s.id === id)!).filter(Boolean);
   const refs: IntelligenceAuditRef[] = [];
   const data: Row[] = [];
+  const chartAudits: ChartSourceAudit[] = [];
 
   ordered.forEach((scan, i) => {
     const id = String(scan.id);
@@ -205,15 +261,30 @@ async function gatherAudits(
     const date = String(scan.created_at ?? "").slice(0, 10);
     const subCategory = scan.sub_category_label ?? scan.sub_category_custom ?? scan.sub_category;
     const storeName = String(store?.name ?? "Store");
-    refs.push({
-      id,
-      mode,
+    const assignment = assignments.get(String(scan.assignment_id ?? ""));
+    const name = auditName({
+      assignedName: assignedAuditName(assignment?.scope_values),
+      store: storeName,
+      category: scan.category as string | null,
+      shelf: scan.shelf_label as string | null,
+    });
+    const description = auditDescription({ instructions: assignment?.instructions, notes: scan.notes });
+    const code = auditShortId(id);
+    refs.push({ id, mode, date, label: name, code, description });
+    chartAudits.push({
+      label: `${i + 1}. ${name}`,
       date,
-      label: [storeName, scan.category, scan.shelf_label].filter(Boolean).join(" · "),
+      storeId: String(scan.store_id ?? ""),
+      storeName,
+      mode,
+      scan,
     });
 
     const audit: Row = {
       audit_number: i + 1,
+      audit_id: code,
+      audit_name: name,
+      audit_description: description,
       audit_type: mode === "digital" ? "Digital audit" : "AI audit",
       audit_date: date,
       store: compact({ name: storeName, city: store?.city, state: store?.state, type: store?.store_type }),
@@ -308,42 +379,160 @@ async function gatherAudits(
     data.push(compact(audit));
   });
 
-  return { refs, data };
+  const charts = buildIntelligenceCharts({
+    audits: chartAudits,
+    findings: (findingsRes.data ?? []) as Row[],
+    products: (productsRes.data ?? []) as Row[],
+    lines: (linesRes.data ?? []) as Row[],
+  });
+  return { refs, data, charts };
 }
+
+type LoadedFile = { attachment: IntelligenceAttachment; input: IntelligenceFileInput; dataUrl?: string };
+
+async function loadAttachments(
+  orgId: string,
+  userId: string,
+  files: Array<{ path: string; name: string }>,
+): Promise<LoadedFile[]> {
+  if (!files.length) return [];
+  const prefix = `${orgId}/${userId}/`;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { inspectAttachment, safeFileName, AttachmentRejected } = await import(
+    "@/lib/intelligence/attachment-safety.server"
+  );
+  const out: LoadedFile[] = [];
+  let inlineBytes = 0;
+  for (const f of files) {
+    if (!f.path.startsWith(prefix)) throw new Error("An attached file is not yours. Attach it again.");
+    const name = safeFileName(f.name);
+    const { data: blob, error } = await supabaseAdmin.storage.from(INTELLIGENCE_ATTACHMENT_BUCKET).download(f.path);
+    if (error || !blob) throw new Error(`Could not read ${name}. Attach it again.`);
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const ext = f.path.slice(f.path.lastIndexOf(".") + 1);
+    let inspected;
+    try {
+      inspected = await inspectAttachment(`file.${ext}`, bytes);
+    } catch (e) {
+      if (e instanceof AttachmentRejected) throw new Error(`${name} ${e.message}`);
+      throw e;
+    }
+    const attachment: IntelligenceAttachment = { path: f.path, name, kind: inspected.kind, size: bytes.length };
+    if (inspected.text !== undefined) {
+      out.push({ attachment, input: { name, kind: inspected.kind, text: inspected.text } });
+      continue;
+    }
+    inlineBytes += bytes.length;
+    if (inlineBytes > MAX_INLINE_FILE_BYTES) {
+      throw new Error("The attached PDFs and images are too large together (30 MB max). Remove one and try again.");
+    }
+    const base64 = Buffer.from(bytes).toString("base64");
+    out.push({ attachment, input: { name, kind: inspected.kind }, dataUrl: `data:${inspected.mime};base64,${base64}` });
+  }
+  return out;
+}
+
+export const uploadIntelligenceAttachment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { activeOrgId: string; name: string; base64: string }) => {
+    const activeOrgId = String(input?.activeOrgId ?? "");
+    if (!UUID_RE.test(activeOrgId)) throw new Error("Missing workspace.");
+    const name = String(input?.name ?? "").slice(0, 200);
+    if (!name) throw new Error("The file has no name.");
+    const base64 = String(input?.base64 ?? "").replace(/^data:[^,]*;base64,/, "");
+    if (!base64 || base64.length > Math.ceil((ATTACHMENT_MAX_BYTES * 4) / 3) + 16) {
+      throw new Error(`${name} is larger than 10 MB.`);
+    }
+    return { activeOrgId, name, base64 };
+  })
+  .handler(async ({ data, context }): Promise<IntelligenceAttachment> => {
+    const { supabase, userId } = context;
+    await requireMember(supabase, data.activeOrgId, userId);
+
+    const { withinRateLimits } = await import("@/lib/rate-limit.server");
+    if (!(await withinRateLimits([[`intelligence-upload:user:${userId}`, 60, 3600]]))) {
+      throw new Error("Too many uploads in the last hour. Try again later.");
+    }
+
+    const { inspectAttachment, safeFileName, AttachmentRejected } = await import(
+      "@/lib/intelligence/attachment-safety.server"
+    );
+    const name = safeFileName(data.name);
+    const bytes = new Uint8Array(Buffer.from(data.base64, "base64"));
+    let inspected;
+    try {
+      inspected = await inspectAttachment(name, bytes);
+    } catch (e) {
+      if (e instanceof AttachmentRejected) throw new Error(`${name} ${e.message}`);
+      throw new Error(`${name} could not be checked. Try again.`);
+    }
+
+    const path = `${data.activeOrgId}/${userId}/${crypto.randomUUID()}.${inspected.ext}`;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.storage
+      .from(INTELLIGENCE_ATTACHMENT_BUCKET)
+      .upload(path, inspected.bytes, { contentType: inspected.mime, upsert: false });
+    if (error) throw new Error(`${name} could not be saved. Try again.`);
+    return { path, name, kind: inspected.kind, size: inspected.bytes.length };
+  });
 
 export const runIntelligenceAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: IntelligenceInput) => validate(input))
   .handler(async ({ data, context }): Promise<IntelligenceReport> => {
     const { supabase, userId } = context;
-
-    const { data: member } = await supabase
-      .from("organization_members")
-      .select("user_id")
-      .eq("org_id", data.activeOrgId)
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .maybeSingle();
-    if (!member) throw new Error("You are not a member of this workspace.");
+    await requireMember(supabase, data.activeOrgId, userId);
 
     const { withinRateLimits } = await import("@/lib/rate-limit.server");
     if (!(await withinRateLimits([[`intelligence:user:${userId}`, 30, 3600]]))) {
       throw new Error("Too many analyses in the last hour. Try again later.");
     }
 
-    const { refs, data: audits } = await gatherAudits(supabase, data.activeOrgId, data.scanIds);
+    const [{ refs, data: audits, charts: catalog }, files] = await Promise.all([
+      gatherAudits(supabase, data.activeOrgId, data.scanIds),
+      loadAttachments(data.activeOrgId, userId, data.attachments),
+    ]);
 
     const apiKey = (process.env.OPENAI_API_KEY ?? "").trim();
     if (!apiKey) throw new Error("Intelligence is not available right now.");
     const OpenAI = (await import("openai")).default;
     const client = new OpenAI({ apiKey, timeout: 240_000 });
+    const text = buildIntelligenceInput(
+      data.question,
+      audits,
+      catalog.map(({ id, title, about }) => ({ id, title, about })),
+      files.map((f) => f.input),
+    );
+    type ContentPart =
+      | { type: "input_text"; text: string }
+      | { type: "input_file"; filename: string; file_data: string }
+      | { type: "input_image"; image_url: string; detail: "high" };
+    const content: ContentPart[] = [{ type: "input_text", text }];
+    for (const f of files) {
+      if (!f.dataUrl) continue;
+      content.push(
+        f.input.kind === "pdf"
+          ? { type: "input_file", filename: f.attachment.name, file_data: f.dataUrl }
+          : { type: "input_image", image_url: f.dataUrl, detail: "high" },
+      );
+    }
     const response = await client.responses.create({
       model: lunaModel(),
       instructions: INTELLIGENCE_INSTRUCTIONS,
-      input: buildIntelligenceInput(data.question, audits),
+      input: [{ role: "user", content }],
       max_output_tokens: 16000,
     });
-    const report = hideModelNames(String(response.output_text ?? "").trim());
+    const raw = String(response.output_text ?? "").trim();
+    const picked = extractChartPicks(raw, catalog);
+    const report = hideModelNames(picked.text);
+    const picks: Array<{ id: string; caption?: string }> = picked.found
+      ? picked.picks
+      : catalog.slice(0, 2).map((c) => ({ id: c.id }));
+    const charts: IntelligenceChart[] = picks.map((p) => {
+      const chart = catalog.find((c) => c.id === p.id)!;
+      return p.caption ? { ...chart, caption: hideModelNames(p.caption) } : chart;
+    });
+    const attachments = files.map((f) => f.attachment);
     if (!report) {
       const reason = (response as { incomplete_details?: { reason?: string } | null }).incomplete_details?.reason;
       throw new Error(
@@ -363,10 +552,20 @@ export const runIntelligenceAnalysis = createServerFn({ method: "POST" })
         audits: refs,
         question: data.question,
         report,
+        charts,
+        attachments,
       } as never)
       .select("id, created_at")
       .single();
     if (error || !row) throw new Error("The report was written but could not be saved. Try again.");
     const saved = row as { id: string; created_at: string };
-    return { id: saved.id, created_at: saved.created_at, question: data.question, report, audits: refs };
+    return {
+      id: saved.id,
+      created_at: saved.created_at,
+      question: data.question,
+      report,
+      audits: refs,
+      charts,
+      attachments,
+    };
   });

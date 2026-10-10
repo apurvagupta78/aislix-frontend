@@ -79,7 +79,7 @@ function ManageWorkspace() {
         {tab === "settings" ? (
           <>
             <WorkspaceLinkCard
-              title="Workspace settings"
+              title="Workspace"
               description="Organization, notifications and operational defaults."
               to="/settings"
               icon={<Settings className="size-4" />}
