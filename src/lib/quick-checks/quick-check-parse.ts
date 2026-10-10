@@ -69,6 +69,8 @@ export type ShelfCsvResult = {
   imageQuality: string | null;
 };
 
+const UNREAD_BRAND_RE = /^(unidentified|unknown|unbranded|unreadable|not visible|not readable|generic)\b/i;
+
 export function parseShelfCsvPayload(payload: unknown): ShelfCsvResult {
   const root = rec(payload) ?? {};
   const raw = Array.isArray(root.products) ? root.products : [];
@@ -92,7 +94,11 @@ export function parseShelfCsvPayload(payload: unknown): ShelfCsvResult {
       confidence: confidence(r.confidence),
     });
   }
-  const brands = new Set(products.map((p) => p.brand?.toLowerCase()).filter(Boolean));
+  const brands = new Set(
+    products
+      .map((p) => p.brand?.toLowerCase())
+      .filter((b): b is string => Boolean(b) && !UNREAD_BRAND_RE.test(b!)),
+  );
   return {
     products,
     productsCount: products.length,
