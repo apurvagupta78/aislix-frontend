@@ -11,7 +11,7 @@ import type { OperatingModel } from "@/lib/audit-builder/types";
 import type { AuditTemplate } from "@/lib/audit-templates";
 import { OPERATING_MODEL_CARDS } from "@/lib/audit-engine/operating-model-catalog";
 import {
-  demoPlanogramSummary,
+  demoPlanogramSummaryText,
   type NewAuditPlanogramChoice,
 } from "@/lib/new-audit/planogram-setup";
 import type { CaptureMethod, StartChoice } from "@/lib/new-audit/summary";
@@ -234,7 +234,7 @@ export function NewAuditStep2StartMethod({
             <div id="step-3-template-fields" className="scroll-mt-24 space-y-3">
               {templateSetup}
               {templateIsPlanogram ? (
-                <p className="text-sm text-[var(--aislix-secondary)]">{demoPlanogramSummary()}</p>
+                <p className="text-sm text-[var(--aislix-secondary)]">{demoPlanogramSummaryText()}</p>
               ) : null}
             </div>
           ) : null}

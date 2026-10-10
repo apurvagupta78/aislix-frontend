@@ -48,3 +48,8 @@ export function demoPlanogramSummary() {
     fixture: DEMO_ORAL_CARE_META.fixture_id ?? "G01",
   };
 }
+
+export function demoPlanogramSummaryText(): string {
+  const s = demoPlanogramSummary();
+  return `${s.label}: ${s.name} · ${s.category} · ${s.positions} shelf positions · ${s.fixture}`;
+}
