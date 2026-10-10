@@ -75,8 +75,8 @@ const ROUTINES = [
     who: "Store managers and quality checkers",
     steps: [
       "Walk the racks and take one Rack Check photo per rack, whole rack in frame.",
-      "Empty bins open a refill fix straight away; messy bins open a tidy fix.",
-      "Re-check the same rack after refilling to close the fix.",
+      "The result shows which bins are empty, low or messy, so the team knows what to refill and tidy.",
+      "Re-check the same rack after refilling to confirm it is full.",
     ],
     page: { to: "/rack-check" as const, label: "Rack check" },
   },

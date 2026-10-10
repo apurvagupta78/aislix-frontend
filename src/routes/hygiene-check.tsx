@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -8,13 +8,13 @@ import { AppShell } from "@/components/AppShell";
 import {
   CheckPhoto,
   PhotoPicker,
-  QuickCheckNotice,
-  RecentChecks,
+  QuickCheckDisclaimer,
+  QuickCheckResultSlot,
   StorePicker,
   VerdictPill,
   formatCheckTime,
   uploadQuickCheckPhoto,
-  useRecentQuickChecks,
+  useQuickCheckResult,
   type QuickCheckRowBase,
 } from "@/components/quick-checks/QuickCheckParts";
 import { Button } from "@/components/ui/button";
@@ -43,10 +43,9 @@ type CheckRow = QuickCheckRowBase & {
   verdict: HygieneVerdict;
   issues: HygieneIssue[];
   summary: string | null;
-  issues_raised: number;
 };
 
-const COLUMNS = "area, verdict, issues, summary, issues_raised";
+const COLUMNS = "area, verdict, issues, summary";
 
 const TONE: Record<HygieneVerdict, "good" | "bad" | "neutral"> = {
   passed: "good",
@@ -67,13 +66,12 @@ function checkTitle(row: CheckRow): string {
 }
 
 function HygieneCheckPage() {
-  const queryClient = useQueryClient();
   const [storeId, setStoreId] = useState("");
   const [area, setArea] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [lastId, setLastId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const checks = useRecentQuickChecks<CheckRow>("hygiene_checks", COLUMNS);
+  const check = useQuickCheckResult<CheckRow>("hygiene_checks", COLUMNS, lastId);
 
   const run = useMutation({
     mutationFn: async () => {
@@ -82,20 +80,14 @@ function HygieneCheckPage() {
       const { orgId, path } = await uploadQuickCheckPhoto(file, QUICK_CHECK_FOLDERS.hygiene);
       return runHygieneCheck({ data: { activeOrgId: orgId, storeId, storagePath: path, hint: area.trim() || null } });
     },
-    onSuccess: async (out) => {
-      toast.success(
-        `Hygiene ${HYGIENE_VERDICT_LABEL[out.result.verdict].toLowerCase()}.${out.issueRaised ? " A fix was opened for the store." : ""}`,
-      );
+    onSuccess: (out) => {
+      toast.success(`Hygiene ${HYGIENE_VERDICT_LABEL[out.result.verdict].toLowerCase()}.`);
       setFile(null);
       if (fileInput.current) fileInput.current.value = "";
-      await queryClient.invalidateQueries({ queryKey: ["quick-checks", "hygiene_checks"] });
-      setSelectedId(out.id);
+      setLastId(out.id);
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "The hygiene check failed."),
   });
-
-  const rows = checks.data ?? [];
-  const selected = useMemo(() => rows.find((r) => r.id === selectedId) ?? rows[0] ?? null, [rows, selectedId]);
 
   return (
     <AppShell title="Hygiene check" description={DESCRIPTION}>
@@ -129,37 +121,20 @@ function HygieneCheckPage() {
                 "Check hygiene"
               )}
             </Button>
-            <p className="text-xs text-[#667085]">
-              Include the shelf surfaces and the floor below. A failed check opens a fix in{" "}
-              <Link to="/corrective-actions" className="underline">
-                Corrective Actions
-              </Link>
-              .
-            </p>
+            <p className="text-xs text-[#667085]">Include the shelf surfaces and the floor below in the photo.</p>
           </div>
         </section>
 
         <section aria-labelledby="check-result" className="min-w-0 space-y-4">
-          {checks.isPending ? (
-            <div className="h-48 animate-pulse rounded-2xl border border-[#D9E2E8] bg-[#F4F7F9]" aria-busy="true" />
-          ) : checks.isError ? (
-            <QuickCheckNotice title="Hygiene checks unavailable" body="Refresh the page to try again." />
-          ) : !selected ? (
-            <QuickCheckNotice title="No hygiene checks yet" body="Pick a store, photograph a shelf and run your first check." />
-          ) : (
-            <HygieneResult row={selected} />
-          )}
-          <RecentChecks
-            rows={rows}
-            selectedId={selected?.id ?? null}
-            onSelect={setSelectedId}
-            title={checkTitle}
-            meta={(r) => {
-              const n = Array.isArray(r.issues) ? r.issues.length : 0;
-              return n ? `${n} issue${n === 1 ? "" : "s"}` : "No issues";
-            }}
-            pill={(r) => <VerdictPill label={HYGIENE_VERDICT_LABEL[r.verdict]} tone={TONE[r.verdict]} />}
-          />
+          <QuickCheckResultSlot
+            id={lastId}
+            query={check}
+            running={run.isPending}
+            emptyTitle="Your result will appear here"
+            emptyBody="Pick a store, photograph a shelf and check whether hygiene is maintained."
+          >
+            {(row) => <HygieneResult row={row} />}
+          </QuickCheckResultSlot>
         </section>
       </div>
     </AppShell>
@@ -173,10 +148,7 @@ function HygieneResult({ row }: { row: CheckRow & { photoUrl: string | null } })
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-[#04203F]">{checkTitle(row)}</h2>
-          <p className="mt-0.5 text-xs text-[#667085]">
-            {formatCheckTime(row.created_at)}
-            {row.issues_raised ? " · Fix opened" : ""}
-          </p>
+          <p className="mt-0.5 text-xs text-[#667085]">{formatCheckTime(row.created_at)}</p>
         </div>
         <VerdictPill label={`Hygiene ${HYGIENE_VERDICT_LABEL[row.verdict].toLowerCase()}`} tone={TONE[row.verdict]} />
       </div>
@@ -223,6 +195,9 @@ function HygieneResult({ row }: { row: CheckRow & { photoUrl: string | null } })
           ) : null}
           <p className="text-xs text-[#667085]">AI detected · Read from image</p>
         </div>
+      </div>
+      <div className="mt-4">
+        <QuickCheckDisclaimer />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -8,13 +8,12 @@ import { AppShell } from "@/components/AppShell";
 import {
   CheckPhoto,
   PhotoPicker,
-  QuickCheckNotice,
-  RecentChecks,
+  QuickCheckDisclaimer,
+  QuickCheckResultSlot,
   StorePicker,
-  VerdictPill,
   formatCheckTime,
   uploadQuickCheckPhoto,
-  useRecentQuickChecks,
+  useQuickCheckResult,
   type QuickCheckRowBase,
 } from "@/components/quick-checks/QuickCheckParts";
 import { Button } from "@/components/ui/button";
@@ -58,13 +57,12 @@ function csvFileName(row: CheckRow): string {
 }
 
 function ShelfToCsvPage() {
-  const queryClient = useQueryClient();
   const [storeId, setStoreId] = useState("");
   const [shelf, setShelf] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [lastId, setLastId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const checks = useRecentQuickChecks<CheckRow>("shelf_csv_checks", COLUMNS);
+  const check = useQuickCheckResult<CheckRow>("shelf_csv_checks", COLUMNS, lastId);
 
   const run = useMutation({
     mutationFn: async () => {
@@ -73,7 +71,7 @@ function ShelfToCsvPage() {
       const { orgId, path } = await uploadQuickCheckPhoto(file, QUICK_CHECK_FOLDERS.shelfCsv);
       return runShelfCsvCheck({ data: { activeOrgId: orgId, storeId, storagePath: path, hint: shelf.trim() || null } });
     },
-    onSuccess: async (out) => {
+    onSuccess: (out) => {
       toast.success(
         out.result.productsCount
           ? `${out.result.productsCount} product${out.result.productsCount === 1 ? "" : "s"} read from the shelf.`
@@ -81,14 +79,10 @@ function ShelfToCsvPage() {
       );
       setFile(null);
       if (fileInput.current) fileInput.current.value = "";
-      await queryClient.invalidateQueries({ queryKey: ["quick-checks", "shelf_csv_checks"] });
-      setSelectedId(out.id);
+      setLastId(out.id);
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "The shelf check failed."),
   });
-
-  const rows = checks.data ?? [];
-  const selected = useMemo(() => rows.find((r) => r.id === selectedId) ?? rows[0] ?? null, [rows, selectedId]);
 
   return (
     <AppShell title="Shelf to CSV" description={DESCRIPTION}>
@@ -129,25 +123,15 @@ function ShelfToCsvPage() {
         </section>
 
         <section aria-labelledby="check-result" className="min-w-0 space-y-4">
-          {checks.isPending ? (
-            <div className="h-48 animate-pulse rounded-2xl border border-[#D9E2E8] bg-[#F4F7F9]" aria-busy="true" />
-          ) : checks.isError ? (
-            <QuickCheckNotice title="Shelf checks unavailable" body="Refresh the page to try again." />
-          ) : !selected ? (
-            <QuickCheckNotice title="No shelf checks yet" body="Pick a store, photograph a shelf and read it into a table." />
-          ) : (
-            <ShelfResult row={selected} />
-          )}
-          <RecentChecks
-            rows={rows}
-            selectedId={selected?.id ?? null}
-            onSelect={setSelectedId}
-            title={checkTitle}
-            meta={(r) => `${r.products_count} product${r.products_count === 1 ? "" : "s"}`}
-            pill={(r) => (
-              <VerdictPill label={`${r.facings_total} facings`} tone={r.products_count ? "good" : "neutral"} />
-            )}
-          />
+          <QuickCheckResultSlot
+            id={lastId}
+            query={check}
+            running={run.isPending}
+            emptyTitle="Your shelf table will appear here"
+            emptyBody="Pick a store, photograph a shelf and read it into a table you can download as CSV."
+          >
+            {(row) => <ShelfResult row={row} />}
+          </QuickCheckResultSlot>
         </section>
       </div>
     </AppShell>
@@ -237,6 +221,9 @@ function ShelfResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
           )}
           <p className="mt-2 text-xs text-[#667085]">AI detected · Read from image · Totals calculated by Aislix</p>
         </div>
+      </div>
+      <div className="mt-4">
+        <QuickCheckDisclaimer />
       </div>
     </div>
   );

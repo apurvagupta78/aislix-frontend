@@ -1,22 +1,17 @@
 /**
  * Dark store rack quick check: the photo is uploaded by the client, then this server function reads
- * it with the rack overview prompt, saves the bin grid and opens a fix for every empty or messy bin.
+ * it with the rack overview prompt and saves the bin grid. Quick checks never open fixes or enter
+ * audit history; the rows and photos are kept only for usage reporting.
  */
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { buildRackOverviewPrompt } from "@/lib/ai-audit/prompts/rack-overview.prompt";
-import {
-  normalizeCode,
-  parseRackCheckPayload,
-  rackCheckIssues,
-  type RackCheckResult,
-} from "@/lib/rack-check/rack-check-parse";
+import { normalizeCode, parseRackCheckPayload, type RackCheckResult } from "@/lib/rack-check/rack-check-parse";
 
 export const RACK_CHECK_FOLDER = "rack-check";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FILE_RE = /^[0-9a-f-]{36}\.(jpe?g|png|webp)$/i;
-const REPEAT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export type RunRackCheckInput = {
   activeOrgId: string;
@@ -25,12 +20,7 @@ export type RunRackCheckInput = {
   rackCode?: string | null;
 };
 
-export type RunRackCheckOutput = {
-  id: string;
-  result: RackCheckResult;
-  issuesRaised: number;
-  issuesAlreadyOpen: number;
-};
+export type RunRackCheckOutput = { id: string; result: RackCheckResult };
 
 function contentTypeFor(path: string): string {
   const lower = path.toLowerCase();
@@ -121,7 +111,6 @@ export const runRackCheck = createServerFn({ method: "POST" })
       throw new Error("The AI could not read this photo. Try again or retake it.");
     }
     const result = parseRackCheckPayload(payload);
-    const issues = rackCheckIssues(result, data.rackCode);
 
     const { data: row, error: insertError } = await supabaseAdmin
       .from("rack_checks" as never)
@@ -146,53 +135,5 @@ export const runRackCheck = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (insertError || !row) throw new Error("Could not save the rack check.");
-    const checkId = (row as { id: string }).id;
-
-    // A re-check of the same rack the same day must not open a second fix for a bin that is still open.
-    let fresh = issues;
-    const identifiable = issues.filter((i) => i.identifiable).map((i) => i.title);
-    if (identifiable.length) {
-      const { data: open } = await supabaseAdmin
-        .from("findings")
-        .select("title")
-        .eq("org_id", data.activeOrgId)
-        .eq("store_id", data.storeId)
-        .eq("source_type", "rack_check" as never)
-        .in("title", identifiable)
-        .not("status", "in", "(resolved,closed)")
-        .gte("created_at", new Date(Date.now() - REPEAT_WINDOW_MS).toISOString());
-      const already = new Set(((open ?? []) as { title: string }[]).map((f) => f.title));
-      fresh = issues.filter((i) => !(i.identifiable && already.has(i.title)));
-    }
-
-    let issuesRaised = 0;
-    if (fresh.length) {
-      const { error: findingsError } = await supabaseAdmin.from("findings").insert(
-        fresh.map((issue) => ({
-          org_id: data.activeOrgId,
-          store_id: data.storeId,
-          created_by: userId,
-          finding_type: issue.findingType,
-          source_type: "rack_check",
-          source_id: checkId,
-          severity: issue.severity,
-          status: "open",
-          audit_origin: "ai",
-          confirmation_state: "ai_suggested",
-          title: issue.title,
-          description: issue.description,
-        })) as never,
-      );
-      if (findingsError) {
-        console.error("[rack-check] could not raise findings", checkId, findingsError.message);
-      } else {
-        issuesRaised = fresh.length;
-        await supabaseAdmin
-          .from("rack_checks" as never)
-          .update({ issues_raised: issuesRaised } as never)
-          .eq("id", checkId);
-      }
-    }
-
-    return { id: checkId, result, issuesRaised, issuesAlreadyOpen: issues.length - fresh.length };
+    return { id: (row as { id: string }).id, result };
   });

@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -8,13 +8,13 @@ import { AppShell } from "@/components/AppShell";
 import {
   CheckPhoto,
   PhotoPicker,
-  QuickCheckNotice,
-  RecentChecks,
+  QuickCheckDisclaimer,
+  QuickCheckResultSlot,
   StorePicker,
   VerdictPill,
   formatCheckTime,
   uploadQuickCheckPhoto,
-  useRecentQuickChecks,
+  useQuickCheckResult,
   type QuickCheckRowBase,
 } from "@/components/quick-checks/QuickCheckParts";
 import { Button } from "@/components/ui/button";
@@ -40,10 +40,9 @@ type CheckRow = QuickCheckRowBase & {
   defects: string[];
   reason: string | null;
   action: string | null;
-  issues_raised: number;
 };
 
-const COLUMNS = "item_hint, product, verdict, units_visible, units_not_sellable, defects, reason, action, issues_raised";
+const COLUMNS = "item_hint, product, verdict, units_visible, units_not_sellable, defects, reason, action";
 
 const TONE: Record<FnvVerdict, "good" | "bad" | "neutral"> = {
   sellable: "good",
@@ -56,13 +55,12 @@ function itemName(row: CheckRow): string {
 }
 
 function FnvCheckPage() {
-  const queryClient = useQueryClient();
   const [storeId, setStoreId] = useState("");
   const [item, setItem] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [lastId, setLastId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const checks = useRecentQuickChecks<CheckRow>("fnv_checks", COLUMNS);
+  const check = useQuickCheckResult<CheckRow>("fnv_checks", COLUMNS, lastId);
 
   const run = useMutation({
     mutationFn: async () => {
@@ -71,20 +69,14 @@ function FnvCheckPage() {
       const { orgId, path } = await uploadQuickCheckPhoto(file, QUICK_CHECK_FOLDERS.fnv);
       return runFnvCheck({ data: { activeOrgId: orgId, storeId, storagePath: path, hint: item.trim() || null } });
     },
-    onSuccess: async (out) => {
-      toast.success(
-        `${FNV_VERDICT_LABEL[out.result.verdict]}.${out.issueRaised ? " A fix was opened for the store." : ""}`,
-      );
+    onSuccess: (out) => {
+      toast.success(`${FNV_VERDICT_LABEL[out.result.verdict]}.`);
       setFile(null);
       if (fileInput.current) fileInput.current.value = "";
-      await queryClient.invalidateQueries({ queryKey: ["quick-checks", "fnv_checks"] });
-      setSelectedId(out.id);
+      setLastId(out.id);
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "The FNV check failed."),
   });
-
-  const rows = checks.data ?? [];
-  const selected = useMemo(() => rows.find((r) => r.id === selectedId) ?? rows[0] ?? null, [rows, selectedId]);
 
   return (
     <AppShell title="FNV check" description={DESCRIPTION}>
@@ -118,34 +110,20 @@ function FnvCheckPage() {
                 "Check produce"
               )}
             </Button>
-            <p className="text-xs text-[#667085]">
-              Take the photo close up, in good light. Produce that is not sellable opens a fix in{" "}
-              <Link to="/corrective-actions" className="underline">
-                Corrective Actions
-              </Link>
-              .
-            </p>
+            <p className="text-xs text-[#667085]">Take the photo close up, in good light, with the produce surface visible.</p>
           </div>
         </section>
 
         <section aria-labelledby="check-result" className="min-w-0 space-y-4">
-          {checks.isPending ? (
-            <div className="h-48 animate-pulse rounded-2xl border border-[#D9E2E8] bg-[#F4F7F9]" aria-busy="true" />
-          ) : checks.isError ? (
-            <QuickCheckNotice title="FNV checks unavailable" body="Refresh the page to try again." />
-          ) : !selected ? (
-            <QuickCheckNotice title="No FNV checks yet" body="Pick a store, photograph fruit or vegetables and run your first check." />
-          ) : (
-            <FnvResult row={selected} />
-          )}
-          <RecentChecks
-            rows={rows}
-            selectedId={selected?.id ?? null}
-            onSelect={setSelectedId}
-            title={(r) => `${r.stores?.name ?? "Store"} · ${itemName(r)}`}
-            meta={(r) => (r.units_visible != null ? `${r.units_visible} unit${r.units_visible === 1 ? "" : "s"} seen` : "Produce")}
-            pill={(r) => <VerdictPill label={FNV_VERDICT_LABEL[r.verdict]} tone={TONE[r.verdict]} />}
-          />
+          <QuickCheckResultSlot
+            id={lastId}
+            query={check}
+            running={run.isPending}
+            emptyTitle="Your result will appear here"
+            emptyBody="Pick a store, photograph fruit or vegetables and check whether they can be sold."
+          >
+            {(row) => <FnvResult row={row} />}
+          </QuickCheckResultSlot>
         </section>
       </div>
     </AppShell>
@@ -161,10 +139,7 @@ function FnvResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
           <h2 className="text-base font-semibold text-[#04203F]">
             {row.stores?.name ?? "Store"} · {itemName(row)}
           </h2>
-          <p className="mt-0.5 text-xs text-[#667085]">
-            {formatCheckTime(row.created_at)}
-            {row.issues_raised ? " · Fix opened" : ""}
-          </p>
+          <p className="mt-0.5 text-xs text-[#667085]">{formatCheckTime(row.created_at)}</p>
         </div>
         <VerdictPill label={FNV_VERDICT_LABEL[row.verdict]} tone={TONE[row.verdict]} />
       </div>
@@ -216,6 +191,9 @@ function FnvResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
           ) : null}
           <p className="text-xs text-[#667085]">AI detected · Read from image</p>
         </div>
+      </div>
+      <div className="mt-4">
+        <QuickCheckDisclaimer />
       </div>
     </div>
   );

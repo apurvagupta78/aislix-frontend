@@ -1,6 +1,7 @@
 /**
  * Quick checks for store managers (no audit setup): the client uploads one photo, then these server
- * functions read it with the AI, save the result and, for failed FNV / hygiene checks, open a fix.
+ * functions read it with the AI and save the result. Quick checks never open fixes or enter audit
+ * history; the rows and photos are kept only for usage reporting.
  */
 
 import { createServerFn } from "@tanstack/react-start";
@@ -10,9 +11,6 @@ import { buildNoPlanogramPrompt } from "@/lib/ai-audit/astra-prompt";
 import { buildFnvCheckPrompt } from "@/lib/ai-audit/prompts/fnv-check.prompt";
 import { buildHygieneCheckPrompt } from "@/lib/ai-audit/prompts/hygiene-check.prompt";
 import {
-  FNV_VERDICT_LABEL,
-  fnvDefectLabel,
-  hygieneTypeLabel,
   parseFnvCheckPayload,
   parseHygieneCheckPayload,
   parseShelfCsvPayload,
@@ -206,7 +204,7 @@ export const runShelfCsvCheck = createServerFn({ method: "POST" })
 
 /* ------------------------------------------------------------------ */
 
-export type FnvCheckOutput = { id: string; result: FnvCheckResult; issueRaised: boolean };
+export type FnvCheckOutput = { id: string; result: FnvCheckResult };
 
 export const runFnvCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -246,41 +244,12 @@ export const runFnvCheck = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error || !row) throw new Error("Could not save the FNV check.");
-    const checkId = (row as { id: string }).id;
-
-    let issueRaised = false;
-    if (result.verdict === "not_sellable") {
-      const item = result.product ?? data.hint ?? "Produce";
-      const units = result.unitsNotSellable ? `${result.unitsNotSellable} unit${result.unitsNotSellable === 1 ? "" : "s"} not sellable. ` : "";
-      const defects = result.defects.length ? `Defects: ${result.defects.map(fnvDefectLabel).join(", ")}. ` : "";
-      const { error: findingError } = await supabaseAdmin.from("findings").insert({
-        org_id: data.activeOrgId,
-        store_id: data.storeId,
-        created_by: userId,
-        finding_type: "damaged_product",
-        source_type: "fnv_check",
-        source_id: checkId,
-        severity: "high",
-        status: "open",
-        audit_origin: "ai",
-        confirmation_state: "ai_suggested",
-        title: `${FNV_VERDICT_LABEL.not_sellable} produce — ${item}`,
-        description: `${units}${defects}${result.reason ?? ""} ${result.action ?? ""}`.trim(),
-        product_name: result.product,
-      } as never);
-      if (findingError) {
-        console.error("[fnv-check] could not raise finding", checkId, findingError.message);
-      } else {
-        issueRaised = true;
-        await supabaseAdmin.from("fnv_checks" as never).update({ issues_raised: 1 } as never).eq("id", checkId);
-      }
-    }
-    return { id: checkId, result, issueRaised };
+    return { id: (row as { id: string }).id, result };
   });
 
 /* ------------------------------------------------------------------ */
 
-export type HygieneCheckOutput = { id: string; result: HygieneCheckResult; issueRaised: boolean };
+export type HygieneCheckOutput = { id: string; result: HygieneCheckResult };
 
 export const runHygieneCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -316,38 +285,5 @@ export const runHygieneCheck = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error || !row) throw new Error("Could not save the hygiene check.");
-    const checkId = (row as { id: string }).id;
-
-    let issueRaised = false;
-    if (result.verdict === "failed") {
-      const severity = result.issues.some((i) => i.severity === "high")
-        ? "high"
-        : result.issues.some((i) => i.severity === "medium")
-          ? "medium"
-          : "low";
-      const steps = result.issues
-        .map((i) => `• ${hygieneTypeLabel(i.type)}${i.where ? ` (${i.where})` : ""}: ${i.whatToDo ?? "Clean and tidy this area."}`)
-        .join("\n");
-      const { error: findingError } = await supabaseAdmin.from("findings").insert({
-        org_id: data.activeOrgId,
-        store_id: data.storeId,
-        created_by: userId,
-        finding_type: "shelf_execution_issue",
-        source_type: "hygiene_check",
-        source_id: checkId,
-        severity,
-        status: "open",
-        audit_origin: "ai",
-        confirmation_state: "ai_suggested",
-        title: `Hygiene failed${data.hint ? ` — ${data.hint}` : ""}`,
-        description: [result.summary, steps].filter(Boolean).join("\n\n") || "Shelf hygiene needs attention.",
-      } as never);
-      if (findingError) {
-        console.error("[hygiene-check] could not raise finding", checkId, findingError.message);
-      } else {
-        issueRaised = true;
-        await supabaseAdmin.from("hygiene_checks" as never).update({ issues_raised: 1 } as never).eq("id", checkId);
-      }
-    }
-    return { id: checkId, result, issueRaised };
+    return { id: (row as { id: string }).id, result };
   });

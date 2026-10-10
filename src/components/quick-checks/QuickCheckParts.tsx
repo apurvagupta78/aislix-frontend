@@ -34,30 +34,62 @@ export function useQuickCheckStores() {
   });
 }
 
-/** Last 30 checks from a quick-check table, each with a 1-hour signed photo URL. */
-export function useRecentQuickChecks<T extends QuickCheckRowBase>(table: string, columns: string) {
+/**
+ * Quick checks are not kept as a history for users: the page only shows the check just run.
+ * Rows stay in the backend table for usage reporting.
+ */
+export function useQuickCheckResult<T extends QuickCheckRowBase>(table: string, columns: string, id: string | null) {
   return useQuery({
-    queryKey: ["quick-checks", table],
-    queryFn: async () => {
-      const orgId = await requireOrgId();
+    queryKey: ["quick-check", table, id],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<T & { photoUrl: string | null }> => {
       const { data, error } = await supabase
         .from(table as never)
         .select(`id, storage_path, created_at, stores(name, city), ${columns}`)
-        .eq("org_id", orgId)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      const rows = (data ?? []) as unknown as T[];
-      const { data: signed } = rows.length
-        ? await supabase.storage.from("audit-evidence").createSignedUrls(
-            rows.map((r) => r.storage_path),
-            3600,
-          )
-        : { data: [] };
-      const urls = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
-      return rows.map((r) => ({ ...r, photoUrl: urls.get(r.storage_path) ?? null }));
+        .eq("id", id!)
+        .single();
+      if (error || !data) throw error ?? new Error("Check not found.");
+      const row = data as unknown as T;
+      const { data: signed } = await supabase.storage.from("audit-evidence").createSignedUrl(row.storage_path, 3600);
+      return { ...row, photoUrl: signed?.signedUrl ?? null };
     },
   });
+}
+
+export const QUICK_CHECK_DISCLAIMER =
+  "AI-generated insights may contain errors. Please verify all results before making decisions. These are quick analyses and will not be saved in your audit history.";
+
+export function QuickCheckDisclaimer() {
+  return <p className="border-t border-[#EEF1F4] pt-3 text-xs text-[#667085]">{QUICK_CHECK_DISCLAIMER}</p>;
+}
+
+/** Placeholder, loading and error states for the result panel before / while a check runs. */
+export function QuickCheckResultSlot<T>({
+  id,
+  query,
+  running,
+  emptyTitle,
+  emptyBody,
+  children,
+}: {
+  id: string | null;
+  query: { isPending: boolean; isError: boolean; data: T | undefined };
+  running: boolean;
+  emptyTitle: string;
+  emptyBody: string;
+  children: (row: T) => ReactNode;
+}) {
+  if (running) {
+    return <div className="h-48 animate-pulse rounded-2xl border border-[#D9E2E8] bg-[#F4F7F9]" aria-busy="true" />;
+  }
+  if (!id) return <QuickCheckNotice title={emptyTitle} body={emptyBody} />;
+  if (query.isPending) {
+    return <div className="h-48 animate-pulse rounded-2xl border border-[#D9E2E8] bg-[#F4F7F9]" aria-busy="true" />;
+  }
+  if (query.isError || !query.data) {
+    return <QuickCheckNotice title="Result unavailable" body="Refresh the page and run the check again." />;
+  }
+  return <>{children(query.data)}</>;
 }
 
 export async function uploadQuickCheckPhoto(file: File, folder: string): Promise<{ orgId: string; path: string }> {
@@ -125,56 +157,6 @@ export function PhotoPicker({
 
 export function formatCheckTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
-}
-
-export function RecentChecks<T extends QuickCheckRowBase & { photoUrl: string | null }>({
-  rows,
-  selectedId,
-  onSelect,
-  title,
-  meta,
-  pill,
-}: {
-  rows: T[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  title: (row: T) => string;
-  meta: (row: T) => string;
-  pill: (row: T) => ReactNode;
-}) {
-  if (rows.length < 2) return null;
-  return (
-    <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4">
-      <h3 className="text-sm font-semibold text-[#04203F]">Recent checks</h3>
-      <ul className="mt-2 divide-y divide-[#EEF1F4]">
-        {rows.map((r) => (
-          <li key={r.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(r.id)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors duration-150 hover:bg-[#F4F7F9]",
-                selectedId === r.id && "bg-[#F4F7F9]",
-              )}
-            >
-              {r.photoUrl ? (
-                <img src={r.photoUrl} alt="" className="size-10 shrink-0 rounded-md object-cover" />
-              ) : (
-                <span className="size-10 shrink-0 rounded-md bg-[#EEF1F4]" />
-              )}
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-[#04203F]">{title(r)}</span>
-                <span className="block truncate text-xs text-[#667085]">
-                  {formatCheckTime(r.created_at)} · {meta(r)}
-                </span>
-              </span>
-              {pill(r)}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 }
 
 export function CheckPhoto({ url, alt }: { url: string | null; alt: string }) {

@@ -1,16 +1,13 @@
 /**
  * Display / POSM check: the photo is uploaded by the client, then this server function reads it
- * with the display check prompt, saves the result and raises a fix for every problem found.
+ * with the display check prompt and saves the result. Quick checks never open fixes or enter audit
+ * history; the rows and photos are kept only for usage reporting.
  */
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { buildDisplayCheckPrompt } from "@/lib/ai-audit/prompts/display-check.prompt";
-import {
-  displayCheckIssues,
-  parseDisplayCheckPayload,
-  type DisplayCheckResult,
-} from "@/lib/display-check/display-check-parse";
+import { parseDisplayCheckPayload, type DisplayCheckResult } from "@/lib/display-check/display-check-parse";
 
 export const DISPLAY_CHECK_FOLDER = "display-check";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,7 +21,7 @@ export type RunDisplayCheckInput = {
   expectedDisplay?: string | null;
 };
 
-export type RunDisplayCheckOutput = { id: string; result: DisplayCheckResult; issuesRaised: number };
+export type RunDisplayCheckOutput = { id: string; result: DisplayCheckResult };
 
 function contentTypeFor(path: string): string {
   const lower = path.toLowerCase();
@@ -122,7 +119,6 @@ export const runDisplayCheck = createServerFn({ method: "POST" })
       throw new Error("The AI could not read this photo. Try again or retake it.");
     }
     const result = parseDisplayCheckPayload(payload, data.expectedBrand);
-    const issues = displayCheckIssues(result, data.expectedBrand);
 
     const { data: row, error: insertError } = await supabaseAdmin
       .from("display_checks" as never)
@@ -142,36 +138,5 @@ export const runDisplayCheck = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (insertError || !row) throw new Error("Could not save the display check.");
-    const checkId = (row as { id: string }).id;
-
-    let issuesRaised = 0;
-    if (issues.length) {
-      const { error: findingsError } = await supabaseAdmin.from("findings").insert(
-        issues.map((issue) => ({
-          org_id: data.activeOrgId,
-          store_id: data.storeId,
-          created_by: userId,
-          finding_type: "display_issue",
-          source_type: "display_check",
-          source_id: checkId,
-          severity: issue.severity,
-          status: "open",
-          audit_origin: "ai",
-          confirmation_state: "ai_suggested",
-          title: issue.title,
-          description: issue.description,
-        })) as never,
-      );
-      if (findingsError) {
-        console.error("[display-check] could not raise findings", checkId, findingsError.message);
-      } else {
-        issuesRaised = issues.length;
-        await supabaseAdmin
-          .from("display_checks" as never)
-          .update({ issues_raised: issuesRaised } as never)
-          .eq("id", checkId);
-      }
-    }
-
-    return { id: checkId, result, issuesRaised };
+    return { id: (row as { id: string }).id, result };
   });
