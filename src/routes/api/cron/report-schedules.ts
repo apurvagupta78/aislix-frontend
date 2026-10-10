@@ -8,7 +8,7 @@ function sameToken(a: string, b: string): boolean {
 }
 
 /**
- * Called every few minutes by the Aislix backend timer. The bearer token must match the
+ * Called every 15 minutes by the database timer (pg_cron + pg_net). The bearer token must match the
  * `report_cron` service secret, which only the service role can read.
  */
 export const Route = createFileRoute("/api/cron/report-schedules")({
