@@ -262,8 +262,13 @@ function IntelligencePage() {
   const openPast = (r: IntelligenceReport) => {
     setReport(r);
     setQuestion(r.question);
-    const known = new Set(options.map((a) => a.id));
-    setSelected(r.audits.map((a) => a.id).filter((id) => known.has(id)).slice(0, INTELLIGENCE_MAX_AUDITS));
+    const known = audits.data ? new Set(audits.data.map((a) => a.id)) : null;
+    setSelected(
+      r.audits
+        .map((a) => a.id)
+        .filter((id) => !known || known.has(id))
+        .slice(0, INTELLIGENCE_MAX_AUDITS),
+    );
     setFiles(
       r.attachments.map((a) => ({ key: a.path, name: a.name, size: a.size, status: "ready" as const, attachment: a })),
     );
