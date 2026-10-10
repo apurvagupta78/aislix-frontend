@@ -493,6 +493,68 @@ export async function deleteAuditTemplate(id: string): Promise<void> {
   if (error) dbError(error, "Could not delete template.");
 }
 
+/** Tables whose rows keep pointing at a template after an audit used it. */
+const TEMPLATE_USAGE_TABLES = ["scan_assignments", "shelf_scans", "audit_responses", "audit_schedules"] as const;
+
+async function templateIsInUse(orgId: string, id: string): Promise<boolean> {
+  const counts = await Promise.all(
+    TEMPLATE_USAGE_TABLES.map(async (table) => {
+      const { count, error } = await supabase
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", orgId)
+        .eq("template_id", id);
+      return error ? 0 : (count ?? 0);
+    }),
+  );
+  return counts.some((n) => n > 0);
+}
+
+/**
+ * Deletes a template nobody has used. Templates that past audits, scans or schedules
+ * reference are archived instead so their reports keep working.
+ */
+export async function deleteOrArchiveAuditTemplate(id: string): Promise<"deleted" | "archived"> {
+  const orgId = await requireOrgId();
+  if (await templateIsInUse(orgId, id)) {
+    await archiveAuditTemplate(id);
+    return "archived";
+  }
+  const { error } = await supabase.from("audit_templates").delete().eq("org_id", orgId).eq("id", id);
+  if (error) {
+    if (error.code === "23503") {
+      await archiveAuditTemplate(id);
+      return "archived";
+    }
+    dbError(error, "Could not delete template.");
+  }
+  return "deleted";
+}
+
+const BLANK_TEMPLATE_SECTIONS: TemplateSection[] = [
+  { key: "store_info", title: "Store Information", order: 0 },
+  { key: "product", title: "Product Information", order: 1, repeatable: true, repeatBy: "sku" },
+  { key: "quantity", title: "Quantity", order: 2, repeatable: true, repeatBy: "sku" },
+  { key: "expiry", title: "Expiry", order: 3, repeatable: true, repeatBy: "sku" },
+  { key: "quality", title: "Quality", order: 4, repeatable: true, repeatBy: "sku" },
+  { key: "evidence", title: "Evidence", order: 5, repeatable: true, repeatBy: "sku" },
+  { key: "rca", title: "RCA", order: 6, repeatable: true, repeatBy: "sku" },
+];
+
+/** New private draft with the standard builder sections, ready to open in the builder. */
+export async function createBlankAuditTemplate(input: {
+  name?: string;
+  description?: string;
+}): Promise<AuditTemplate> {
+  return createAuditTemplate({
+    name: input.name?.trim() || "Untitled Audit Template",
+    description: input.description,
+    template_type: "custom",
+    audit_mode: "digital",
+    sections: BLANK_TEMPLATE_SECTIONS,
+  });
+}
+
 export async function publishAuditTemplate(id: string): Promise<number> {
   const { data, error } = await supabase.rpc("publish_audit_template", {
     p_template_id: id,
@@ -566,6 +628,11 @@ export async function seedFnvQcTemplate(): Promise<string | null> {
     dbError(error, "Could not seed FNV QC template.");
   }
   return (data as string) ?? null;
+}
+
+/** Only the person who created a custom template may edit or delete it; Aislix templates are read-only. */
+export function canEditAuditTemplate(t: AuditTemplate, userId: string | null | undefined): boolean {
+  return Boolean(userId) && !t.is_system_template && t.owner_user_id === userId;
 }
 
 export function isCustomBuilderTemplate(t: AuditTemplate): boolean {

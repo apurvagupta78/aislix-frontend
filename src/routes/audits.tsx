@@ -99,11 +99,10 @@ function AuditsWorkspace() {
         ) : null}
         {tab === "schedules" ? (
           <WorkspaceLinkCard
-            title="Recurring schedules"
-            description="Plan repeating audits without creating another navigation page."
-            to="/audit-schedules"
+            title="Audit calendar"
+            description="One-off and recurring audits on the day they are due."
+            to="/audit-calendar"
             icon={<CalendarClock className="size-4" />}
-            badge="Manager"
           />
         ) : null}
       </div>

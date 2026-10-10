@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Navigate, Outlet, createFileRoute, useChildMatches } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Eye } from "lucide-react";
 import { toast } from "sonner";
@@ -46,7 +46,9 @@ import type {
   TemplateSection,
   WorkflowSettings,
 } from "@/lib/audit-builder/types";
+import { requireUserId } from "@/lib/db/context";
 import {
+  canEditAuditTemplate,
   definitionToPatch,
   fetchAuditTemplate,
   publishAuditTemplate,
@@ -59,8 +61,14 @@ import { isOrgManager } from "@/lib/assignments";
 
 export const Route = createFileRoute("/audit-templates/$templateId")({
   head: () => ({ meta: [{ title: "Audit template builder — Aislix" }] }),
-  component: TemplateBuilderPage,
+  component: TemplateBuilderRoute,
 });
+
+/** Preview, versions and intelligence are child routes and render in place of the builder. */
+function TemplateBuilderRoute() {
+  const childMatches = useChildMatches();
+  return childMatches.length ? <Outlet /> : <TemplateBuilderPage />;
+}
 
 function TemplateBuilderPage() {
   const { templateId } = Route.useParams();
@@ -80,6 +88,11 @@ function TemplateBuilderPage() {
     queryKey: ["audit-template", templateId],
     queryFn: () => fetchAuditTemplate(templateId),
     enabled: managerQuery.data === true,
+  });
+
+  const currentUserQuery = useQuery({
+    queryKey: ["current-user-id"],
+    queryFn: requireUserId,
   });
 
   const [draft, setDraft] = useState<AuditTemplate | null>(null);
@@ -269,7 +282,7 @@ function TemplateBuilderPage() {
     updateDefinition({ sections: [...definition.sections, section] });
   };
 
-  if (managerQuery.isLoading || templateQuery.isLoading) {
+  if (managerQuery.isLoading || templateQuery.isLoading || currentUserQuery.isLoading) {
     return (
       <AppShell title="Template builder">
         <Skeleton className="h-96 w-full" />
@@ -283,6 +296,10 @@ function TemplateBuilderPage() {
         <ErrorState description="Manager access required to edit audit templates." />
       </AppShell>
     );
+  }
+
+  if (templateQuery.data && !canEditAuditTemplate(templateQuery.data, currentUserQuery.data)) {
+    return <Navigate to="/audit-templates/$templateId/preview" params={{ templateId }} replace />;
   }
 
   if (templateQuery.isError || !draft || !definition) {

@@ -55,7 +55,6 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
       { kind: "leaf", label: "Rack check", to: "/rack-check" },
       { kind: "leaf", label: "Assignments", to: "/assigned-scans" },
       { kind: "leaf", label: "Audit calendar", to: "/audit-calendar" },
-      { kind: "leaf", label: "Recurring schedules", to: "/audit-schedules" },
       { kind: "leaf", label: "Audit templates", to: "/audit-templates", managerOnly: true },
     ],
   },

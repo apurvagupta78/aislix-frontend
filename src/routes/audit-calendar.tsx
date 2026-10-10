@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Plus, Repeat } from "lucide-react";
+import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { EmptyState, PageHeader } from "@/components/design-system";
@@ -677,13 +677,6 @@ function AuditCalendarPage() {
           }
           actions={
             <>
-              {isManager ? (
-                <Button variant="outline" size="sm" className="rounded-lg" asChild>
-                  <Link to="/audit-schedules">
-                    <Repeat className="mr-2 size-4" /> Recurring schedules
-                  </Link>
-                </Button>
-              ) : null}
               <Button
                 variant="brand"
                 size="sm"

@@ -155,7 +155,7 @@ function AssignmentGridPage() {
                 <Link to="/assigned-scans">Assignments</Link>
               </Button>
               <Button variant="outline" size="sm" className="rounded-xl" asChild>
-                <Link to="/audit-schedules">Schedules</Link>
+                <Link to="/audit-calendar">Audit calendar</Link>
               </Button>
             </>
           }
