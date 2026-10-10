@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Package, ShoppingCart, Sparkles, Store, Truck, Warehouse } from "lucide-react";
 
 import { OptionCard } from "@/components/design-system";
@@ -18,20 +19,29 @@ const MODEL_META: Record<
   custom: { icon: Sparkles, tone: "neutral" },
 };
 
+export function operatingModelIcon(model: OperatingModel) {
+  return MODEL_META[model]?.icon ?? Store;
+}
+
 type Props = {
   value: OperatingModel;
   onChange: (model: OperatingModel) => void;
   error?: string | null;
+  /** Extra control beside the heading (e.g. "Cancel" when re-opening the cards). */
+  headerAction?: ReactNode;
 };
 
-export function OperatingModelCards({ value, onChange, error }: Props) {
+export function OperatingModelCards({ value, onChange, error, headerAction }: Props) {
   return (
     <section className="space-y-3">
-      <div>
-        <h2 className="text-lg font-semibold">What are you auditing?</h2>
-        <p className="text-sm text-muted-foreground">
-          Choose the type of operation you want to audit.
-        </p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">What are you auditing?</h2>
+          <p className="text-sm text-muted-foreground">
+            Choose the type of operation you want to audit.
+          </p>
+        </div>
+        {headerAction}
       </div>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
         {OPERATING_MODEL_CARDS.map((card) => {

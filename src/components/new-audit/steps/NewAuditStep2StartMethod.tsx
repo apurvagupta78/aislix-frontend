@@ -1,13 +1,15 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { FileText, type LucideIcon } from "lucide-react";
 
 import { AiDocumentAuditSetup } from "@/components/new-audit/AiDocumentAuditSetup";
-import { OperatingModelCards } from "@/components/new-audit/OperatingModelCards";
+import { OperatingModelCards, operatingModelIcon } from "@/components/new-audit/OperatingModelCards";
 import { NewAuditStepSection } from "@/components/new-audit/NewAuditStepSection";
 import { StartChoiceCards } from "@/components/new-audit/StartChoiceCards";
 import { TemplateChoiceGrid } from "@/components/new-audit/TemplateChoiceGrid";
 import type { AiAnalysisCheck } from "@/lib/ai-audit/ai-analysis";
 import type { OperatingModel } from "@/lib/audit-builder/types";
 import type { AuditTemplate } from "@/lib/audit-templates";
+import { OPERATING_MODEL_CARDS } from "@/lib/audit-engine/operating-model-catalog";
 import {
   demoPlanogramSummary,
   type NewAuditPlanogramChoice,
@@ -48,6 +50,50 @@ type Props = {
   operatingModelError?: string | null;
 };
 
+function ChoiceSummaryRow({
+  icon: Icon,
+  label,
+  value,
+  onChange,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  onChange: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#F4F7F9]">
+        <Icon className="size-4 text-[#04203F]" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-[#667085]">{label}</p>
+        <p className="truncate text-sm font-semibold text-[#04203F]">{value}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onChange}
+        aria-label={`Change ${label.toLowerCase()}`}
+        className="shrink-0 rounded-md border border-[#D9E2E8] px-2.5 py-1 text-xs font-semibold text-[#04203F] transition-colors hover:bg-[#F4F7F9]"
+      >
+        Change
+      </button>
+    </div>
+  );
+}
+
+function CancelButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 rounded-md px-2.5 py-1.5 text-xs font-semibold text-[#667085] transition-colors hover:bg-[#F4F7F9] hover:text-[#04203F]"
+    >
+      Cancel
+    </button>
+  );
+}
+
 export const STEP_3_TITLE = "What should Aislix work with?";
 export const STEP_3_DESCRIPTION =
   "Upload planogram, documents, templates, evidence, images, or other reference material to set up your audit.";
@@ -82,6 +128,9 @@ export function NewAuditStep2StartMethod({
   operatingModelError,
 }: Props) {
   const isAi = method === "ai";
+  const [reopen, setReopen] = useState<"operation" | "template" | null>(null);
+  const picked = templateChoice !== "general" && Boolean(selectedTemplateName);
+  const modelTitle = OPERATING_MODEL_CARDS.find((c) => c.id === operatingModel)?.title ?? "";
 
   if (isAi) {
     return (
@@ -120,19 +169,67 @@ export function NewAuditStep2StartMethod({
 
       {startChoice === "template" ? (
         <div className="mt-6 space-y-6 border-t border-[var(--aislix-border)] pt-6">
-          <OperatingModelCards
-            value={operatingModel}
-            onChange={onOperatingModelChange}
-            error={operatingModelError}
-          />
-          <div id="step-3-templates" className="scroll-mt-24">
-            <TemplateChoiceGrid
-              operatingModel={operatingModel}
-              templateChoice={templateChoice}
-              savedTemplates={savedTemplates}
-              onSelect={onTemplateSelect}
+          {picked && !reopen ? (
+            <div className="divide-y divide-[#D9E2E8] rounded-xl border border-[#D9E2E8] bg-white">
+              <ChoiceSummaryRow
+                icon={operatingModelIcon(operatingModel)}
+                label="Auditing"
+                value={modelTitle}
+                onChange={() => setReopen("operation")}
+              />
+              <ChoiceSummaryRow
+                icon={FileText}
+                label="Template"
+                value={selectedTemplateName ?? ""}
+                onChange={() => setReopen("template")}
+              />
+            </div>
+          ) : null}
+          {!picked || reopen === "operation" ? (
+            <OperatingModelCards
+              value={operatingModel}
+              onChange={(model) => {
+                setReopen(null);
+                if (model !== operatingModel || !picked) onOperatingModelChange(model);
+              }}
+              error={operatingModelError}
+              headerAction={picked ? <CancelButton onClick={() => setReopen(null)} /> : null}
             />
-          </div>
+          ) : null}
+          {picked && reopen === "operation" ? (
+            <div className="rounded-xl border border-[#D9E2E8] bg-white">
+              <ChoiceSummaryRow
+                icon={FileText}
+                label="Template"
+                value={selectedTemplateName ?? ""}
+                onChange={() => setReopen("template")}
+              />
+            </div>
+          ) : null}
+          {picked && reopen === "template" ? (
+            <div className="rounded-xl border border-[#D9E2E8] bg-white">
+              <ChoiceSummaryRow
+                icon={operatingModelIcon(operatingModel)}
+                label="Auditing"
+                value={modelTitle}
+                onChange={() => setReopen("operation")}
+              />
+            </div>
+          ) : null}
+          {!picked || reopen === "template" ? (
+            <div id="step-3-templates" className="scroll-mt-24">
+              <TemplateChoiceGrid
+                operatingModel={operatingModel}
+                templateChoice={templateChoice}
+                savedTemplates={savedTemplates}
+                onSelect={(choice, meta) => {
+                  setReopen(null);
+                  onTemplateSelect(choice, meta);
+                }}
+                headerAction={picked ? <CancelButton onClick={() => setReopen(null)} /> : null}
+              />
+            </div>
+          ) : null}
           {selectedTemplateName && templateSetup ? (
             <div id="step-3-template-fields" className="scroll-mt-24 space-y-3">
               {templateSetup}
