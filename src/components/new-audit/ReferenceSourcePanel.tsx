@@ -130,6 +130,14 @@ export function ReferenceSourcePanel({
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newHeader, setNewHeader] = useState<string | null>(null);
+  /** A header rename commits on blur, right before a button click in the same tick — both must build on it. */
+  const latest = useRef(value);
+  latest.current = value;
+
+  function emit(next: ReferenceDocumentState) {
+    latest.current = next;
+    onChange(next);
+  }
 
   const rows = value?.rows ?? [];
   const meta = value?.meta;
@@ -213,39 +221,42 @@ export function ReferenceSourcePanel({
   }
 
   function renameColumn(column: { field: ReferenceField } | { extra: string }, name: string): boolean {
-    if (!value) return false;
-    const result = renameReferenceColumn(value, column, name);
+    const current = latest.current;
+    if (!current) return false;
+    const result = renameReferenceColumn(current, column, name);
     if ("error" in result) {
       toast.error(result.error);
       return false;
     }
-    if (result.state !== value) onChange({ ...result.state, saved: manual });
+    if (result.state !== current) emit({ ...result.state, saved: manual });
     return true;
   }
 
   function addColumn() {
-    const base = value ?? { meta: emptyReferenceMeta(manual ? "manual" : "csv", null), rows: [] };
+    const base = latest.current ?? { meta: emptyReferenceMeta(manual ? "manual" : "csv", null), rows: [] };
     const { state, header } = addReferenceColumn(base);
     setNewHeader(header);
-    onChange({ ...state, saved: manual });
+    emit({ ...state, saved: manual });
   }
 
   function removeColumn(header: string) {
-    if (!value) return;
-    const filled = value.rows.some((row) => (row.extra?.[header] ?? "").trim());
+    const current = latest.current;
+    if (!current) return;
+    const filled = current.rows.some((row) => (row.extra?.[header] ?? "").trim());
     if (filled && !window.confirm(`Remove the "${header}" column and its values?`)) return;
-    onChange({ ...removeReferenceColumn(value, header), saved: manual });
+    emit({ ...removeReferenceColumn(current, header), saved: manual });
   }
 
   function removeRow(id: string) {
-    if (!value) return;
-    onChange({ ...value, saved: manual, rows: value.rows.filter((row) => row.id !== id) });
+    const current = latest.current;
+    if (!current) return;
+    emit({ ...current, saved: manual, rows: current.rows.filter((row) => row.id !== id) });
   }
 
   function addRow() {
-    const base = value ?? { meta: emptyReferenceMeta(manual ? "manual" : "csv", null), rows: [] };
+    const base = latest.current ?? { meta: emptyReferenceMeta(manual ? "manual" : "csv", null), rows: [] };
     const nextLine = Math.max(0, ...base.rows.map((r) => r.line_no)) + 1;
-    onChange({ ...base, saved: manual, rows: [...base.rows, emptyReferenceRow(nextLine)] });
+    emit({ ...base, saved: manual, rows: [...base.rows, emptyReferenceRow(nextLine)] });
   }
 
   function saveRows() {
