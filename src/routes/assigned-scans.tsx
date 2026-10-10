@@ -722,7 +722,7 @@ function AssignedScansPage() {
         <PageHeader
           title="Assignments"
           description={
-            isManager
+            !query.data || isManager
               ? "Every audit assigned to you and your team, and where each one stands."
               : "Audits assigned to you or by you, and where each one stands."
           }
@@ -880,7 +880,7 @@ function AssignedScansPage() {
               ) : null}
             </section>
 
-            <div className="flex gap-1 overflow-x-auto border-b border-[#D9E2E8]" role="tablist" aria-label="Status">
+            <div className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-[#D9E2E8]" role="tablist" aria-label="Status">
               {STATUS_TABS.map((tab) => {
                 const active = statusTab === tab.id;
                 return (
