@@ -54,6 +54,10 @@ type AuditOption = {
 
 type ModeFilter = "all" | "ai" | "digital";
 
+function auditsLabel(n: number): string {
+  return `${n} audit${n === 1 ? "" : "s"}`;
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -313,12 +317,11 @@ function IntelligencePage() {
             >
               {run.isPending ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" /> Analysing {selected.length} audit
-                  {selected.length === 1 ? "" : "s"}…
+                  <Loader2 className="size-4 animate-spin" /> {`Analysing ${auditsLabel(selected.length)}…`}
                 </>
               ) : (
                 <>
-                  <Sparkles className="size-4" /> Analyse {selected.length || ""} audit{selected.length === 1 ? "" : "s"}
+                  <Sparkles className="size-4" /> {selected.length ? `Analyse ${auditsLabel(selected.length)}` : "Analyse audits"}
                 </>
               )}
             </Button>
@@ -331,8 +334,7 @@ function IntelligencePage() {
             {run.isPending ? (
               <div className="rounded-2xl border border-[#D9E2E8] bg-white p-5" aria-busy="true">
                 <p className="flex items-center gap-2 text-sm font-medium text-[#04203F]">
-                  <Loader2 className="size-4 animate-spin" /> AI is reading {selected.length} audit
-                  {selected.length === 1 ? "" : "s"}…
+                  <Loader2 className="size-4 animate-spin" /> {`AI is reading ${auditsLabel(selected.length)}…`}
                 </p>
                 <div className="mt-4 space-y-2">
                   <Skeleton className="h-5 w-1/3" />
