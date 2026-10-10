@@ -85,6 +85,8 @@ import {
 } from "@/lib/new-audit/planogram-setup";
 import { DEMO_ORAL_CARE_META } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
+import { useWorkspaceContext } from "@/hooks/use-customer-context";
+import { normalizeAuditRoleTab } from "@/lib/role-audit-ui";
 import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import { TemplateChecklistPreview } from "@/components/new-audit/TemplateChecklistPreview";
 import { buildTemplateDataset, isTemplateColumn, templateHasLines } from "@/lib/new-audit/template-dataset";
@@ -235,7 +237,14 @@ function NewAuditPage() {
   const [aiPlanogramChoice, setAiPlanogramChoice] = useState<NewAuditPlanogramChoice | null>(
     null,
   );
-  const [demoScanContext, setDemoScanContext] = useState<ScanContextState>(NEW_AUDIT_SCAN_CONTEXT);
+  const [setupScanContext, setDemoScanContext] = useState<ScanContextState>(NEW_AUDIT_SCAN_CONTEXT);
+  const workspaceContext = useWorkspaceContext();
+  const workspaceCustomerType = workspaceContext.data?.customerType;
+  /** Audit role is the workspace business type from onboarding — not asked per audit. */
+  const demoScanContext = useMemo<ScanContextState>(
+    () => ({ ...setupScanContext, auditRole: normalizeAuditRoleTab(workspaceCustomerType) }),
+    [setupScanContext, workspaceCustomerType],
+  );
   /** Scan context sent to the AI audit — reference document lines become the expected products. */
   const aiScanContext = useMemo(
     () =>

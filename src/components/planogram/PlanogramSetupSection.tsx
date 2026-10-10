@@ -89,6 +89,8 @@ export type PlanogramSetupSectionProps = {
   lockedPlanogramMode?: PlanogramModeChoice;
   /** Hides the "no planogram" capability explainer (e.g. when comparing to a document). */
   hideNoPlanogramIntro?: boolean;
+  /** Hides "Who is this audit for?" — the caller supplies `scanContext.auditRole` (e.g. the workspace business type). */
+  hideRolePicker?: boolean;
   /** Optional category + sub-category picker (shown after role). */
   shelfCategory?: {
     state: DemoCategoryState;
@@ -115,6 +117,7 @@ export function PlanogramSetupSection({
   wizardRef: wizardRefProp,
   showInlineStart = false,
   hideNoPlanogramIntro = false,
+  hideRolePicker = false,
   canStart = true,
   onStart,
   startError,
@@ -239,9 +242,9 @@ export function PlanogramSetupSection({
   return (
     <>
       <div className="overflow-hidden rounded-2xl border border-border bg-card p-4 sm:p-5">
-        <HomepageRolePicker value={auditRole} onChange={setAuditRole} />
+        {hideRolePicker ? null : <HomepageRolePicker value={auditRole} onChange={setAuditRole} />}
         {shelfCategory ? (
-          <div className="mt-5 border-t border-border pt-5">
+          <div className={cn(!hideRolePicker && "mt-5 border-t border-border pt-5")}>
             <DemoCategoryPicker
               state={shelfCategory.state}
               onChange={shelfCategory.onChange}
