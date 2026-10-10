@@ -155,6 +155,14 @@ export const Route = createFileRoute("/new-audit")({
       search.assign === "true" ||
       search.assign === "1" ||
       search.assign === 1,
+    dueDate:
+      typeof search.dueDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.dueDate)
+        ? search.dueDate
+        : undefined,
+    dueTime:
+      typeof search.dueTime === "string" && /^\d{2}:\d{2}$/.test(search.dueTime)
+        ? search.dueTime
+        : undefined,
   }),
   component: NewAuditPage,
 });
@@ -167,6 +175,8 @@ function NewAuditPage() {
     templateId: initialTemplateId,
     systemKey: initialSystemKey,
     assign: initialAssign,
+    dueDate: initialDueDate,
+    dueTime: initialDueTime,
   } = Route.useSearch();
   const [auditName, setAuditName] = useState("");
   const [auditDescription, setAuditDescription] = useState("");
@@ -214,7 +224,7 @@ function NewAuditPage() {
   const [instructions, setInstructions] = useState("");
   const [assignToSelf, setAssignToSelf] = useState(false);
   const [assignmentMode, setAssignmentMode] = useState<AssignmentMode>("assign_now");
-  const [scheduleTouched, setScheduleTouched] = useState(false);
+  const [scheduleTouched, setScheduleTouched] = useState(Boolean(initialDueDate));
   const [locationScope, setLocationScope] = useState<LocationScope>({ storeIds: [], stores: [] });
   const storeId = locationScope.storeIds[0] ?? "";
   const [teamScope, setTeamScope] = useState<TeamScope>({ assigneeIds: [] });
@@ -222,7 +232,9 @@ function NewAuditPage() {
   const [storeAssigneeOverrides, setStoreAssigneeOverrides] = useState<Record<string, string>>({});
   const [campaignName, setCampaignName] = useState("");
   const [publishAt, setPublishAt] = useState("");
-  const [dueConfig, setDueConfig] = useState<DueConfig>({});
+  const [dueConfig, setDueConfig] = useState<DueConfig>(() =>
+    initialDueDate ? { dueDate: initialDueDate, dueTime: initialDueTime ?? "17:00" } : {},
+  );
   const [recurrence, setRecurrence] = useState<RecurrenceRule>({
     frequency: "weekly",
     interval: 1,

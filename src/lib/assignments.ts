@@ -65,6 +65,8 @@ export type Assignment = {
   audit_mode: AuditMode;
   approval_status: ApprovalStatus;
   due_at: string | null;
+  /** When a "schedule once" assignment is sent out. */
+  scheduled_at?: string | null;
   instructions: string | null;
   created_at: string;
   assignee_id: string;
@@ -470,11 +472,12 @@ type AssignmentRow = {
   approval_status?: string | null;
   template_id?: string | null;
   template_version?: number | null;
+  scheduled_at?: string | null;
   stores?: { name?: string | null } | null;
 };
 
 const SELECT =
-  "id, org_id, store_id, scope_type, scope_values, status, audit_mode, approval_status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, verified_at, template_id, template_version, stores:store_id (name)";
+  "id, org_id, store_id, scope_type, scope_values, status, audit_mode, approval_status, due_at, scheduled_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, verified_at, template_id, template_version, stores:store_id (name)";
 
 /** scan_assignments references auth.users, so profile names are resolved separately. */
 async function fetchNames(ids: string[]): Promise<Map<string, string>> {
@@ -560,6 +563,7 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
         scope_values: scopeValues,
         status: (row.status as AssignmentStatus) ?? "pending",
         due_at: row.due_at,
+        scheduled_at: row.scheduled_at ?? null,
         instructions: row.instructions,
         created_at: row.created_at,
         assignee_id: row.assignee_id,
