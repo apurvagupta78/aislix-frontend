@@ -167,6 +167,9 @@ export async function fetchLifecycleActions(input: {
   scanId?: string;
   storeId?: string;
   status?: string;
+  /** Any of these statuses; takes precedence over `status`. */
+  statuses?: LifecycleActionStatus[];
+  assignedTo?: string;
   /** Defaults to the active org (e.g. the demo data org on dashboards). */
   orgId?: string;
 } = {}): Promise<LifecycleAction[]> {
@@ -175,7 +178,9 @@ export async function fetchLifecycleActions(input: {
   if (input.findingId) query = query.eq("finding_id", input.findingId);
   if (input.scanId) query = query.eq("scan_id", input.scanId);
   if (input.storeId && input.storeId !== "all") query = query.eq("store_id", input.storeId);
-  if (input.status && input.status !== "all") query = query.eq("status", input.status);
+  if (input.assignedTo) query = query.eq("assigned_to", input.assignedTo);
+  if (input.statuses?.length) query = query.in("status", input.statuses);
+  else if (input.status && input.status !== "all") query = query.eq("status", input.status);
   else query = query.not("status", "in", UNREVIEWED_STATUS_FILTER);
   const { data, error } = await query;
   if (error) {
@@ -200,6 +205,23 @@ export async function fetchLifecycleActions(input: {
   );
   const storeNames = new Map((stores ?? []).map((s) => [s.id, s.name]));
   return rows.map((row) => mapAction(row, names, storeNames));
+}
+
+/** Statuses where the assignee still has work to do (rejected = sent back by the reviewer). */
+export const MY_OPEN_ACTION_STATUSES: LifecycleActionStatus[] = [
+  "open",
+  "assigned",
+  "in_progress",
+  "overdue",
+  "rejected",
+];
+
+/** Corrective actions the signed-in user still has to work on, most urgent first. */
+export async function fetchMyOpenActions(): Promise<LifecycleAction[]> {
+  const userId = await requireUserId();
+  const actions = await fetchLifecycleActions({ assignedTo: userId, statuses: MY_OPEN_ACTION_STATUSES });
+  const dueTime = (a: LifecycleAction) => (a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY);
+  return [...actions].sort((a, b) => dueTime(a) - dueTime(b));
 }
 
 export async function fetchLifecycleAction(id: string): Promise<LifecycleAction | null> {

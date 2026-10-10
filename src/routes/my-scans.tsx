@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, ClipboardList, Loader2, MapPin, ScanLine } from "lucide-react";
+import { CalendarClock, ClipboardList, ListChecks, Loader2, MapPin, ScanLine } from "lucide-react";
 import { CollectionMethodBadge, SyncBadge } from "@/components/audit/AuditStatusBadges";
 import { toast } from "sonner";
 import {
@@ -26,6 +26,13 @@ import {
   type Assignment,
 } from "@/lib/assignments";
 import { processDueAuditSchedules } from "@/lib/audit-schedules";
+import { hideModelNames } from "@/lib/ai-display-text";
+import {
+  LIFECYCLE_STATUSES,
+  fetchMyOpenActions,
+  slaRemainingLabel,
+  type LifecycleAction,
+} from "@/lib/corrective-action-lifecycle";
 import { markAssignmentNotificationsRead } from "@/lib/notifications";
 import { complianceTone } from "@/lib/planogram-compliance";
 import { AssignmentIdChip } from "@/components/AssignmentId";
@@ -77,7 +84,7 @@ export function formatDate(value: string | null) {
   });
 }
 
-type TabKey =
+type AssignmentTabKey =
   | "today"
   | "upcoming"
   | "overdue"
@@ -85,14 +92,72 @@ type TabKey =
   | "unsynced"
   | "completed";
 
+type TabKey = AssignmentTabKey | "actions";
+
 const TABS: { key: TabKey; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "upcoming", label: "Upcoming" },
   { key: "overdue", label: "Overdue" },
+  { key: "actions", label: "Corrective actions" },
   { key: "needs_correction", label: "Re-audit Requested" },
   { key: "unsynced", label: "Unsynced" },
   { key: "completed", label: "Approved" },
 ];
+
+function MyActionsList({ actions }: { actions: LifecycleAction[] }) {
+  if (!actions.length) {
+    return (
+      <EmptyState
+        icon={<ListChecks className="size-6" />}
+        title="No corrective actions"
+        description="Corrective actions assigned to you will appear here."
+      />
+    );
+  }
+  return (
+    <div className="divide-y divide-[#D9E2E8] overflow-hidden rounded-xl border border-[#D9E2E8] bg-white">
+      {actions.map((action) => {
+        const sla = slaRemainingLabel(action.due_at, action.status);
+        const overdue = action.status === "overdue" || sla.startsWith("Overdue");
+        const statusLabel =
+          action.status === "rejected"
+            ? "Sent back"
+            : (LIFECYCLE_STATUSES.find((s) => s.value === action.status)?.label ?? action.status);
+        return (
+          <Link
+            key={action.id}
+            to="/corrective-actions/$actionId"
+            params={{ actionId: action.id }}
+            className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-[#F4F7F9]"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium leading-snug text-[#04203F]">
+                {action.code ? <span className="mr-1.5 text-xs font-normal text-[#667085]">{action.code}</span> : null}
+                {hideModelNames(action.title)}
+              </p>
+              <p className="mt-0.5 text-xs text-[#667085]">
+                {[action.store_name, `${action.priority.charAt(0).toUpperCase()}${action.priority.slice(1)} priority`, statusLabel]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </div>
+            <span className="flex shrink-0 items-center gap-1.5 text-xs text-[#667085]">
+              {overdue ? (
+                <Badge variant="secondary" className="rounded-full border-0 bg-destructive/10 text-destructive">
+                  {sla.startsWith("Overdue") ? sla : "Overdue"}
+                </Badge>
+              ) : (
+                <>
+                  <CalendarClock className="size-3.5" /> {sla}
+                </>
+              )}
+            </span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 function isDueToday(dueAt: string | null): boolean {
   if (!dueAt) return false;
@@ -186,6 +251,12 @@ function MyScansPage() {
     retry: false,
   });
 
+  const actionsQuery = useQuery({
+    queryKey: ["my-open-actions"],
+    queryFn: () => fetchMyOpenActions(),
+    retry: false,
+  });
+
   useEffect(() => {
     const digital = (query.data ?? []).filter((a) => a.audit_mode === "digital");
     void Promise.all(
@@ -235,10 +306,12 @@ function MyScansPage() {
           (pendingByAssignment[item.id] ?? 0) > 0,
       ),
       completed: all.filter((item) => item.status === "completed" || item.status === "cancelled"),
-    } satisfies Record<TabKey, Assignment[]>;
+    } satisfies Record<AssignmentTabKey, Assignment[]>;
   }, [all, unsyncedIds, pendingByAssignment]);
 
-  const visible = buckets[tab];
+  const myActions = actionsQuery.data ?? [];
+  const tabCount = (key: TabKey) => (key === "actions" ? myActions.length : buckets[key].length);
+  const visible = tab === "actions" ? [] : buckets[tab];
   const actionable =
     tab === "today" ||
     tab === "upcoming" ||
@@ -260,7 +333,7 @@ function MyScansPage() {
   return (
     <AppShell
       title="My work"
-      description="Digital and AI audit assignments — today, upcoming, overdue and returned for correction."
+      description="Audits and corrective actions assigned to you — today, upcoming, overdue and returned for correction."
     >
       {query.isLoading ? (
         <div className="space-y-3">
@@ -278,14 +351,25 @@ function MyScansPage() {
                 <TabsTrigger key={item.key} value={item.key} className="rounded-lg">
                   {item.label}
                   <span className="ml-1.5 text-xs text-muted-foreground">
-                    {buckets[item.key].length}
+                    {tabCount(item.key)}
                   </span>
                 </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
 
-          {visible.length === 0 ? (
+          {tab === "actions" ? (
+            actionsQuery.isLoading ? (
+              <Skeleton className="h-28 w-full rounded-xl" />
+            ) : actionsQuery.isError ? (
+              <ErrorState
+                description={toUserMessage(actionsQuery.error)}
+                onRetry={() => void actionsQuery.refetch()}
+              />
+            ) : (
+              <MyActionsList actions={myActions} />
+            )
+          ) : visible.length === 0 ? (
             <EmptyState
               icon={<ClipboardList className="size-6" />}
               title="Nothing here yet"
