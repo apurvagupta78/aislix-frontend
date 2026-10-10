@@ -104,6 +104,25 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "completed", label: "Approved" },
 ];
 
+function actionButtonLabel(status: LifecycleAction["status"]): string {
+  if (status === "in_progress") return "Continue";
+  if (status === "rejected") return "Fix & resubmit";
+  return "Start action";
+}
+
+/** "Due today 4:38 PM" · "Due tomorrow 1:21 AM" · "Due 12 Oct 1:21 PM" */
+function dueDateLabel(dueAt: string | null): string | null {
+  if (!dueAt) return null;
+  const due = new Date(dueAt);
+  const time = due.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (isDueToday(dueAt)) return `Due today ${time}`;
+  if (due.toDateString() === tomorrow.toDateString()) return `Due tomorrow ${time}`;
+  const date = due.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return `Due ${date} ${time}`;
+}
+
 function MyActionsList({ actions }: { actions: LifecycleAction[] }) {
   if (!actions.length) {
     return (
@@ -123,35 +142,51 @@ function MyActionsList({ actions }: { actions: LifecycleAction[] }) {
           action.status === "rejected"
             ? "Sent back"
             : (LIFECYCLE_STATUSES.find((s) => s.value === action.status)?.label ?? action.status);
+        const title = hideModelNames(action.title);
+        const task = action.suggestion ? hideModelNames(action.suggestion) : "";
+        const due = dueDateLabel(action.due_at);
         return (
           <Link
             key={action.id}
             to="/corrective-actions/$actionId"
             params={{ actionId: action.id }}
-            className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-[#F4F7F9]"
+            className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-[#F4F7F9] sm:flex-row sm:items-center sm:gap-4"
           >
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium leading-snug text-[#04203F]">
                 {action.code ? <span className="mr-1.5 text-xs font-normal text-[#667085]">{action.code}</span> : null}
-                {hideModelNames(action.title)}
+                {title}
               </p>
+              {task && task !== title ? (
+                <p className="mt-0.5 line-clamp-2 text-xs text-[#04203F]">
+                  <span className="font-medium">To do:</span> {task}
+                </p>
+              ) : null}
               <p className="mt-0.5 text-xs text-[#667085]">
                 {[action.store_name, `${action.priority.charAt(0).toUpperCase()}${action.priority.slice(1)} priority`, statusLabel]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
             </div>
-            <span className="flex shrink-0 items-center gap-1.5 text-xs text-[#667085]">
-              {overdue ? (
-                <Badge variant="secondary" className="rounded-full border-0 bg-destructive/10 text-destructive">
-                  {sla.startsWith("Overdue") ? sla : "Overdue"}
-                </Badge>
-              ) : (
-                <>
-                  <CalendarClock className="size-3.5" /> {sla}
-                </>
-              )}
-            </span>
+            <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end sm:gap-1.5">
+              <span className="flex items-center gap-1.5 text-xs text-[#667085]">
+                {overdue ? (
+                  <Badge variant="secondary" className="rounded-full border-0 bg-destructive/10 text-destructive">
+                    {sla.startsWith("Overdue") ? sla : "Overdue"}
+                  </Badge>
+                ) : (
+                  <>
+                    <CalendarClock className="size-3.5" />
+                    {due ? `${due} · ` : ""}
+                    {sla.replace(/ remaining$/, " left")}
+                  </>
+                )}
+              </span>
+              {overdue && due ? <span className="hidden text-xs text-[#667085] sm:block">{due}</span> : null}
+              <span className="inline-flex items-center rounded-lg bg-[#04203F] px-3 py-1.5 text-xs font-semibold text-white">
+                {actionButtonLabel(action.status)}
+              </span>
+            </div>
           </Link>
         );
       })}
@@ -174,9 +209,11 @@ function isPastDue(dueAt: string | null): boolean {
   return dueAt !== null && new Date(dueAt).getTime() < Date.now();
 }
 
-/** Today's work: due today, past its deadline, or no due date at all. */
+const TODAY_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** Today's work: due within the next 24 hours, past its deadline, or no due date at all. */
 function isTodayWork(dueAt: string | null): boolean {
-  return !dueAt || isDueToday(dueAt) || isPastDue(dueAt);
+  return !dueAt || new Date(dueAt).getTime() - Date.now() <= TODAY_WINDOW_MS;
 }
 
 function isLaterWork(dueAt: string | null): boolean {
@@ -399,6 +436,12 @@ function MyScansPage() {
             />
           ) : (
             <div className="space-y-6">
+              {tabActions.length ? (
+                <section className="space-y-3">
+                  <GroupHeading label="Corrective actions" count={tabActions.length} />
+                  <MyActionsList actions={tabActions} />
+                </section>
+              ) : null}
               {visible.length ? (
                 <section className="space-y-3">
                   {tabActions.length ? <GroupHeading label="Audits" count={visible.length} /> : null}
@@ -514,12 +557,6 @@ function MyScansPage() {
                       </div>
                     </article>
                   ))}
-                </section>
-              ) : null}
-              {tabActions.length ? (
-                <section className="space-y-3">
-                  <GroupHeading label="Corrective actions" count={tabActions.length} />
-                  <MyActionsList actions={tabActions} />
                 </section>
               ) : null}
             </div>
